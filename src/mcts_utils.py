@@ -39,11 +39,11 @@ def f(state, control):
     r, theta, crs, spd = state
     spd = control[1]
     
-    #theta = theta % 360
-    #theta -= control[0]
-    #theta = theta % 360
-    #if theta < 0:
-    #    theta += 360
+    theta = theta % 360
+    theta -= control[0]
+    theta = theta % 360
+    if theta < 0:
+       theta += 360
 
     crs = crs % 360
     crs -= control[0]
@@ -261,6 +261,10 @@ def dynamics(particles, control=None, **kwargs):
 
 def random_state():
     return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
+
+def near_state(state): 
+    return np.array(gen_state(h(state)))
+
 ##################################################################
 # Trial
 ##################################################################
@@ -276,7 +280,7 @@ def mcts_trial(depth, c, plotting=False, num_particles=500, iterations=1000, fig
     # assume a starting position within range of sensor and not too close
     true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
     pf = ParticleFilter(
-                        prior_fn=lambda n: np.array([true_state for i in range(n)]),
+                        prior_fn=lambda n: np.array([near_state(true_state) for i in range(n)]),
                         observe_fn=lambda states, **kwargs: np.array([np.array(h(x)) for x in states]),
                         n_particles=num_particles,
                         #dynamics_fn=lambda particles, **kwargs: [f2(p, control) for p in particles],

@@ -5,7 +5,7 @@ SENSOR_RANGE = 150
 
 def obs1(state):
     #rel_brg = state[1] - state[3]
-    rel_brg = state[2]
+    rel_brg = state[1]
     state_range = state[0]
     if rel_brg < 0:
         rel_brg += 360
@@ -19,7 +19,7 @@ def obs1(state):
 def obs2(state):
     #rel_brg = state[1] - state[3]
     rel_brg = state[2]
-    state_range = state[0]
+    state_range = state[1]
     if rel_brg < 0:
         rel_brg += 360
     if ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (state_range < SENSOR_RANGE/2):
@@ -31,7 +31,7 @@ def obs2(state):
 
 def obs3(state):
     #rel_brg = state[1] - state[3]
-    rel_brg = state[2]
+    rel_brg = state[1]
     state_range = state[0]
     if rel_brg < 0:
         rel_brg += 360
@@ -44,7 +44,7 @@ def obs3(state):
 
 def obs0(state):
     #rel_brg = state[1] - state[3]
-    rel_brg = state[2]
+    rel_brg = state[1]
     state_range = state[0]
     if rel_brg < 0:
         rel_brg += 360
@@ -88,3 +88,20 @@ def h(x):
     weights = [obs0(x), obs1(x), obs2(x), obs3(x)]
     obsers = [0, 1, 2, 3]
     return random.choices(obsers, weights)[0]
+
+# sample state from observation 
+def gen_state(obs): 
+    
+    if obs == 0: 
+        bearing = random.randint(-60,60)
+    elif obs == 1: 
+        bearing = random.choice([random.randint(60,90), random.randint(270, 300)])
+    elif obs == 2: 
+        bearing = random.choice([random.randint(90,120), random.randint(240,270)])
+    elif obs == 3: 
+        bearing = random.randint(120, 240)
+    
+    if bearing < 0: 
+        bearing += 360
+        
+    return [random.randint(25,100), bearing, random.randint(0,11)*30, 1]
