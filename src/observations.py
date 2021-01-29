@@ -14,7 +14,7 @@ def obs1(state):
     elif ((60 < rel_brg < 90) or (270 < rel_brg < 300)) and (state_range < SENSOR_RANGE):
         return 2-2*state_range/SENSOR_RANGE
     else:
-        return 0
+        return 0.0001
 
 def obs2(state):
     #rel_brg = state[1] - state[3]
@@ -27,7 +27,7 @@ def obs2(state):
     elif ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (state_range < SENSOR_RANGE):
         return 2-2*state_range/SENSOR_RANGE
     else:
-        return 0
+        return 0.0001
 
 def obs3(state):
     #rel_brg = state[1] - state[3]
@@ -40,7 +40,7 @@ def obs3(state):
     elif (120 <= rel_brg <= 240) and (state_range < SENSOR_RANGE):
         return 2-2*state_range/SENSOR_RANGE
     else:
-        return 0
+        return 0.0001
 
 def obs0(state):
     #rel_brg = state[1] - state[3]
@@ -59,7 +59,7 @@ def obs0(state):
     elif ((60 <= rel_brg < 90) or (270 < rel_brg <= 300)) and (SENSOR_RANGE/2 < state_range < SENSOR_RANGE):
         return 2*state_range/SENSOR_RANGE - 1
     else:
-        return 0
+        return 0.0001
 
 # returns observation given state
 def g(x, a, xp, o):

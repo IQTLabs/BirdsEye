@@ -38,11 +38,12 @@ def f(state, control):
     TGT_SPD = 1
     r, theta, crs, spd = state
     spd = control[1]
-    theta = theta % 360
-    theta -= control[0]
-    theta = theta % 360
-    if theta < 0:
-        theta += 360
+    
+    #theta = theta % 360
+    #theta -= control[0]
+    #theta = theta % 360
+    #if theta < 0:
+    #    theta += 360
 
     crs = crs % 360
     crs -= control[0]
@@ -57,7 +58,7 @@ def f(state, control):
     crs = next_crs(crs)
 
     r = np.sqrt(pos[0]**2 + pos[1]**2)
-    theta = np.arctan2(pos[0], pos[1]) * 180 / np.pi
+    theta = np.arctan2(pos[1], pos[0]) * 180 / np.pi
     if theta < 0:
         theta += 360
     return (r, theta, crs, spd)
@@ -370,7 +371,7 @@ def mcts_trial(depth, c, plotting=False, num_particles=500, iterations=1000, fig
 
         if plotting:
             #push!(plots, build_plot(true_state, belief))
-            build_plot(true_state, belief, fig, ax)
+            build_plot(true_state, belief, fig, ax, time_step)
 
 
         # TODO: flags for collision, lost track, end of simulation lost track
@@ -387,7 +388,7 @@ def mcts_trial(depth, c, plotting=False, num_particles=500, iterations=1000, fig
 # Plotting
 ##################################################################
 
-def build_plot(xp, b, fig=None, ax=None):
+def build_plot(xp, b, fig=None, ax=None, time_step=None):
     grid_r, grid_theta = [],[]
     plot_r = [row[0] for row in b]
     plot_theta = np.array([row[1] for row in b])*np.pi/180
@@ -400,6 +401,8 @@ def build_plot(xp, b, fig=None, ax=None):
     #plt.figure()
     plt.polar(plot_theta, plot_r, 'ro')
     plt.polar(plot_x_theta, plot_x_r, 'bo')
+    plt.ylim(-150,150)
+    plt.title('iteration {}'.format(time_step))
     
     #ax.clear()
     #ax.plot(plot_theta, plot_r, 'ro')
