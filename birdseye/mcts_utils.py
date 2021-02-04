@@ -6,7 +6,7 @@ import random
 import numpy as np
 from pfilter import ParticleFilter, systematic_resample
 import matplotlib.pyplot as plt
-from observations import *
+from .observations import *
 from IPython.display import clear_output
 
 

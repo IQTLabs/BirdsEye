@@ -2,8 +2,9 @@ from datetime import datetime
 import argparse
 import pandas as pd
 import os.path
-from mcts_utils import *
-from observations import *
+from .mcts_utils import *
+from .definitions import *
+from .observations import *
 
 
 
@@ -25,9 +26,10 @@ def run_mcts(N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_
 
 
     #write output header
-    if not os.path.isdir('runs'): 
-        os.mkdir('runs')
-    header_filename = "runs/{}_header.txt".format(global_start_time)
+    run_dir = RUN_DIR
+    if not os.path.isdir(RUN_DIR): 
+        os.mkdir(RUN_DIR)
+    header_filename = "{}/{}_header.txt".format(RUN_DIR, global_start_time)
     with open(header_filename, "w") as file:
         file.write(header_string)
 
