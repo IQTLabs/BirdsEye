@@ -388,7 +388,7 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
         if plotting:
             #push!(plots, build_plot(true_state, belief))
             build_plot(true_state, belief, fig, ax, time_step)
-            particle_heatmap(belief)
+            #particle_heatmap(belief)
 
 
         # TODO: flags for collision, lost track, end of simulation lost track
@@ -406,6 +406,15 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
 ##################################################################
 
 def build_plot(xp, b, fig=None, ax=None, time_step=None):
+
+    # Make Subplots
+    plt.tight_layout()
+    # Put space between plots
+    plt.subplots_adjust(wspace=0.5)
+    
+    # Particle Plot (Polar)
+    plt.subplot(1, 2, 1, polar=True)
+
     grid_r, grid_theta = [],[]
     plot_r = [row[0] for row in b]
     plot_theta = np.array([row[1] for row in b])*np.pi/180
@@ -420,6 +429,19 @@ def build_plot(xp, b, fig=None, ax=None, time_step=None):
     plt.polar(plot_x_theta, plot_x_r, 'bo')
     plt.ylim(-150,150)
     plt.title('iteration {}'.format(time_step))
+    
+    
+    # Heatmap Plot (Cartesian)
+    plt.subplot(1, 2, 2)
+    
+    cart  = np.array(list(map(pol2cart, b[:,0], b[:,1])))
+    x = cart[:,0]
+    y = cart[:,1]
+    heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
+    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+
+    #plt.clf()
+    plt.imshow(heatmap.T, extent=extent, origin='lower')
     
     #ax.clear()
     #ax.plot(plot_theta, plot_r, 'ro')
