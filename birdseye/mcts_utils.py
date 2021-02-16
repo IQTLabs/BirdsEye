@@ -6,7 +6,6 @@ import random
 import numpy as np
 from pfilter import ParticleFilter, systematic_resample
 import matplotlib.pyplot as plt
-from .observations import *
 from IPython.display import clear_output
 
 
@@ -178,7 +177,7 @@ def rollout_random(state, depth):
 ##################################################################
 # Simulate
 ##################################################################
-def simulate(Q, N, state, history, depth, c):
+def simulate(sensor, Q, N, state, history, depth, c):
 
     if depth == 0:
         return (Q, N, 0)
@@ -206,14 +205,14 @@ def simulate(Q, N, state, history, depth, c):
 
     # take action; get new state, observation, and reward
     state_prime = f2(state, action)
-    observation = h(state_prime)
+    observation = sensor.observation(state_prime)
     reward = r(tuple(state_prime), action_to_index(action))
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
     new_history.append(search_action_index)
     new_history.append(observation)
-    (Q, N, successor_reward) = simulate(Q, N, state_prime, new_history, depth-1, c)
+    (Q, N, successor_reward) = simulate(sensor, Q, N, state_prime, new_history, depth-1, c)
     q = reward + lambda_arg * successor_reward
 
     # update counts and values
@@ -228,7 +227,7 @@ def simulate(Q, N, state, history, depth, c):
 ##################################################################
 # Select Action
 ##################################################################
-def select_action(Q, N, belief, depth, c, iterations):
+def select_action(sensor, Q, N, belief, depth, c, iterations):
 
     # empty history at top recursive call
     history = []
@@ -247,7 +246,7 @@ def select_action(Q, N, belief, depth, c, iterations):
         state = random.choice(belief)
 
         # simulate
-        simulate(Q, N, state.astype(float), history, depth, c)
+        simulate(sensor, Q, N, state.astype(float), history, depth, c)
 
         counter+=1
 
@@ -262,14 +261,14 @@ def dynamics(particles, control=None, **kwargs):
 def random_state():
     return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
-def near_state(state): 
-    return np.array(gen_state(h(state)))
+def near_state(sensor, state): 
+    return np.array(sensor.gen_state(sensor.observation(state)))
 
 ##################################################################
 # Trial
 ##################################################################
 lambda_arg = 0.95
-def mcts_trial(depth, c, plotting=False, num_particles=500, iterations=1000, fig=None, ax=None):
+def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1000, fig=None, ax=None):
 
 
     # Initialize true state and belief state (particle filter); we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
@@ -280,15 +279,15 @@ def mcts_trial(depth, c, plotting=False, num_particles=500, iterations=1000, fig
     # assume a starting position within range of sensor and not too close
     true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
     pf = ParticleFilter(
-                        prior_fn=lambda n: np.array([near_state(true_state) for i in range(n)]),
-                        observe_fn=lambda states, **kwargs: np.array([np.array(h(x)) for x in states]),
+                        prior_fn=lambda n: np.array([near_state(sensor, true_state) for i in range(n)]),
+                        observe_fn=lambda states, **kwargs: np.array([np.array(sensor.observation(x)) for x in states]),
                         n_particles=num_particles,
                         #dynamics_fn=lambda particles, **kwargs: [f2(p, control) for p in particles],
                         dynamics_fn=dynamics,
                         noise_fn=lambda x, **kwargs: x,
                         #noise_fn=lambda x:
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
-                        weight_fn=lambda hyp, o, xp=None,**kwargs: [weight(None, o, xp=x) for x in xp],
+                        weight_fn=lambda hyp, o, xp=None,**kwargs: [sensor.weight(None, o, xp=x) for x in xp],
                         resample_fn=systematic_resample,
                         column_names = ['range', 'bearing', 'relative_course', 'own_speed'])
 
@@ -327,8 +326,6 @@ def mcts_trial(depth, c, plotting=False, num_particles=500, iterations=1000, fig
     action = None
     observation = None
 
-
-
     # run simulation
 
     total_reward = 0
@@ -351,14 +348,12 @@ def mcts_trial(depth, c, plotting=False, num_particles=500, iterations=1000, fig
             Q = {}
             N = {}
 
-
-
         # select an action
-        (Q, N, action) = select_action(Q, N, belief, depth, c, iterations)
+        (Q, N, action) = select_action(sensor, Q, N, belief, depth, c, iterations)
 
         # take action; get next true state, obs, and reward
         next_state = f2(true_state, action)
-        observation = h(next_state)
+        observation = sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
         reward = r(tuple(next_state), action_to_index(action))
         true_state = next_state

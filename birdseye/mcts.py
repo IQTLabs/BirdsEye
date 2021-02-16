@@ -4,11 +4,10 @@ import pandas as pd
 import os.path
 from .mcts_utils import *
 from .definitions import *
-from .observations import *
 
 
 
-def run_mcts(N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_REWARD, plotting, fig=None, ax=None):
+def run_mcts(sensor, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_REWARD, plotting, fig=None, ax=None):
 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     plotting = plotting
@@ -24,7 +23,6 @@ def run_mcts(N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_
                      'Collision Reward: {}\n' +
                      'Loss Reward: {}\n').format(global_start_time, DEPTH, N, lambda_arg, iterations, COLLISION_REWARD, LOSS_REWARD)
 
-
     #write output header
     run_dir = RUN_DIR
     if not os.path.isdir(RUN_DIR): 
@@ -33,9 +31,6 @@ def run_mcts(N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_
     with open(header_filename, "w") as file:
         file.write(header_string)
 
-
-
-
     #cumulative collisions, losses, and number of trials
     #total reward, and best average tracking
     cum_coll = 0
@@ -43,7 +38,6 @@ def run_mcts(N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_
     cum_trials = 0
     total_reward = 0
     best_average = 1
-
 
     run_data = []
 
@@ -55,7 +49,7 @@ def run_mcts(N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_
     for i  in range(num_runs):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
-        result = mcts_trial(DEPTH, 20, plotting, num_particles, fig=fig, ax=ax)
+        result = mcts_trial(sensor, DEPTH, 20, plotting, num_particles, fig=fig, ax=ax)
         mcts_coll += result[2]
         mcts_loss += result[3]
         run_data.append(result[2:4])
@@ -95,4 +89,5 @@ if __name__ == '__main__':
     parser.add_argument('--plot_header', type=str, default='out')
     args = parser.parse_args()
 
-    run_mcts(args.N, args.depth, args.lambda_arg, args.trials, args.iterations, args.collision, args.loss, False)
+    sensor = Drone() 
+    run_mcts(sensor, args.N, args.depth, args.lambda_arg, args.trials, args.iterations, args.collision, args.loss, False)
