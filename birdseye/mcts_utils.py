@@ -264,6 +264,23 @@ def random_state():
 def near_state(sensor, state): 
     return np.array(sensor.gen_state(sensor.observation(state)))
 
+def pol2cart(rho, phi):
+    x = rho * np.cos(phi)
+    y = rho * np.sin(phi)
+    return(x, y)
+
+def particle_heatmap(particles): 
+
+    cart  = np.array(list(map(pol2cart, particles[:,0], particles[:,1])))
+    x = cart[:,0]
+    y = cart[:,1]
+    heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
+    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+
+    plt.clf()
+    plt.imshow(heatmap.T, extent=extent, origin='lower')
+    plt.show()
+
 ##################################################################
 # Trial
 ##################################################################
@@ -371,6 +388,7 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
         if plotting:
             #push!(plots, build_plot(true_state, belief))
             build_plot(true_state, belief, fig, ax, time_step)
+            particle_heatmap(belief)
 
 
         # TODO: flags for collision, lost track, end of simulation lost track
