@@ -9,12 +9,19 @@ import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
 
+# Some transform functions
+# to be abstracted out later
+def pol2cart(rho, phi):
+    x = rho * np.cos(phi)
+    y = rho * np.sin(phi)
+    return(x, y)
+
 ######################################
 ### generative model
 ######################################
 # generate next course given current course
-def next_crs(crs):
-    if random.random() < 0.9:
+def next_crs(crs, prob=0.9):
+    if random.random() < prob:
         return crs
     crs = (crs + random.choice([-1,1])*30) % 360
     if crs < 0:
@@ -22,14 +29,14 @@ def next_crs(crs):
     return crs
 
 
-# alternate next course-- uses different probability to represent model error
-def next_crs_gen(crs):
-    if random.random() < 0.75:
-        return crs
-    crs = (crs + random.choice([-1,1])*30) % 360
-    if crs < 0:
-        crs += 360
-    return crs
+## alternate next course-- uses different probability to represent model error
+#def next_crs_gen(crs):
+#    if random.random() < 0.75:
+#        return crs
+#    crs = (crs + random.choice([-1,1])*30) % 360
+#    if crs < 0:
+#        crs += 360
+#    return crs
 
 
 # returns new state given last state and action (control)
@@ -50,10 +57,15 @@ def f(state, control):
         crs += 360
     crs = crs % 360
 
-    x = r*np.cos(np.pi / 180 * theta)
-    y = r*np.sin(np.pi / 180 * theta)
+    x, y = pol2cart(r, np.pi / 180 * theta)
+    #x = r*np.cos(np.pi / 180 * theta)
+    #y = r*np.sin(np.pi / 180 * theta)
 
-    pos = [x + TGT_SPD * np.cos(np.pi / 180 * crs) - spd, y + TGT_SPD * np.sin(np.pi / 180 * crs)]
+    dx, dy = pol2cart(TGT_SPD, np.pi / 180 * crs)
+    pos = [x + dx - spd, y + dy]
+
+    #pos = [x + TGT_SPD * np.cos(np.pi / 180 * crs) - spd,
+    #       y + TGT_SPD * np.sin(np.pi / 180 * crs)]
     crs = next_crs(crs)
 
     r = np.sqrt(pos[0]**2 + pos[1]**2)
@@ -73,7 +85,7 @@ ACTION_PENALTY = -.05
 
 
 # returns reward as a function of range, action, and action penalty or as a function of range only
-def r(s, u=None, action_penalty=ACTION_PENALTY):
+def reward_func(s, u=None, action_penalty=ACTION_PENALTY):
     state_range = s[0]
 
     if u is not None: # returns reward as a function of range, action, and action penalty
@@ -169,7 +181,7 @@ def rollout_random(state, depth):
 
     # generate next state and reward with random action; observation doesn't matter
     state_prime = f2(state, action)
-    reward = r(tuple(state_prime), action_to_index(action))
+    reward = reward_func(tuple(state_prime), action_to_index(action))
 
     return reward + lambda_arg * rollout_random(state_prime, depth-1)
 
@@ -206,7 +218,7 @@ def simulate(sensor, Q, N, state, history, depth, c):
     # take action; get new state, observation, and reward
     state_prime = f2(state, action)
     observation = sensor.observation(state_prime)
-    reward = r(tuple(state_prime), action_to_index(action))
+    reward = reward_func(tuple(state_prime), action_to_index(action))
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
@@ -263,11 +275,6 @@ def random_state():
 
 def near_state(sensor, state): 
     return np.array(sensor.gen_state(sensor.observation(state)))
-
-def pol2cart(rho, phi):
-    x = rho * np.cos(phi)
-    y = rho * np.sin(phi)
-    return(x, y)
 
 def particle_heatmap(particles): 
 
@@ -372,11 +379,10 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
         next_state = f2(true_state, action)
         observation = sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
-        reward = r(tuple(next_state), action_to_index(action))
+        reward = reward_func(tuple(next_state), action_to_index(action))
         true_state = next_state
 
         # update belief state (particle filter)
-        #belief = update(pfilter, belief, action, observation)
         pf.update(np.array(observation), xp=belief, control=action)
         belief = pf.particles
 
@@ -388,7 +394,7 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
         if plotting:
             #push!(plots, build_plot(true_state, belief))
             build_plot(true_state, belief, fig, ax, time_step)
-            particle_heatmap(belief)
+            #particle_heatmap(belief)
 
 
         # TODO: flags for collision, lost track, end of simulation lost track
@@ -405,10 +411,19 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
 # Plotting
 ##################################################################
 
-def build_plot(xp, b, fig=None, ax=None, time_step=None):
+def build_plot(xp=[], belief=[], fig=None, ax=None, time_step=None):
+
+    # Make Subplots
+    plt.tight_layout()
+    # Put space between plots
+    plt.subplots_adjust(wspace=0.5)
+    
+    # Particle Plot (Polar)
+    plt.subplot(1, 2, 1, polar=True)
+
     grid_r, grid_theta = [],[]
-    plot_r = [row[0] for row in b]
-    plot_theta = np.array([row[1] for row in b])*np.pi/180
+    plot_r = [row[0] for row in belief]
+    plot_theta = np.array([row[1] for row in belief])*np.pi/180
     plot_x_theta = xp[1]*np.pi/180
     plot_x_r = xp[0]
 
@@ -420,6 +435,19 @@ def build_plot(xp, b, fig=None, ax=None, time_step=None):
     plt.polar(plot_x_theta, plot_x_r, 'bo')
     plt.ylim(-150,150)
     plt.title('iteration {}'.format(time_step))
+    
+    
+    # Heatmap Plot (Cartesian)
+    plt.subplot(1, 2, 2)
+    
+    cart  = np.array(list(map(pol2cart, belief[:,0], belief[:,1])))
+    x = cart[:,0]
+    y = cart[:,1]
+    heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
+    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+
+    #plt.clf()
+    plt.imshow(heatmap.T, extent=extent, origin='lower')
     
     #ax.clear()
     #ax.plot(plot_theta, plot_r, 'ro')
