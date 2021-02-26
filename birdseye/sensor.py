@@ -1,15 +1,25 @@
 import random
 
 class Sensor(object):
+    """Common base class for sensor & assoc methods
+    """
     def __init__(self):
         pass
+
     def observation(self):
+        """Undefined observation sample method
+        """
         pass
 
-    def weight(self): 
+    def weight(self):
+        """Undefined method for importance
+           weight of a state given observation
+        """
         pass
 
 class Drone(Sensor): 
+    """Drone sensor
+    """
     def __init__(self): 
         pass
 
