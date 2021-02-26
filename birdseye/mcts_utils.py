@@ -106,35 +106,6 @@ def reward_func(s, u=None, action_penalty=ACTION_PENALTY):
 
 
 
-## Action space and function to convert from action to index and vice versa
-#action_space = ((-30, 1), (-30, 2), (0, 1), (0, 2), (30, 1), (30, 2))
-#
-#
-##returns action given an index
-#def action_to_index(a):
-#    return int(np.trunc(2*(a[0] / 30 + 1) + a[1]))-1
-#
-#
-##function version of action_space
-#def actions():
-#    return ((-30, 1), (-30, 2), (0, 1), (0, 2), (30, 1), (30, 2))
-#
-#
-## Action space-index list
-#action_list = list(map(action_to_index, action_space))
-#print(action_list)
-
-
-##returns index of action given an action
-#def index_to_action(a):
-#    a = a + 1
-#    if a % 2 == 0:
-#        return (int(np.trunc((((a - 2) / 2) - 1) * 30)), 2)
-#    else:
-#        return (int(np.trunc((((a - 1) / 2) - 1) * 30)), 1)
-
-
-
 ##################################################################
 # MCTS Algorithm
 ##################################################################
