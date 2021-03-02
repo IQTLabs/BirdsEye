@@ -6,18 +6,18 @@ class Sensor(object):
     def __init__(self):
         pass
 
-    def observation(self):
+    def observation(self, state):
         """Undefined observation sample method
         """
         pass
 
-    def weight(self):
+    def weight(self, hyp, obs, state):
         """Undefined method for importance
            weight of a state given observation
         """
         pass
 
-    def acceptance(self):
+    def acceptance(self, state):
         """Undefined method for defining
            detector acceptance pattern
         """

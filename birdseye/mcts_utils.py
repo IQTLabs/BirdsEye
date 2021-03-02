@@ -49,14 +49,10 @@ def f(state, control):
     crs = crs % 360
 
     x, y = pol2cart(r, np.pi / 180 * theta)
-    #x = r*np.cos(np.pi / 180 * theta)
-    #y = r*np.sin(np.pi / 180 * theta)
 
     dx, dy = pol2cart(TGT_SPD, np.pi / 180 * crs)
     pos = [x + dx - spd, y + dy]
 
-    #pos = [x + TGT_SPD * np.cos(np.pi / 180 * crs) - spd,
-    #       y + TGT_SPD * np.sin(np.pi / 180 * crs)]
     crs = next_crs(crs)
 
     r = np.sqrt(pos[0]**2 + pos[1]**2)
@@ -105,16 +101,12 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
     # only need to compute if exploration possibility
     if exploration_bonus:
         N_h = 0
-        #for action in list(map(action_to_index, action_space)):
-        #for action in action_list:
         for action in actions.get_action_list():
             new_index = history.copy()
             new_index.append(action)
             N_h += N[tuple(new_index)]
 
     values = []
-    #for action in list(map(action_to_index, action_space)):
-    #for action in action_list:
     for action in actions.get_action_list():
         new_index = history.copy()
         new_index.append(action)
@@ -147,14 +139,10 @@ def rollout_random(actions, state, depth):
         return 0
 
     ## random action
-    ##random_action_index = random.choice(list(map(action_to_index, action_space)))
-    #random_action_index = random.choice(action_list)
-    #action = index_to_action(random_action_index)
     action, action_index = actions.get_random_action()
 
     # generate next state and reward with random action; observation doesn't matter
     state_prime = f2(state, action)
-    #reward = reward_func(tuple(state_prime), action_to_index(action))
     reward = reward_func(tuple(state_prime), action_index)
 
     return reward + lambda_arg * rollout_random(actions, state_prime, depth-1)
@@ -174,8 +162,6 @@ def simulate(actions, sensor, Q, N, state, history, depth, c):
 
     if tuple(test_index) not in Q:
 
-        #for action in list(map(action_to_index, action_space)):
-        #for action in action_list:
         for action in actions.get_action_list():
             # initialize Q and N to zeros
             new_index = history.copy()
@@ -186,18 +172,14 @@ def simulate(actions, sensor, Q, N, state, history, depth, c):
         # rollout
         return (Q, N, rollout_random(actions, state, depth))
 
-    # search
-    # find optimal action to explore
+    # search: find optimal action to explore
     search_action_index = arg_max_action(actions, Q, N, history, c, True)
-    #action = index_to_action(search_action_index)
     action = actions.index_to_action(search_action_index)
 
     # take action; get new state, observation, and reward
     state_prime = f2(state, action)
     observation = sensor.observation(state_prime)
-    #reward = reward_func(tuple(state_prime), action_to_index(action))
-    # Question: Is this index not the same as search_action_index?
-    reward = reward_func(tuple(state_prime), actions.action_to_index(action))
+    reward = reward_func(tuple(state_prime), search_action_index)
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
@@ -371,9 +353,7 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
             total_col = 1
 
         if plotting:
-            #push!(plots, build_plot(true_state, belief))
             build_plots(true_state, belief, fig, ax, time_step)
-            #particle_heatmap(belief)
 
 
         # TODO: flags for collision, lost track, end of simulation lost track

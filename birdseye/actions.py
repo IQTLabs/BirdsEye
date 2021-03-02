@@ -62,9 +62,9 @@ class SimpleActions(Actions):
     """SimpleActions for testing purposes
     """
     def __init__(self):
-        self.theta_space = [-30, 0, 30]
-        self.r_space = [1, 2]
-        simple_action_space = tuple(itertools.product(self.theta_space, self.r_space))
+        self.del_theta = [-30, 0, 30]
+        self.del_r = [1, 2]
+        simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=True)
 
 
