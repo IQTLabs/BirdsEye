@@ -7,7 +7,7 @@ from .definitions import *
 
 
 
-def run_mcts(sensor, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_REWARD, plotting, fig=None, ax=None):
+def run_mcts(actions, sensor, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_REWARD, plotting, fig=None, ax=None):
 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     plotting = plotting
@@ -49,7 +49,7 @@ def run_mcts(sensor, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWAR
     for i  in range(num_runs):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
-        result = mcts_trial(sensor, DEPTH, 20, plotting, num_particles, fig=fig, ax=ax)
+        result = mcts_trial(actions, sensor, DEPTH, 20, plotting, num_particles, fig=fig, ax=ax)
         mcts_coll += result[2]
         mcts_loss += result[3]
         run_data.append(result[2:4])
@@ -89,5 +89,6 @@ if __name__ == '__main__':
     parser.add_argument('--plot_header', type=str, default='out')
     args = parser.parse_args()
 
+    actions = SimpleActions()
     sensor = Drone() 
-    run_mcts(sensor, args.N, args.depth, args.lambda_arg, args.trials, args.iterations, args.collision, args.loss, False)
+    run_mcts(actions, sensor, args.N, args.depth, args.lambda_arg, args.trials, args.iterations, args.collision, args.loss, False)

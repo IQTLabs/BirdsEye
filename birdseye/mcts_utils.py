@@ -6,6 +6,7 @@ import random
 import numpy as np
 from pfilter import ParticleFilter, systematic_resample
 import matplotlib.pyplot as plt
+import matplotlib.tri as tri
 from IPython.display import clear_output
 
 
@@ -105,46 +106,26 @@ def reward_func(s, u=None, action_penalty=ACTION_PENALTY):
 
 
 
-# Action space and function to convert from action to index and vice versa
-action_space = ((-30,1), (-30, 2), (0, 1), (0, 2), (30, 1), (30, 2))
-
-
-#returns action given an index
-def action_to_index(a):
-    return int(np.trunc(2*(a[0] / 30 + 1) + a[1]))-1
-
-
-#function version of action_space
-def actions():
-    return ((-30,1), (-30, 2), (0, 1), (0, 2), (30, 1), (30, 2))
-
-
-#returns index of action given an action
-def index_to_action(a):
-    a = a + 1
-    if a % 2 == 0:
-        return (int(np.trunc((((a - 2) / 2) - 1) * 30)), 2)
-    else:
-        return (int(np.trunc((((a - 1) / 2) - 1) * 30)), 1)
-
-
-
 ##################################################################
 # MCTS Algorithm
 ##################################################################
 
-def arg_max_action(Q, N, history, c=None, exploration_bonus=False):
+def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
 
     # only need to compute if exploration possibility
     if exploration_bonus:
         N_h = 0
-        for action in list(map(action_to_index, action_space)):
+        #for action in list(map(action_to_index, action_space)):
+        #for action in action_list:
+        for action in actions.get_action_list():
             new_index = history.copy()
             new_index.append(action)
             N_h += N[tuple(new_index)]
 
     values = []
-    for action in list(map(action_to_index, action_space)):
+    #for action in list(map(action_to_index, action_space)):
+    #for action in action_list:
+    for action in actions.get_action_list():
         new_index = history.copy()
         new_index.append(action)
 
@@ -170,26 +151,29 @@ def arg_max_action(Q, N, history, c=None, exploration_bonus=False):
 ##################################################################
 # Rollout
 ##################################################################
-def rollout_random(state, depth):
+def rollout_random(actions, state, depth):
 
     if depth == 0:
         return 0
 
-    # random action
-    random_action_index = random.choice(list(map(action_to_index, action_space)))
-    action = index_to_action(random_action_index)
+    ## random action
+    ##random_action_index = random.choice(list(map(action_to_index, action_space)))
+    #random_action_index = random.choice(action_list)
+    #action = index_to_action(random_action_index)
+    action, action_index = actions.get_random_action()
 
     # generate next state and reward with random action; observation doesn't matter
     state_prime = f2(state, action)
-    reward = reward_func(tuple(state_prime), action_to_index(action))
+    #reward = reward_func(tuple(state_prime), action_to_index(action))
+    reward = reward_func(tuple(state_prime), action_index)
 
-    return reward + lambda_arg * rollout_random(state_prime, depth-1)
+    return reward + lambda_arg * rollout_random(actions, state_prime, depth-1)
 
 
 ##################################################################
 # Simulate
 ##################################################################
-def simulate(sensor, Q, N, state, history, depth, c):
+def simulate(actions, sensor, Q, N, state, history, depth, c):
 
     if depth == 0:
         return (Q, N, 0)
@@ -200,7 +184,9 @@ def simulate(sensor, Q, N, state, history, depth, c):
 
     if tuple(test_index) not in Q:
 
-        for action in list(map(action_to_index, action_space)):
+        #for action in list(map(action_to_index, action_space)):
+        #for action in action_list:
+        for action in actions.get_action_list():
             # initialize Q and N to zeros
             new_index = history.copy()
             new_index.append(action)
@@ -208,23 +194,26 @@ def simulate(sensor, Q, N, state, history, depth, c):
             N[tuple(new_index)] = 0
 
         # rollout
-        return (Q, N, rollout_random(state, depth))
+        return (Q, N, rollout_random(actions, state, depth))
 
     # search
     # find optimal action to explore
-    search_action_index = arg_max_action(Q, N, history, c, True)
-    action = index_to_action(search_action_index)
+    search_action_index = arg_max_action(actions, Q, N, history, c, True)
+    #action = index_to_action(search_action_index)
+    action = actions.index_to_action(search_action_index)
 
     # take action; get new state, observation, and reward
     state_prime = f2(state, action)
     observation = sensor.observation(state_prime)
-    reward = reward_func(tuple(state_prime), action_to_index(action))
+    #reward = reward_func(tuple(state_prime), action_to_index(action))
+    # Question: Is this index not the same as search_action_index?
+    reward = reward_func(tuple(state_prime), actions.action_to_index(action))
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
     new_history.append(search_action_index)
     new_history.append(observation)
-    (Q, N, successor_reward) = simulate(sensor, Q, N, state_prime, new_history, depth-1, c)
+    (Q, N, successor_reward) = simulate(actions, sensor, Q, N, state_prime, new_history, depth-1, c)
     q = reward + lambda_arg * successor_reward
 
     # update counts and values
@@ -239,7 +228,7 @@ def simulate(sensor, Q, N, state, history, depth, c):
 ##################################################################
 # Select Action
 ##################################################################
-def select_action(sensor, Q, N, belief, depth, c, iterations):
+def select_action(actions, sensor, Q, N, belief, depth, c, iterations):
 
     # empty history at top recursive call
     history = []
@@ -258,13 +247,13 @@ def select_action(sensor, Q, N, belief, depth, c, iterations):
         state = random.choice(belief)
 
         # simulate
-        simulate(sensor, Q, N, state.astype(float), history, depth, c)
+        simulate(actions, sensor, Q, N, state.astype(float), history, depth, c)
 
         counter+=1
 
 
-    best_action_index = arg_max_action(Q, N, history)
-    action = index_to_action(best_action_index)
+    best_action_index = arg_max_action(actions, Q, N, history)
+    action = actions.index_to_action(best_action_index)
     return (Q, N, action)
 
 def dynamics(particles, control=None, **kwargs):
@@ -292,7 +281,7 @@ def particle_heatmap(particles):
 # Trial
 ##################################################################
 lambda_arg = 0.95
-def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1000, fig=None, ax=None):
+def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, iterations=1000, fig=None, ax=None):
 
 
     # Initialize true state and belief state (particle filter); we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
@@ -373,13 +362,13 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
             N = {}
 
         # select an action
-        (Q, N, action) = select_action(sensor, Q, N, belief, depth, c, iterations)
+        (Q, N, action) = select_action(actions, sensor, Q, N, belief, depth, c, iterations)
 
         # take action; get next true state, obs, and reward
         next_state = f2(true_state, action)
         observation = sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
-        reward = reward_func(tuple(next_state), action_to_index(action))
+        reward = reward_func(tuple(next_state), actions.action_to_index(action))
         true_state = next_state
 
         # update belief state (particle filter)
@@ -413,32 +402,48 @@ def mcts_trial(sensor, depth, c, plotting=False, num_particles=500, iterations=1
 
 def build_plot(xp=[], belief=[], fig=None, ax=None, time_step=None):
 
-    # Make Subplots
+    fig = plt.figure(figsize=(21, 7))
     plt.tight_layout()
     # Put space between plots
     plt.subplots_adjust(wspace=0.5)
     
     # Particle Plot (Polar)
-    plt.subplot(1, 2, 1, polar=True)
+    ax = fig.add_subplot(1, 3, 1, polar=True)
 
     grid_r, grid_theta = [],[]
     plot_r = [row[0] for row in belief]
     plot_theta = np.array([row[1] for row in belief])*np.pi/180
     plot_x_theta = xp[1]*np.pi/180
     plot_x_r = xp[0]
-
     
-    #plt.figure(1)
     clear_output(wait=True)
-    #plt.figure()
-    plt.polar(plot_theta, plot_r, 'ro')
-    plt.polar(plot_x_theta, plot_x_r, 'bo')
-    plt.ylim(-150,150)
-    plt.title('iteration {}'.format(time_step))
+    
+    ax.plot(plot_theta, plot_r, 'ro')
+    ax.plot(plot_x_theta, plot_x_r, 'bo')
+    ax.set_ylim(-150,150)
+    ax.set_title('iteration {}'.format(time_step), fontsize=16)
+   
+
+    # Particle Plot (Polar) with Interpolation
+    ax = fig.add_subplot(1, 3, 2, polar=True)
+
+    # Create grid values first via histogram.
+    nbins = 10
+    counts, xbins, ybins = np.histogram2d(plot_theta, plot_r, bins=nbins)
+
+    # Make a meshgrid for theta, r values
+    tm, rm = np.meshgrid(xbins[:-1], ybins[:-1])
+
+    # Build contour plot
+    ax.contourf(tm, rm, counts)
+    # True position
+    ax.plot(plot_x_theta, plot_x_r, 'bo')
+    ax.set_ylim(-150,150)
+    ax.set_title('Interpolated Belief'.format(time_step), fontsize=16)
     
     
     # Heatmap Plot (Cartesian)
-    plt.subplot(1, 2, 2)
+    ax = fig.add_subplot(1, 3, 3)
     
     cart  = np.array(list(map(pol2cart, belief[:,0], belief[:,1])))
     x = cart[:,0]
@@ -447,17 +452,8 @@ def build_plot(xp=[], belief=[], fig=None, ax=None, time_step=None):
     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
 
     #plt.clf()
-    plt.imshow(heatmap.T, extent=extent, origin='lower')
+    ax.imshow(heatmap.T, extent=extent, origin='lower')
     
-    #ax.clear()
-    #ax.plot(plot_theta, plot_r, 'ro')
-    #ax.plot(plot_x_theta, plot_x_r, 'bo')
     plt.show()
-    #fig.canvas.draw()
-    #fig.clf()
-    #plt.pause(0.0001)
-    #plt.clf()
-    
-
 
 
