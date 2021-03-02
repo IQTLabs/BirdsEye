@@ -17,18 +17,37 @@ class Sensor(object):
         """
         pass
 
+    def acceptance(self):
+        """Undefined method for defining
+           detector acceptance pattern
+        """
+        pass
+
 class Drone(Sensor): 
     """Drone sensor
     """
     def __init__(self): 
-        pass
+        self.num_avail_obs = 2
 
     # importance weight of state given observation
-    def weight(self, hyp, o, xp):
-        if o == 1: 
-            return self.obs1_prob(xp)
-        else: 
-            return 1-self.obs1_prob(xp)
+    def weight(self, hyp, obs, xp):
+
+        # Get acceptance value for state value
+        obs_weight = self.acceptance(xp)
+        
+        # Convolve acceptance with observation weight 
+        if obs == 1: 
+            obs_weight *= self.obs1_prob(xp)
+        elif obs == 0: 
+            obs_weight *= 1-self.obs1_prob(xp)
+        else:
+            raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
+                             .format(obs, self.num_avail_obs-1))
+
+        return obs_weight
+
+    def acceptance(self, state):
+        return 1.
 
     # samples observation given state
     def observation(self, x):
@@ -63,17 +82,31 @@ class Drone(Sensor):
 class Bearing(Sensor): 
     def __init__(self, sensor_range = 150): 
         self.sensor_range = sensor_range
+        self.num_avail_obs = 4
 
     # importance weight of state given observation
-    def weight(self, hyp, o, xp):
-        if o == 0:
-            return self.obs0(xp)
-        if o == 1:
-            return self.obs1(xp)
-        if o == 2:
-            return self.obs2(xp)
-        if o == 3:
-            return self.obs3(xp)
+    def weight(self, hyp, obs, xp):
+
+        # Get acceptance value for state value
+        obs_weight = self.acceptance(xp)
+
+        # Convolve acceptance with observation weight 
+        if obs == 0:
+            obs_weight *= self.obs0(xp)
+        elif obs == 1:
+            obs_weight *= self.obs1(xp)
+        elif obs == 2:
+            obs_weight *= self.obs2(xp)
+        elif obs == 3:
+            obs_weight *= self.obs3(xp)
+        else:
+            raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
+                             .format(obs, self.num_avail_obs-1))
+
+        return obs_weight
+
+    def acceptance(self, state):
+        return 1.
 
     # samples observation given state
     def observation(self, x):
