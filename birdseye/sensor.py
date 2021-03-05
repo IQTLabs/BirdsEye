@@ -50,8 +50,8 @@ class Drone(Sensor):
         return 1.
 
     # samples observation given state
-    def observation(self, x):
-        weights = [1-self.obs1_prob(x), self.obs1_prob(x)]
+    def observation(self, state):
+        weights = [1-self.obs1_prob(state), self.obs1_prob(state)]
         obsers = [0, 1]
         return random.choices(obsers, weights)[0]
 
@@ -109,8 +109,8 @@ class Bearing(Sensor):
         return 1.
 
     # samples observation given state
-    def observation(self, x):
-        weights = [self.obs0(x), self.obs1(x), self.obs2(x), self.obs3(x)]
+    def observation(self, state):
+        weights = [self.obs0(state), self.obs1(state), self.obs2(state), self.obs3(state)]
         obsers = [0, 1, 2, 3]
         return random.choices(obsers, weights)[0]
 
