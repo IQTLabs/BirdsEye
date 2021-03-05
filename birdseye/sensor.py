@@ -30,16 +30,16 @@ class Drone(Sensor):
         self.num_avail_obs = 2
 
     # importance weight of state given observation
-    def weight(self, hyp, obs, xp):
+    def weight(self, hyp, obs, state):
 
         # Get acceptance value for state value
-        obs_weight = self.acceptance(xp)
+        obs_weight = self.acceptance(state)
         
         # Convolve acceptance with observation weight 
         if obs == 1: 
-            obs_weight *= self.obs1_prob(xp)
+            obs_weight *= self.obs1_prob(state)
         elif obs == 0: 
-            obs_weight *= 1-self.obs1_prob(xp)
+            obs_weight *= 1-self.obs1_prob(state)
         else:
             raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
                              .format(obs, self.num_avail_obs-1))
@@ -56,8 +56,8 @@ class Drone(Sensor):
         return random.choices(obsers, weights)[0]
 
     # probability of observation 1 
-    def obs1_prob(self, x): 
-        rel_bearing = x[1]
+    def obs1_prob(self, state): 
+        rel_bearing = state[1]
         if -60 <= rel_bearing <= 60: 
             return 0.9
         elif 120 <= rel_bearing <= 240: 
@@ -85,20 +85,20 @@ class Bearing(Sensor):
         self.num_avail_obs = 4
 
     # importance weight of state given observation
-    def weight(self, hyp, obs, xp):
+    def weight(self, hyp, obs, state):
 
         # Get acceptance value for state value
-        obs_weight = self.acceptance(xp)
+        obs_weight = self.acceptance(state)
 
         # Convolve acceptance with observation weight 
         if obs == 0:
-            obs_weight *= self.obs0(xp)
+            obs_weight *= self.obs0(state)
         elif obs == 1:
-            obs_weight *= self.obs1(xp)
+            obs_weight *= self.obs1(state)
         elif obs == 2:
-            obs_weight *= self.obs2(xp)
+            obs_weight *= self.obs2(state)
         elif obs == 3:
-            obs_weight *= self.obs3(xp)
+            obs_weight *= self.obs3(state)
         else:
             raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
                              .format(obs, self.num_avail_obs-1))
