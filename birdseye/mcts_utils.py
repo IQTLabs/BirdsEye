@@ -107,6 +107,8 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
         new_index = history.copy()
         new_index.append(action)
 
+        Q_val = Q[tuple(new_index)]
+
         # best action with exploration possibility
         if exploration_bonus:
             if N[tuple(new_index)] == 0:
@@ -115,15 +117,16 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
             # compute exploration bonus, checking for zeroes (I don't think this will ever occur anyway...)
             log_N_h = np.log(N_h)
             if log_N_h < 0:
-                numerator = 0
-            else:
-                numerator = np.sqrt(log_N_h)
+                log_N_h = 0
 
+            numerator = np.sqrt(log_N_h)
             denominator = N[tuple(new_index)]
             exp_bonus = c * numerator / denominator
-            values.append(Q[tuple(new_index)] + exp_bonus)
-        else:
-            values.append(Q[tuple(new_index)])
+
+            Q_val += exp_bonus
+
+        values.append(Q_val)
+
     return np.argmax(values)
 
 
