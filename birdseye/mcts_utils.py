@@ -67,7 +67,7 @@ def reward_func(state, action_idx=None, action_penalty=ACTION_PENALTY):
     reward_val = 0.
     state_range = state[0]
 
-    if u is not None: # returns reward as a function of range, action, and action penalty
+    if action_idx is not None: # returns reward as a function of range, action, and action penalty
         if (2 < action_idx < 5):
             action_penalty = 0
 
