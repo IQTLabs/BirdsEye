@@ -12,22 +12,11 @@ from pfilter import ParticleFilter, systematic_resample
 ######################################
 # generate next course given current course
 def next_crs(crs, prob=0.9):
-    if random.random() < prob:
-        return crs
-    crs = (crs + random.choice([-1,1])*30) % 360
-    if crs < 0:
-        crs += 360
+    if random.random() >= prob:
+        crs = (crs + random.choice([-1,1])*30) % 360
+        if crs < 0:
+            crs += 360
     return crs
-
-
-## alternate next course-- uses different probability to represent model error
-#def next_crs_gen(crs):
-#    if random.random() < 0.75:
-#        return crs
-#    crs = (crs + random.choice([-1,1])*30) % 360
-#    if crs < 0:
-#        crs += 360
-#    return crs
 
 
 # returns new state given last state and action (control)
@@ -124,10 +113,11 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
                 return action
 
             # compute exploration bonus, checking for zeroes (I don't think this will ever occur anyway...)
-            if np.log(N_h) < 0:
+            log_N_h = np.log(N_h)
+            if log_N_h < 0:
                 numerator = 0
             else:
-                numerator = np.sqrt(np.log(N_h))
+                numerator = np.sqrt(log_N_h)
 
             denominator = N[tuple(new_index)]
             exp_bonus = c * numerator / denominator
@@ -212,12 +202,6 @@ def select_action(actions, sensor, Q, N, belief, depth, c, iterations):
     # empty history at top recursive call
     history = []
 
-    # loop
-    # timed loop, how long should intervals be?
-    #counter = 0
-    #start_time = time_ns()
-    #while (time_ns() - start_time) / 1.0e9 < 1 # 1 second timer to start
-
     # number of iterations
     counter = 0
     while counter < iterations:
@@ -228,8 +212,7 @@ def select_action(actions, sensor, Q, N, belief, depth, c, iterations):
         # simulate
         simulate(actions, sensor, Q, N, state.astype(float), history, depth, c)
 
-        counter+=1
-
+        counter += 1
 
     best_action_index = arg_max_action(actions, Q, N, history)
     action = actions.index_to_action(best_action_index)
@@ -244,17 +227,6 @@ def random_state():
 def near_state(sensor, state): 
     return np.array(sensor.gen_state(sensor.observation(state)))
 
-def particle_heatmap(particles): 
-
-    cart  = np.array(list(map(pol2cart, particles[:,0], particles[:,1])))
-    x = cart[:,0]
-    y = cart[:,1]
-    heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-
-    plt.clf()
-    plt.imshow(heatmap.T, extent=extent, origin='lower')
-    plt.show()
 
 ##################################################################
 # Trial
@@ -262,11 +234,7 @@ def particle_heatmap(particles):
 lambda_arg = 0.95
 def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, iterations=1000, fig=None, ax=None):
 
-
     # Initialize true state and belief state (particle filter); we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
-    #num_particles = 500
-
-    # true state
     # state is [range, bearing, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
@@ -288,25 +256,16 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
     ##model = ParticleFilterModel{Vector{Float64}}(f2, g)
     ##pfilter = SIRParticleFilter(model, num_particles)
 
-
-
     # belief state
     # assume perfect knowledge at first time step
     ##belief = ParticleCollection([true_state for i in 1:num_particles])
     belief = pf.particles
-        # Simulation prep/initialization; for now we start with no prior knowledge for Q values/N values, could incorporate this later
-
-    #build_plots(true_state, belief)
 
     # global Q and N dictionaries, indexed by history (and optionally action to follow all in same array; using ints)
     ##Q = Dict{Array{Int64,1},Float64}()
     Q = {}
     ##N = Dict{Array{Int64,1},Float64}()
     N = {}
-
-    # not manipulating these parameters for now, in global scope
-    # lambda, discount factor
-    ##lambda = 0.95
 
     # experimenting with different parameter values
     # experiment with different depth parameters
@@ -336,7 +295,6 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
         # NOTE: we found restarting history tree at each time step yielded better results
         # if action taken, modify history tree
         if action is not None:
-            #(Q,N) = modify_history_tree(Q, N, action, observation)
             Q = {}
             N = {}
 
@@ -362,10 +320,7 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
         if plotting:
             build_plots(true_state, belief, fig, ax, time_step)
 
-
         # TODO: flags for collision, lost track, end of simulation lost track
-
-
 
     if true_state[0] > 150:
         total_loss = 1
