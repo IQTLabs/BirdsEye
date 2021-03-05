@@ -250,7 +250,7 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
                         noise_fn=lambda x, **kwargs: x,
                         #noise_fn=lambda x:
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
-                        weight_fn=lambda hyp, o, xp=None,**kwargs: [sensor.weight(None, o, xp=x) for x in xp],
+                        weight_fn=lambda hyp, o, xp=None,**kwargs: [sensor.weight(None, o, state=x) for x in xp],
                         resample_fn=systematic_resample,
                         column_names = ['range', 'bearing', 'relative_course', 'own_speed'])
 
