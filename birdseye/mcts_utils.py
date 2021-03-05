@@ -440,7 +440,7 @@ def build_plot(xp=[], belief=[], fig=None, ax=None, time_step=None):
     # Heatmap Plot (Cartesian)
     plt.subplot(1, 2, 2)
     
-    cart  = np.array(list(map(pol2cart, belief[:,0], belief[:,1])))
+    cart  = np.array(list(map(pol2cart, belief[:,0], belief[:,1]*np.pi/180)))
     x = cart[:,0]
     y = cart[:,1]
     heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
