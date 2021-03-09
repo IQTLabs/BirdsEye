@@ -12,11 +12,11 @@ def pol2cart(rho, phi):
 
 class RFEnv(object): 
 
-    def __init__(self, sensor): 
+    def __init__(self, sensor, actions): 
         
         self.sensor = sensor 
         # Action space and function to convert from action to index and vice versa
-        self.action_space = ((-30,1), (-30, 2), (0, 1), (0, 2), (30, 1), (30, 2))
+        self.actions = actions 
 
 
     def dynamics(self, particles, control=None, **kwargs):
@@ -37,26 +37,13 @@ class RFEnv(object):
                         noise_fn=lambda x, **kwargs: x,
                         #noise_fn=lambda x:
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
-                        weight_fn=lambda hyp, o, xp=None,**kwargs: [self.sensor.weight(None, o, xp=x) for x in xp],
+                        weight_fn=lambda hyp, o, xp=None,**kwargs: [self.sensor.weight(None, o, state=x) for x in xp],
                         resample_fn=systematic_resample,
                         column_names = ['range', 'bearing', 'relative_course', 'own_speed'])
         
         #return self.sensor.observation(self.true_state)
         env_obs = self.env_observation()
         return env_obs
-
-    #returns action given an index
-    def action_to_index(self, a):
-        return int(np.trunc(2*(a[0] / 30 + 1) + a[1]))-1
-
-    #returns index of action given an action
-    def index_to_action(self, a):
-        a = a + 1
-        if a % 2 == 0:
-            return (int(np.trunc((((a - 2) / 2) - 1) * 30)), 2)
-        else:
-            return (int(np.trunc((((a - 1) / 2) - 1) * 30)), 1)
-
 
     # generate next course given current course
     def next_crs(self, crs, prob=0.9):
@@ -126,9 +113,9 @@ class RFEnv(object):
     # returns observation, reward, done, info
     def step(self, action): 
 
-        next_state = self.f(self.true_state, self.index_to_action(action))
+        next_state = self.f(self.true_state, self.actions.index_to_action(action))
         observation = self.sensor.observation(next_state)
-        self.pf.update(np.array(observation), xp=self.pf.particles, control=self.index_to_action(action))
+        self.pf.update(np.array(observation), xp=self.pf.particles, control=self.actions.index_to_action(action))
         
         reward = self.reward_func(next_state, action)
         self.true_state = next_state

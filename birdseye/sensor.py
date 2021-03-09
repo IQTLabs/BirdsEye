@@ -2,34 +2,63 @@ import random
 import numpy as np 
 
 class Sensor(object):
+    """Common base class for sensor & assoc methods
+    """
     def __init__(self):
         pass
-    def observation(self):
+
+    def observation(self, state):
+        """Undefined observation sample method
+        """
         pass
 
-    def weight(self): 
+    def weight(self, hyp, obs, state):
+        """Undefined method for importance
+           weight of a state given observation
+        """
+        pass
+
+    def acceptance(self, state):
+        """Undefined method for defining
+           detector acceptance pattern
+        """
         pass
 
 class Drone(Sensor): 
+    """Drone sensor
+    """
     def __init__(self): 
-        pass
+        self.num_avail_obs = 2
 
     # importance weight of state given observation
-    def weight(self, hyp, o, xp):
-        if o == 1: 
-            return self.obs1_prob(xp)
-        else: 
-            return 1-self.obs1_prob(xp)
+    def weight(self, hyp, obs, state):
+
+        # Get acceptance value for state value
+        obs_weight = self.acceptance(state)
+        
+        # Convolve acceptance with observation weight 
+        if obs == 1: 
+            obs_weight *= self.obs1_prob(state)
+        elif obs == 0: 
+            obs_weight *= 1-self.obs1_prob(state)
+        else:
+            raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
+                             .format(obs, self.num_avail_obs-1))
+
+        return obs_weight
+
+    def acceptance(self, state):
+        return 1.
 
     # samples observation given state
-    def observation(self, x):
-        weights = [1-self.obs1_prob(x), self.obs1_prob(x)]
+    def observation(self, state):
+        weights = [1-self.obs1_prob(state), self.obs1_prob(state)]
         obsers = [0, 1]
         return random.choices(obsers, weights)[0]
 
     # probability of observation 1 
-    def obs1_prob(self, x): 
-        rel_bearing = x[1]
+    def obs1_prob(self, state): 
+        rel_bearing = state[1]
         if -60 <= rel_bearing <= 60: 
             return 0.9
         elif 120 <= rel_bearing <= 240: 
@@ -60,21 +89,35 @@ class Drone(Sensor):
 class Bearing(Sensor): 
     def __init__(self, sensor_range = 150): 
         self.sensor_range = sensor_range
+        self.num_avail_obs = 4
 
     # importance weight of state given observation
-    def weight(self, hyp, o, xp):
-        if o == 0:
-            return self.obs0(xp)
-        if o == 1:
-            return self.obs1(xp)
-        if o == 2:
-            return self.obs2(xp)
-        if o == 3:
-            return self.obs3(xp)
+    def weight(self, hyp, obs, state):
+
+        # Get acceptance value for state value
+        obs_weight = self.acceptance(state)
+
+        # Convolve acceptance with observation weight 
+        if obs == 0:
+            obs_weight *= self.obs0(state)
+        elif obs == 1:
+            obs_weight *= self.obs1(state)
+        elif obs == 2:
+            obs_weight *= self.obs2(state)
+        elif obs == 3:
+            obs_weight *= self.obs3(state)
+        else:
+            raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
+                             .format(obs, self.num_avail_obs-1))
+
+        return obs_weight
+
+    def acceptance(self, state):
+        return 1.
 
     # samples observation given state
-    def observation(self, x):
-        weights = [self.obs0(x), self.obs1(x), self.obs2(x), self.obs3(x)]
+    def observation(self, state):
+        weights = [self.obs0(state), self.obs1(state), self.obs2(state), self.obs3(state)]
         obsers = [0, 1, 2, 3]
         return random.choices(obsers, weights)[0]
 

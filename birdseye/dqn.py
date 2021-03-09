@@ -81,7 +81,7 @@ def learn(logger,
 
     if not os.path.exists(save_path):
         os.makedirs(save_path)
-        
+
     start_ts = time.time()
     for n_iter in range(1, number_timesteps + 1):
         if prioritized_replay:
@@ -161,8 +161,7 @@ def _generate(device, env, qnet, ob_scale,
               atom_num, min_value, max_value):
     """ Generate training batch sample """
     noise_scale = 1e-2
-    #action_dim = env.action_space.n
-    action_dim = len(env.action_space)
+    action_dim = len(env.actions.action_space)
     explore_steps = number_timesteps * exploration_fraction
     if atom_num > 1:
         vrange = torch.linspace(min_value, max_value, atom_num).to(device)
