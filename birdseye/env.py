@@ -47,12 +47,12 @@ class RFEnv(object):
 
     # generate next course given current course
     def next_crs(self, crs, prob=0.9):
-        if random.random() < prob:
-            return crs
-        crs = (crs + random.choice([-1,1])*30) % 360
-        if crs < 0:
-            crs += 360
+        if random.random() >= prob:
+            crs = (crs + random.choice([-1,1])*30) % 360
+            if crs < 0:
+                crs += 360
         return crs
+        
 
 
     # returns new state given last state and action (control)
@@ -92,23 +92,31 @@ class RFEnv(object):
 
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
-    def reward_func(self, s, u=None, action_penalty=-.05):
-        state_range = s[0]
+    def reward_func(self, state, action_idx=None, action_penalty=-.05):
+    
+        # Set reward to 0/. as default
+        reward_val = 0.
+        state_range = state[0]
 
-        if u is not None: # returns reward as a function of range, action, and action penalty
-            if (2 < u < 5):
+        if action_idx is not None: # returns reward as a function of range, action, and action penalty
+            if (2 < action_idx < 5):
                 action_penalty = 0
+
             if state_range >= 150:
-                return (-2 + action_penalty) # reward to not lose track of contact
-            if state_range <= 10:
-                return (-2 + action_penalty) # collision avoidance
-            return (0.1 + action_penalty) # being in "sweet spot" maximizes reward
+                reward_val = -2 + action_penalty # reward to not lose track of contact
+            elif state_range <= 10:
+                reward_val = -2 + action_penalty # collision avoidance
+            else:
+                reward_val = 0.1 + action_penalty # being in "sweet spot" maximizes reward
         else: # returns reward as a function of range only
             if state_range >= 150:
-                return -2 # reward to not lose track of contact
-            if state_range <= 10:
-                return -200 # collision avoidance
-            return 0.1 # being in "sweet spot" maximizes reward
+                reward_val = -2 # reward to not lose track of contact
+            elif state_range <= 10:
+                reward_val = -200 # collision avoidance
+            else:
+                reward_val = 0.1
+        return reward_val
+
 
     # returns observation, reward, done, info
     def step(self, action): 
