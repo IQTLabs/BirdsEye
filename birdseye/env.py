@@ -25,6 +25,7 @@ class RFEnv(object):
     def reset(self): 
 
         self.iters = 0
+        # state is [range, bearing, relative course, own speed]
         self.true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
         num_particles=500
@@ -32,7 +33,6 @@ class RFEnv(object):
                         prior_fn=lambda n: np.array([self.sensor.near_state(self.true_state) for i in range(n)]),
                         observe_fn=lambda states, **kwargs: np.array([np.array(self.sensor.observation(x)) for x in states]),
                         n_particles=num_particles,
-                        #dynamics_fn=lambda particles, **kwargs: [f2(p, control) for p in particles],
                         dynamics_fn=self.dynamics,
                         noise_fn=lambda x, **kwargs: x,
                         #noise_fn=lambda x:
@@ -74,14 +74,10 @@ class RFEnv(object):
         crs = crs % 360
 
         x, y = pol2cart(r, np.pi / 180 * theta)
-        #x = r*np.cos(np.pi / 180 * theta)
-        #y = r*np.sin(np.pi / 180 * theta)
 
         dx, dy = pol2cart(TGT_SPD, np.pi / 180 * crs)
         pos = [x + dx - spd, y + dy]
 
-        #pos = [x + TGT_SPD * np.cos(np.pi / 180 * crs) - spd,
-        #       y + TGT_SPD * np.sin(np.pi / 180 * crs)]
         crs = self.next_crs(crs)
 
         r = np.sqrt(pos[0]**2 + pos[1]**2)
