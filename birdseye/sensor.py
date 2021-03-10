@@ -1,4 +1,5 @@
 import random
+import numpy as np 
 
 class Sensor(object):
     """Common base class for sensor & assoc methods
@@ -77,6 +78,12 @@ class Drone(Sensor):
             bearing += 360
             
         return [random.randint(25,100), bearing, random.randint(0,11)*30, 1]
+
+    def near_state(self, state): 
+        return np.array(self.gen_state(self.observation(state)))
+
+    def random_state(self):
+        return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
 
 class Bearing(Sensor): 
