@@ -1,43 +1,22 @@
-# mcts_utils.jl
+# mcts_utils.py
 
 
 # Imports
 import random
 import numpy as np
+from .utils import pol2cart, build_plots
 from pfilter import ParticleFilter, systematic_resample
-import matplotlib.pyplot as plt
-import matplotlib.tri as tri
-from IPython.display import clear_output
-
-
-# Some transform functions
-# to be abstracted out later
-def pol2cart(rho, phi):
-    x = rho * np.cos(phi)
-    y = rho * np.sin(phi)
-    return(x, y)
 
 ######################################
 ### generative model
 ######################################
 # generate next course given current course
 def next_crs(crs, prob=0.9):
-    if random.random() < prob:
-        return crs
-    crs = (crs + random.choice([-1,1])*30) % 360
-    if crs < 0:
-        crs += 360
+    if random.random() >= prob:
+        crs = (crs + random.choice([-1,1])*30) % 360
+        if crs < 0:
+            crs += 360
     return crs
-
-
-## alternate next course-- uses different probability to represent model error
-#def next_crs_gen(crs):
-#    if random.random() < 0.75:
-#        return crs
-#    crs = (crs + random.choice([-1,1])*30) % 360
-#    if crs < 0:
-#        crs += 360
-#    return crs
 
 
 # returns new state given last state and action (control)
@@ -59,14 +38,10 @@ def f(state, control):
     crs = crs % 360
 
     x, y = pol2cart(r, np.pi / 180 * theta)
-    #x = r*np.cos(np.pi / 180 * theta)
-    #y = r*np.sin(np.pi / 180 * theta)
 
     dx, dy = pol2cart(TGT_SPD, np.pi / 180 * crs)
     pos = [x + dx - spd, y + dy]
 
-    #pos = [x + TGT_SPD * np.cos(np.pi / 180 * crs) - spd,
-    #       y + TGT_SPD * np.sin(np.pi / 180 * crs)]
     crs = next_crs(crs)
 
     r = np.sqrt(pos[0]**2 + pos[1]**2)
@@ -86,23 +61,30 @@ ACTION_PENALTY = -.05
 
 
 # returns reward as a function of range, action, and action penalty or as a function of range only
-def reward_func(s, u=None, action_penalty=ACTION_PENALTY):
-    state_range = s[0]
+def reward_func(state, action_idx=None, action_penalty=ACTION_PENALTY):
+   
+    # Set reward to 0/. as default
+    reward_val = 0.
+    state_range = state[0]
 
-    if u is not None: # returns reward as a function of range, action, and action penalty
-        if (2 < u < 5):
+    if action_idx is not None: # returns reward as a function of range, action, and action penalty
+        if (2 < action_idx < 5):
             action_penalty = 0
+
         if state_range >= 150:
-            return (-2 + action_penalty) # reward to not lose track of contact
-        if state_range <= 10:
-            return (-2 + action_penalty) # collision avoidance
-        return (0.1 + action_penalty) # being in "sweet spot" maximizes reward
+            reward_val = -2 + action_penalty # reward to not lose track of contact
+        elif state_range <= 10:
+            reward_val = -2 + action_penalty # collision avoidance
+        else:
+            reward_val = 0.1 + action_penalty # being in "sweet spot" maximizes reward
     else: # returns reward as a function of range only
         if state_range >= 150:
-            return -2 # reward to not lose track of contact
-        if state_range <= 10:
-            return -200 # collision avoidance
-        return 0.1 # being in "sweet spot" maximizes reward
+            reward_val = -2 # reward to not lose track of contact
+        elif state_range <= 10:
+            reward_val = -200 # collision avoidance
+        else:
+            reward_val = 0.1
+    return reward_val
 
 
 
@@ -115,19 +97,17 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
     # only need to compute if exploration possibility
     if exploration_bonus:
         N_h = 0
-        #for action in list(map(action_to_index, action_space)):
-        #for action in action_list:
         for action in actions.get_action_list():
             new_index = history.copy()
             new_index.append(action)
             N_h += N[tuple(new_index)]
 
     values = []
-    #for action in list(map(action_to_index, action_space)):
-    #for action in action_list:
     for action in actions.get_action_list():
         new_index = history.copy()
         new_index.append(action)
+
+        Q_val = Q[tuple(new_index)]
 
         # best action with exploration possibility
         if exploration_bonus:
@@ -135,16 +115,18 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
                 return action
 
             # compute exploration bonus, checking for zeroes (I don't think this will ever occur anyway...)
-            if np.log(N_h) < 0:
-                numerator = 0
-            else:
-                numerator = np.sqrt(np.log(N_h))
+            log_N_h = np.log(N_h)
+            if log_N_h < 0:
+                log_N_h = 0
 
+            numerator = np.sqrt(log_N_h)
             denominator = N[tuple(new_index)]
             exp_bonus = c * numerator / denominator
-            values.append(Q[tuple(new_index)] + exp_bonus)
-        else:
-            values.append(Q[tuple(new_index)])
+
+            Q_val += exp_bonus
+
+        values.append(Q_val)
+
     return np.argmax(values)
 
 
@@ -157,14 +139,10 @@ def rollout_random(actions, state, depth):
         return 0
 
     ## random action
-    ##random_action_index = random.choice(list(map(action_to_index, action_space)))
-    #random_action_index = random.choice(action_list)
-    #action = index_to_action(random_action_index)
     action, action_index = actions.get_random_action()
 
     # generate next state and reward with random action; observation doesn't matter
     state_prime = f2(state, action)
-    #reward = reward_func(tuple(state_prime), action_to_index(action))
     reward = reward_func(tuple(state_prime), action_index)
 
     return reward + lambda_arg * rollout_random(actions, state_prime, depth-1)
@@ -184,8 +162,6 @@ def simulate(actions, sensor, Q, N, state, history, depth, c):
 
     if tuple(test_index) not in Q:
 
-        #for action in list(map(action_to_index, action_space)):
-        #for action in action_list:
         for action in actions.get_action_list():
             # initialize Q and N to zeros
             new_index = history.copy()
@@ -196,18 +172,14 @@ def simulate(actions, sensor, Q, N, state, history, depth, c):
         # rollout
         return (Q, N, rollout_random(actions, state, depth))
 
-    # search
-    # find optimal action to explore
+    # search: find optimal action to explore
     search_action_index = arg_max_action(actions, Q, N, history, c, True)
-    #action = index_to_action(search_action_index)
     action = actions.index_to_action(search_action_index)
 
     # take action; get new state, observation, and reward
     state_prime = f2(state, action)
     observation = sensor.observation(state_prime)
-    #reward = reward_func(tuple(state_prime), action_to_index(action))
-    # Question: Is this index not the same as search_action_index?
-    reward = reward_func(tuple(state_prime), actions.action_to_index(action))
+    reward = reward_func(tuple(state_prime), search_action_index)
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
@@ -233,12 +205,6 @@ def select_action(actions, sensor, Q, N, belief, depth, c, iterations):
     # empty history at top recursive call
     history = []
 
-    # loop
-    # timed loop, how long should intervals be?
-    #counter = 0
-    #start_time = time_ns()
-    #while (time_ns() - start_time) / 1.0e9 < 1 # 1 second timer to start
-
     # number of iterations
     counter = 0
     while counter < iterations:
@@ -249,8 +215,7 @@ def select_action(actions, sensor, Q, N, belief, depth, c, iterations):
         # simulate
         simulate(actions, sensor, Q, N, state.astype(float), history, depth, c)
 
-        counter+=1
-
+        counter += 1
 
     best_action_index = arg_max_action(actions, Q, N, history)
     action = actions.index_to_action(best_action_index)
@@ -265,17 +230,6 @@ def random_state():
 def near_state(sensor, state): 
     return np.array(sensor.gen_state(sensor.observation(state)))
 
-def particle_heatmap(particles): 
-
-    cart  = np.array(list(map(pol2cart, particles[:,0], particles[:,1])))
-    x = cart[:,0]
-    y = cart[:,1]
-    heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-
-    plt.clf()
-    plt.imshow(heatmap.T, extent=extent, origin='lower')
-    plt.show()
 
 ##################################################################
 # Trial
@@ -283,11 +237,7 @@ def particle_heatmap(particles):
 lambda_arg = 0.95
 def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, iterations=1000, fig=None, ax=None):
 
-
     # Initialize true state and belief state (particle filter); we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
-    #num_particles = 500
-
-    # true state
     # state is [range, bearing, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
@@ -300,7 +250,7 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
                         noise_fn=lambda x, **kwargs: x,
                         #noise_fn=lambda x:
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
-                        weight_fn=lambda hyp, o, xp=None,**kwargs: [sensor.weight(None, o, xp=x) for x in xp],
+                        weight_fn=lambda hyp, o, xp=None,**kwargs: [sensor.weight(None, o, state=x) for x in xp],
                         resample_fn=systematic_resample,
                         column_names = ['range', 'bearing', 'relative_course', 'own_speed'])
 
@@ -309,25 +259,16 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
     ##model = ParticleFilterModel{Vector{Float64}}(f2, g)
     ##pfilter = SIRParticleFilter(model, num_particles)
 
-
-
     # belief state
     # assume perfect knowledge at first time step
     ##belief = ParticleCollection([true_state for i in 1:num_particles])
     belief = pf.particles
-        # Simulation prep/initialization; for now we start with no prior knowledge for Q values/N values, could incorporate this later
-
-    #build_plot(true_state, belief)
 
     # global Q and N dictionaries, indexed by history (and optionally action to follow all in same array; using ints)
     ##Q = Dict{Array{Int64,1},Float64}()
     Q = {}
     ##N = Dict{Array{Int64,1},Float64}()
     N = {}
-
-    # not manipulating these parameters for now, in global scope
-    # lambda, discount factor
-    ##lambda = 0.95
 
     # experimenting with different parameter values
     # experiment with different depth parameters
@@ -357,7 +298,6 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
         # NOTE: we found restarting history tree at each time step yielded better results
         # if action taken, modify history tree
         if action is not None:
-            #(Q,N) = modify_history_tree(Q, N, action, observation)
             Q = {}
             N = {}
 
@@ -381,79 +321,13 @@ def mcts_trial(actions, sensor, depth, c, plotting=False, num_particles=500, ite
             total_col = 1
 
         if plotting:
-            #push!(plots, build_plot(true_state, belief))
-            build_plot(true_state, belief, fig, ax, time_step)
-            #particle_heatmap(belief)
-
+            build_plots(true_state, belief, fig, ax, time_step)
 
         # TODO: flags for collision, lost track, end of simulation lost track
-
-
 
     if true_state[0] > 150:
         total_loss = 1
 
     return (total_reward, plots, total_col, total_loss)
-
-
-##################################################################
-# Plotting
-##################################################################
-
-def build_plot(xp=[], belief=[], fig=None, ax=None, time_step=None):
-
-    fig = plt.figure(figsize=(21, 7))
-    plt.tight_layout()
-    # Put space between plots
-    plt.subplots_adjust(wspace=0.5)
-    
-    # Particle Plot (Polar)
-    ax = fig.add_subplot(1, 3, 1, polar=True)
-
-    grid_r, grid_theta = [],[]
-    plot_r = [row[0] for row in belief]
-    plot_theta = np.array([row[1] for row in belief])*np.pi/180
-    plot_x_theta = xp[1]*np.pi/180
-    plot_x_r = xp[0]
-    
-    clear_output(wait=True)
-    
-    ax.plot(plot_theta, plot_r, 'ro')
-    ax.plot(plot_x_theta, plot_x_r, 'bo')
-    ax.set_ylim(-150,150)
-    ax.set_title('iteration {}'.format(time_step), fontsize=16)
-   
-
-    # Particle Plot (Polar) with Interpolation
-    ax = fig.add_subplot(1, 3, 2, polar=True)
-
-    # Create grid values first via histogram.
-    nbins = 10
-    counts, xbins, ybins = np.histogram2d(plot_theta, plot_r, bins=nbins)
-
-    # Make a meshgrid for theta, r values
-    tm, rm = np.meshgrid(xbins[:-1], ybins[:-1])
-
-    # Build contour plot
-    ax.contourf(tm, rm, counts)
-    # True position
-    ax.plot(plot_x_theta, plot_x_r, 'bo')
-    ax.set_ylim(-150,150)
-    ax.set_title('Interpolated Belief'.format(time_step), fontsize=16)
-    
-    
-    # Heatmap Plot (Cartesian)
-    ax = fig.add_subplot(1, 3, 3)
-    
-    cart  = np.array(list(map(pol2cart, belief[:,0], belief[:,1])))
-    x = cart[:,0]
-    y = cart[:,1]
-    heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
-    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-
-    #plt.clf()
-    ax.imshow(heatmap.T, extent=extent, origin='lower')
-    
-    plt.show()
 
 
