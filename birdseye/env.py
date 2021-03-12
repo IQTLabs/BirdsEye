@@ -23,7 +23,7 @@ class RFEnv(object):
         return np.array([list(self.f(p, control)) for p in particles])
 
     def reset(self): 
-
+        print('reset')
         self.iters = 0
         # state is [range, bearing, relative course, own speed]
         self.true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])

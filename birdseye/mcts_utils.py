@@ -213,6 +213,7 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
 
         if plotting:
             build_plots(true_state, belief, fig, ax, time_step)
+            print('reward = ',reward)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
