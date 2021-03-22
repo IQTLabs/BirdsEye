@@ -61,7 +61,7 @@ def rollout_random(env, state, depth):
     action, action_index = env.actions.get_random_action()
 
     # generate next state and reward with random action; observation doesn't matter
-    state_prime = env.f(state, action)
+    state_prime = env.update_state(state, action)
     reward = env.reward_func(tuple(state_prime), action_index)
 
     return reward + lambda_arg * rollout_random(env, state_prime, depth-1)
@@ -96,7 +96,7 @@ def simulate(env, Q, N, state, history, depth, c):
     action = env.actions.index_to_action(search_action_index)
 
     # take action; get new state, observation, and reward
-    state_prime = env.f(state, action)
+    state_prime = env.update_state(state, action)
     observation = env.sensor.observation(state_prime)
     reward = env.reward_func(tuple(state_prime), search_action_index)
 
@@ -196,7 +196,7 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, iterations)
 
         # take action; get next true state, obs, and reward
-        next_state = env.f(true_state, action)
+        next_state = env.update_state(true_state, action)
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
         reward = env.reward_func(tuple(next_state), env.actions.action_to_index(action))

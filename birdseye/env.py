@@ -25,7 +25,7 @@ class RFEnv(object):
         return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
     def dynamics(self, particles, control=None, **kwargs):
-        return np.array([list(self.f(p, control)) for p in particles])
+        return np.array([list(self.update_state(p, control)) for p in particles])
 
     def reset(self): 
 
@@ -64,7 +64,7 @@ class RFEnv(object):
 
 
     # returns new state given last state and action (control)
-    def f(self, state, control):
+    def update_state(self, state, control):
         TGT_SPD = 1
         r, theta, crs, spd = state
         spd = control[1]
@@ -134,7 +134,7 @@ class RFEnv(object):
     # returns observation, reward, done, info
     def step(self, action): 
 
-        next_state = self.f(self.true_state, self.actions.index_to_action(action))
+        next_state = self.update_state(self.true_state, self.actions.index_to_action(action))
         observation = self.sensor.observation(next_state)
         self.pf.update(np.array(observation), xp=self.pf.particles, control=self.actions.index_to_action(action))
         
