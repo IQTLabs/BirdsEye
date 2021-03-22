@@ -12,12 +12,17 @@ def pol2cart(rho, phi):
 
 class RFEnv(object): 
 
-    def __init__(self, sensor, actions): 
-        
+    def __init__(self, sensor=None, actions=None, prob=0.9): 
+       
+        # Sensor definitions
         self.sensor = sensor 
         # Action space and function to convert from action to index and vice versa
-        self.actions = actions 
+        self.actions = actions
+        # Probability to generate next course given current course
+        self.prob = prob
 
+    def true_state(self):
+        return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
     def dynamics(self, particles, control=None, **kwargs):
         return np.array([list(self.f(p, control)) for p in particles])
@@ -26,7 +31,8 @@ class RFEnv(object):
 
         self.iters = 0
         # state is [range, bearing, relative course, own speed]
-        self.true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
+        self.true_state = self.true_state()
+        #self.true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
         num_particles=500
         self.pf = ParticleFilter(
@@ -45,13 +51,15 @@ class RFEnv(object):
         env_obs = self.env_observation()
         return env_obs
 
-    # generate next course given current course
-    def next_crs(self, crs, prob=0.9):
-        if random.random() >= prob:
-            crs = (crs + random.choice([-1,1])*30) % 360
-            if crs < 0:
-                crs += 360
-        return crs
+    ## generate next course given current course
+    #def next_crs(self, crs):
+    #    if random.random() >= self.prob:
+    #        #crs = (crs + random.choice([-1,1])*30) % 360
+    #        crs += random.choice([-1, 1]) * 30
+    #        crs %= 360
+    #        if crs < 0:
+    #            crs += 360
+    #    return crs
         
 
 
@@ -72,16 +80,25 @@ class RFEnv(object):
         if crs < 0:
             crs += 360
         crs = crs % 360
+        
+        x, y = pol2cart(r, np.radians(theta))
+        #x, y = pol2cart(r, np.pi / 180 * theta)
 
-        x, y = pol2cart(r, np.pi / 180 * theta)
-
-        dx, dy = pol2cart(TGT_SPD, np.pi / 180 * crs)
+        dx, dy = pol2cart(TGT_SPD, np.radians(crs))
         pos = [x + dx - spd, y + dy]
 
-        crs = self.next_crs(crs)
+        #crs = self.next_crs(crs)
+        # generate next course given current course
+        if random.random() >= self.prob:
+            #crs = (crs + random.choice([-1,1])*30) % 360
+            crs += random.choice([-1, 1]) * 30
+            crs %= 360
+            if crs < 0:
+                crs += 360
 
         r = np.sqrt(pos[0]**2 + pos[1]**2)
-        theta = np.arctan2(pos[1], pos[0]) * 180 / np.pi
+        theta_rad = np.arctan2(pos[1], pos[0])# * 180 / np.pi
+        theta = np.degrees(theta_rad)
         if theta < 0:
             theta += 360
         return (r, theta, crs, spd)
