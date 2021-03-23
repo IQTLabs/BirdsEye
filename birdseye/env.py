@@ -22,6 +22,7 @@ class RFEnv(object):
         self.prob = prob
 
     def true_state(self):
+        # state is [range, bearing, relative course, own speed]
         return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
     def dynamics(self, particles, control=None, **kwargs):
@@ -30,9 +31,7 @@ class RFEnv(object):
     def reset(self): 
 
         self.iters = 0
-        # state is [range, bearing, relative course, own speed]
         self.true_state = self.true_state()
-        #self.true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
         num_particles=500
         self.pf = ParticleFilter(
@@ -47,20 +46,8 @@ class RFEnv(object):
                         resample_fn=systematic_resample,
                         column_names = ['range', 'bearing', 'relative_course', 'own_speed'])
         
-        #return self.sensor.observation(self.true_state)
         env_obs = self.env_observation()
         return env_obs
-
-    ## generate next course given current course
-    #def next_crs(self, crs):
-    #    if random.random() >= self.prob:
-    #        #crs = (crs + random.choice([-1,1])*30) % 360
-    #        crs += random.choice([-1, 1]) * 30
-    #        crs %= 360
-    #        if crs < 0:
-    #            crs += 360
-    #    return crs
-        
 
 
     # returns new state given last state and action (control)
