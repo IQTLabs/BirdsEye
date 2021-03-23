@@ -69,22 +69,19 @@ class RFEnv(object):
         crs = crs % 360
         
         x, y = pol2cart(r, np.radians(theta))
-        #x, y = pol2cart(r, np.pi / 180 * theta)
 
         dx, dy = pol2cart(TGT_SPD, np.radians(crs))
         pos = [x + dx - spd, y + dy]
 
-        #crs = self.next_crs(crs)
         # generate next course given current course
         if random.random() >= self.prob:
-            #crs = (crs + random.choice([-1,1])*30) % 360
             crs += random.choice([-1, 1]) * 30
             crs %= 360
             if crs < 0:
                 crs += 360
 
         r = np.sqrt(pos[0]**2 + pos[1]**2)
-        theta_rad = np.arctan2(pos[1], pos[0])# * 180 / np.pi
+        theta_rad = np.arctan2(pos[1], pos[0])
         theta = np.degrees(theta_rad)
         if theta < 0:
             theta += 360
@@ -140,7 +137,7 @@ class RFEnv(object):
         
     def particle_heatmap_obs(self, belief):
 
-        cart  = np.array(list(map(pol2cart, belief[:,0], belief[:,1]*np.pi/180)))
+        cart  = np.array(list(map(pol2cart, belief[:,0], np.radians(belief[:,1]))))
         x = cart[:,0]
         y = cart[:,1]
         heatmap, xedges, yedges = np.histogram2d(x, y, bins=100)
