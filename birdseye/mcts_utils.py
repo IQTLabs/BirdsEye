@@ -147,12 +147,12 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 lambda_arg = 0.95
 def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None):
 
-    # Initialize true state and belief state (particle filter); we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
+    # Initialize true state and belief state (particle filter);
+    # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
     # state is [range, bearing, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     env.reset()
     true_state = env.state.state_vars
-    #true_state = env.state
 
     belief = env.pf.particles
 

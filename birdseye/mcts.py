@@ -16,7 +16,6 @@ def run_mcts(env, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     plotting = plotting
     testing = False
-    #epochsize = 500
 
     #output header file
     header_string = ('MCTS Run: {}\n' +
@@ -25,7 +24,9 @@ def run_mcts(env, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, 
                      'Lambda: {}\n' +
                      'Iterations: {}\n' +
                      'Collision Reward: {}\n' +
-                     'Loss Reward: {}\n').format(global_start_time, DEPTH, N, lambda_arg, iterations, COLLISION_REWARD, LOSS_REWARD)
+                     'Loss Reward: {}\n').format(global_start_time, 
+                                                 DEPTH, N, lambda_arg,
+                                                 iterations, COLLISION_REWARD, LOSS_REWARD)
 
     #write output header
     run_dir = RUN_DIR
