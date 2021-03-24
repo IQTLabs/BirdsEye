@@ -6,7 +6,7 @@ from pfilter import ParticleFilter, systematic_resample
 
 class RFEnv(object): 
 
-    def __init__(self, sensor=None, actions=None, state=None, prob=0.9): 
+    def __init__(self, sensor=None, actions=None, state=None): 
        
         # Sensor definitions
         self.sensor = sensor 
@@ -14,8 +14,6 @@ class RFEnv(object):
         self.actions = actions
         # Setup initial state
         self.state = state
-        # Probability to generate next course given current course
-        self.prob = prob
 
     def dynamics(self, particles, control=None, **kwargs):
         return np.array([list(self.state.update_state(p, control)) for p in particles])
@@ -26,6 +24,7 @@ class RFEnv(object):
         self.state.state_vars = self.state.init_state()
 
         num_particles=500
+        # Setup particle filter
         self.pf = ParticleFilter(
                         prior_fn=lambda n: np.array([self.sensor.near_state(self.state.state_vars) for i in range(n)]),
                         observe_fn=lambda states, **kwargs: np.array([np.array(self.sensor.observation(x)) for x in states]),
@@ -45,12 +44,17 @@ class RFEnv(object):
     # returns observation, reward, done, info
     def step(self, action_idx): 
 
+        # Get action based on index
         action = self.actions.index_to_action(action_idx)
+        # Determine next state based on action & current state variables
         next_state = self.update_state(self.state.state_vars, action)
+        # Get sensor observation
         observation = self.sensor.observation(next_state)
+        # Update particle filter
         self.pf.update(np.array(observation), xp=self.pf.particles, control=action)
-        
+        # Calculate reward based on updated state & action
         reward = self.state.reward_func(next_state, action_idx)
+        # Update the state variables
         self.state.state_vars = next_state
 
         env_obs = self.env_observation()
