@@ -10,12 +10,18 @@ class State(object):
         pass
 
     def init_state(self):
+        """Undefined initializing state method
+        """
         pass
     
     def reward_func(self):
+        """Undefined reward calc method
+        """
         pass
 
     def update_state(self):
+        """Undefined state updating method
+        """
         pass
 
 
@@ -61,7 +67,6 @@ class RFState(State):
             else:
                 reward_val = 0.1
         return reward_val
-
 
 
     # returns new state given last state and action (control)

@@ -7,7 +7,6 @@ from pfilter import ParticleFilter, systematic_resample
 class RFEnv(object): 
 
     def __init__(self, sensor=None, actions=None, state=None): 
-       
         # Sensor definitions
         self.sensor = sensor 
         # Action space and function to convert from action to index and vice versa
@@ -16,9 +15,13 @@ class RFEnv(object):
         self.state = state
 
     def dynamics(self, particles, control=None, **kwargs):
+        """Helper function for particle filter dynamics
+        """
         return np.array([list(self.state.update_state(p, control)) for p in particles])
 
-    def reset(self): 
+    def reset(self):
+        """Reset initial state and particle filter
+        """
 
         self.iters = 0
         self.state.state_vars = self.state.init_state()
@@ -42,7 +45,10 @@ class RFEnv(object):
 
 
     # returns observation, reward, done, info
-    def step(self, action_idx): 
+    def step(self, action_idx):
+        """Function to make step based on
+           state variables and action index
+        """
 
         # Get action based on index
         action = self.actions.index_to_action(action_idx)
