@@ -5,6 +5,7 @@ import os.path
 from .mcts_utils import *
 from .actions import *
 from .sensor import *
+from .state import *
 from .definitions import *
 from .env import RFEnv
 
@@ -96,6 +97,7 @@ if __name__ == '__main__':
 
     actions = SimpleActions()
     sensor = Drone() 
-    env = RFEnv(sensor, actions)
+    state = RFState() 
+    env = RFEnv(sensor, actions, state)
 
     run_mcts(env, args.N, args.depth, args.lambda_arg, args.trials, args.iterations, args.collision, args.loss, False)
