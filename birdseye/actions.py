@@ -67,16 +67,12 @@ class SimpleActions(Actions):
         simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=True)
 
-    #returns action given an index
-    def action_to_index(self, a):
-        return int(np.trunc(2*(a[0] / 30 + 1) + a[1]))-1
-
     #returns index of action given an action
-    def index_to_action(self, a):
-        a = a + 1
-        if a % 2 == 0:
-            return (int(np.trunc((((a - 2) / 2) - 1) * 30)), 2)
-        else:
-            return (int(np.trunc((((a - 1) / 2) - 1) * 30)), 1)
+    def action_to_index(self, action):
+        return self.action_space.index(action)
+
+    #returns action given an index
+    def index_to_action(self, a_idx):
+        return self.action_space[a_idx]
 
 

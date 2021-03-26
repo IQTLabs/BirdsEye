@@ -5,6 +5,7 @@ import os.path
 from .mcts_utils import *
 from .actions import *
 from .sensor import *
+from .state import *
 from .definitions import *
 from .env import RFEnv
 
@@ -16,7 +17,6 @@ def run_mcts(env, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     plotting = plotting
     testing = False
-    #epochsize = 500
 
     #output header file
     header_string = ('MCTS Run: {}\n' +
@@ -25,7 +25,9 @@ def run_mcts(env, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, 
                      'Lambda: {}\n' +
                      'Iterations: {}\n' +
                      'Collision Reward: {}\n' +
-                     'Loss Reward: {}\n').format(global_start_time, DEPTH, N, lambda_arg, iterations, COLLISION_REWARD, LOSS_REWARD)
+                     'Loss Reward: {}\n').format(global_start_time, 
+                                                 DEPTH, N, lambda_arg,
+                                                 iterations, COLLISION_REWARD, LOSS_REWARD)
 
     #write output header
     run_dir = RUN_DIR
@@ -95,6 +97,7 @@ if __name__ == '__main__':
 
     actions = SimpleActions()
     sensor = Drone() 
-    env = RFEnv(sensor, actions)
+    state = RFState() 
+    env = RFEnv(sensor, actions, state)
 
     run_mcts(env, args.N, args.depth, args.lambda_arg, args.trials, args.iterations, args.collision, args.loss, False)

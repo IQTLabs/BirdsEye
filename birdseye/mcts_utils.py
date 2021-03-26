@@ -61,8 +61,8 @@ def rollout_random(env, state, depth):
     action, action_index = env.actions.get_random_action()
 
     # generate next state and reward with random action; observation doesn't matter
-    state_prime = env.f(state, action)
-    reward = env.reward_func(tuple(state_prime), action_index)
+    state_prime = env.state.update_state(state, action)
+    reward = env.state.reward_func(state_prime, action_index)
 
     return reward + lambda_arg * rollout_random(env, state_prime, depth-1)
 
@@ -96,9 +96,9 @@ def simulate(env, Q, N, state, history, depth, c):
     action = env.actions.index_to_action(search_action_index)
 
     # take action; get new state, observation, and reward
-    state_prime = env.f(state, action)
+    state_prime = env.state.update_state(state, action)
     observation = env.sensor.observation(state_prime)
-    reward = env.reward_func(tuple(state_prime), search_action_index)
+    reward = env.state.reward_func(state_prime, search_action_index)
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
@@ -147,11 +147,12 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 lambda_arg = 0.95
 def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None):
 
-    # Initialize true state and belief state (particle filter); we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
+    # Initialize true state and belief state (particle filter);
+    # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
     # state is [range, bearing, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     env.reset()
-    true_state = env.true_state
+    true_state = env.state.state_vars
 
     belief = env.pf.particles
 
@@ -196,10 +197,10 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, iterations)
 
         # take action; get next true state, obs, and reward
-        next_state = env.f(true_state, action)
+        next_state = env.state.update_state(true_state, action)
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
-        reward = env.reward_func(tuple(next_state), env.actions.action_to_index(action))
+        reward = env.state.reward_func(next_state, env.actions.action_to_index(action))
         true_state = next_state
 
         # update belief state (particle filter)
