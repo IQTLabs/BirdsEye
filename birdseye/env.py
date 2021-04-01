@@ -6,13 +6,15 @@ from pfilter import ParticleFilter, systematic_resample
 
 class RFEnv(object): 
 
-    def __init__(self, sensor=None, actions=None, state=None): 
+    def __init__(self, sensor=None, actions=None, state=None, simulated=False): 
         # Sensor definitions
         self.sensor = sensor 
         # Action space and function to convert from action to index and vice versa
         self.actions = actions
         # Setup initial state
         self.state = state
+        # Flag for simulation vs real data
+        self.simulated = simulated
 
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics

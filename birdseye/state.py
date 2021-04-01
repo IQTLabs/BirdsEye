@@ -6,7 +6,7 @@ from .utils import pol2cart
 class State(object):
     """Common base class for state & assoc methods
     """
-    def __init__(self, simulated=False):
+    def __init__(self):
         pass
 
     def init_state(self):
@@ -28,9 +28,7 @@ class State(object):
 class RFState(State):
     """RF State
     """
-    def __init__(self, prob=0.9, simulated=False):
-        # Flag for simulation vs real data
-        self.simulated = simulated
+    def __init__(self, prob=0.9):
         # Transition probability
         self.prob = prob
         # Setup an initial random state
