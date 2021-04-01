@@ -7,6 +7,12 @@ import numpy as np
 
 class Actions(object):
     """Common base class for action methods
+
+        Parameters
+        ----------
+        action_space : tuple
+            Set of tuples defining combinations of actions
+            for all dimensions
     """
     def __init__(self, action_space=None, verbose=False, **kwargs):
         if action_space is None:
