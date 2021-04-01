@@ -26,7 +26,7 @@ from .sensor import *
 from .definitions import *
 from .env import RFEnv
 
-def learn(logger,
+def run_dqn(logger,
           device, env,
           number_timesteps,
           network, optimizer,
@@ -282,7 +282,7 @@ if __name__ == '__main__':
     network = CNN(in_dim, policy_dim, args.atom_num, args.dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
-    learn(logger,
+    run_dqn(logger,
             device, env,
             args.number_timesteps,
             network, optimizer,

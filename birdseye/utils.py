@@ -18,7 +18,7 @@ def pol2cart(rho, phi):
 # Plotting
 ##################################################################
 
-def build_plots(xp=[], belief=[], fig=None, ax=None, time_step=None):
+def build_plots(xp=[], belief=[], fig=None, ax=None, time_step=None, sensor=None, target=None, particles=None):
 
     fig = plt.figure(figsize=(21, 7))
     plt.tight_layout()
@@ -26,7 +26,7 @@ def build_plots(xp=[], belief=[], fig=None, ax=None, time_step=None):
     plt.subplots_adjust(wspace=0.5)
     
     # Particle Plot (Polar)
-    ax = fig.add_subplot(1, 3, 1, polar=True)
+    ax = fig.add_subplot(1, 4, 1, polar=True)
 
     grid_r, grid_theta = [],[]
     plot_r = [row[0] for row in belief]
@@ -43,7 +43,7 @@ def build_plots(xp=[], belief=[], fig=None, ax=None, time_step=None):
    
 
     # Particle Plot (Polar) with Interpolation
-    ax = fig.add_subplot(1, 3, 2, polar=True)
+    ax = fig.add_subplot(1, 4, 2, polar=True)
 
     # Create grid values first via histogram.
     nbins = 10
@@ -61,7 +61,7 @@ def build_plots(xp=[], belief=[], fig=None, ax=None, time_step=None):
     
     
     # Heatmap Plot (Cartesian)
-    ax = fig.add_subplot(1, 3, 3)
+    ax = fig.add_subplot(1, 4, 3)
     
     cart  = np.array(list(map(pol2cart, belief[:,0], belief[:,1]*np.pi/180)))
     x = cart[:,0]
@@ -71,7 +71,47 @@ def build_plots(xp=[], belief=[], fig=None, ax=None, time_step=None):
 
     #plt.clf()
     ax.imshow(heatmap.T, extent=extent, origin='lower')
+
+    # Particle/Sensor Plot (absolute)
+    if sensor is not None and target is not None and particles is not None: 
+        ax = fig.add_subplot(1, 4, 4, polar=True)
+
+        particles = np.array(particles)
+        
+        ax.plot(particles[:,1]*np.pi/180, particles[:,0], 'ro')
+        ax.plot(sensor[1]*np.pi/180, sensor[0], 'go')
+        ax.plot(target[1]*np.pi/180, target[0], 'bo')
+    
+        ax.set_title('Absolute position'.format(time_step), fontsize=16)
+
+        
     
     plt.show()
+    mean_bel_err, rmse = tracking_error(target, particles)
+    print('mean belief error = {}, rmse = {}'.format(mean_bel_err, rmse))
+
+
+def distance_to_target(target, sensor):
+
+    pass
+
+def tracking_error(target, particles): 
+
+    tar_x, tar_y = pol2cart(target[0], target[1]*np.pi/180)
+
+    particles_x, particles_y = pol2cart(particles[:,0], particles[:,1]*np.pi/180)
+
+    # mean belief error 
+    mean_x = np.mean(particles_x)
+    mean_y = np.mean(particles_y)
+    mean_bel_err = (mean_x - tar_x)**2 + (mean_y - tar_y)**2
+
+    # root mean square error
+    rmse = np.sqrt(np.mean((particles_x - tar_x)**2 + (particles_y - tar_y)**2))
+
+    return mean_bel_err, rmse 
+
+
+
 
 

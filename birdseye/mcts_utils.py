@@ -151,7 +151,7 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
     # state is [range, bearing, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     env.reset()
-    true_state = env.true_state
+    #true_state = env.true_state
 
     belief = env.pf.particles
 
@@ -196,11 +196,12 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, iterations)
 
         # take action; get next true state, obs, and reward
-        next_state = env.f(true_state, action)
+        next_state = env.f(env.true_state, action)
+        env.update_abs_pos(action)
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
         reward = env.reward_func(tuple(next_state), env.actions.action_to_index(action))
-        true_state = next_state
+        env.true_state = next_state
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
@@ -208,16 +209,16 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
 
         # accumulate reward
         total_reward += reward
-        if true_state[0] < 10:
+        if env.true_state[0] < 10:
             total_col = 1
 
         if plotting:
-            build_plots(true_state, belief, fig, ax, time_step)
+            build_plots(env.true_state, belief, fig, ax, time_step, sensor=env.sensor_state, target=env.abs_true_state, particles=env.target_states)
             print('reward = ',reward)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    if true_state[0] > 150:
+    if env.true_state[0] > 150:
         total_loss = 1
 
     return (total_reward, plots, total_col, total_loss)

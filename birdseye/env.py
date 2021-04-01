@@ -27,6 +27,7 @@ class RFEnv(object):
         self.iters = 0
         # state is [range, bearing, relative course, own speed]
         self.true_state = np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
+        self.sensor_state = np.array([0, 0, 180, 0])
 
         num_particles=500
         self.pf = ParticleFilter(
@@ -54,9 +55,48 @@ class RFEnv(object):
         return crs
         
 
+    def f_sensor(self, control): 
+        r, theta, crs, spd = self.sensor_state
+        control = (0, 2)
+        spd = control[1]
+
+        crs = crs % 360
+        crs += control[0]
+        if crs < 0:
+            crs += 360
+        crs = crs % 360
+
+        x, y = pol2cart(r, np.pi / 180 * theta)
+
+        dx, dy = pol2cart(spd, np.pi / 180 * crs)
+        pos = [x + dx, y + dy]
+
+        r = np.sqrt(pos[0]**2 + pos[1]**2)
+        theta = np.arctan2(pos[1], pos[0]) * 180 / np.pi
+        if theta < 0:
+            theta += 360
+
+        print(r,',',theta)
+        self.sensor_state = np.array([r, theta, crs, spd])
+
+    def get_absolute_state(self, target_state):
+        r_t, theta_t, crs_t, spd = target_state
+        r_s, theta_s, crs_s, _ = self.sensor_state
+
+        x_t, y_t = pol2cart(r_t, np.pi / 180 * theta_t)
+        x_s, y_s = pol2cart(r_s, np.pi / 180 * theta_s)
+
+        x = x_t + x_s
+        y = y_t + y_s 
+        r = np.sqrt(x**2 + y**2)
+        theta = np.arctan2(x, y) * 180 / np.pi
+        if theta < 0:
+            theta += 360
+
+        return np.array([r, theta, crs_s+crs_t, spd])
 
     # returns new state given last state and action (control)
-    def f(self, state, control):
+    def f(self, state, control, absolute_state=False):
         TGT_SPD = 1
         r, theta, crs, spd = state
         spd = control[1]
@@ -114,10 +154,16 @@ class RFEnv(object):
         return reward_val
 
 
+    def update_abs_pos(self, action): 
+        self.f_sensor(action)
+        self.target_states = [self.get_absolute_state(t) for t in self.pf.particles]
+        self.abs_true_state = self.get_absolute_state(self.true_state)
+
     # returns observation, reward, done, info
     def step(self, action): 
 
         next_state = self.f(self.true_state, self.actions.index_to_action(action))
+        self.update_abs_pos(self.actions.index_to_action(action))
         observation = self.sensor.observation(next_state)
         self.pf.update(np.array(observation), xp=self.pf.particles, control=self.actions.index_to_action(action))
         
