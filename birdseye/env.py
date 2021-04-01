@@ -85,7 +85,7 @@ class RFEnv(object):
         # Get action based on index
         action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
-        next_state = self.update_state(self.state.state_vars, action)
+        next_state = self.state.update_state(self.state.state_vars, action)
         # Get sensor observation
         observation = self.sensor.observation(next_state)
         # Update particle filter
