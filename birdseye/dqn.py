@@ -2,24 +2,33 @@
 These functions are adapted from github.com/Officium/RL-Experiments
 
 """
+import argparse
 import math
 import os
 import random
 import time
 from collections import deque
 from copy import deepcopy
-
 import numpy as np
+
 import torch
 import torch.distributions
 import torch.nn as nn
 from torch.nn.functional import softmax, log_softmax
+from torch.optim import Adam
 
-from birdseye.rl_common.util import scale_ob
-from birdseye.rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
+from .rl_common.util import scale_ob
+from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
+from .rl_common.logger import init_logger
+from .rl_common.models import CNN, MLP
+
+from .actions import *
+from .sensor import *
+from .definitions import *
+from .env import RFEnv
 
 
-def learn(logger,
+def run_dqn(logger,
           device, env,
           number_timesteps,
           network, optimizer,
@@ -29,7 +38,7 @@ def learn(logger,
           exploration_fraction, exploration_final_eps,
           batch_size, train_freq, learning_starts, target_network_update_freq,
           buffer_size, prioritized_replay, prioritized_replay_alpha,
-          prioritized_replay_beta0, atom_num, min_value, max_value):
+          prioritized_replay_beta0, atom_num, min_value, max_value, max_episode_length):
     """
     Papers:
     Mnih V, Kavukcuoglu K, Silver D, et al. Human-level control through deep
@@ -72,7 +81,7 @@ def learn(logger,
     generator = _generate(device, env, qnet, ob_scale,
                           number_timesteps, param_noise,
                           exploration_fraction, exploration_final_eps,
-                          atom_num, min_value, max_value)
+                          atom_num, min_value, max_value, max_episode_length)
     if atom_num > 1:
         delta_z = float(max_value - min_value) / (atom_num - 1)
         z_i = torch.linspace(min_value, max_value, atom_num).to(device)
@@ -158,7 +167,7 @@ def learn(logger,
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,
               exploration_fraction, exploration_final_eps,
-              atom_num, min_value, max_value):
+              atom_num, min_value, max_value, max_episode_length):
     """ Generate training batch sample """
     noise_scale = 1e-2
     action_dim = len(env.actions.action_space)
@@ -220,8 +229,65 @@ def _generate(device, env, qnet, ob_scale,
         infos = dict()
         o = o_ if not done else env.reset()
 
+        if info['episode']['l'] > max_episode_length: 
+            env.reset()
 
 def huber_loss(abs_td_error):
     flag = (abs_td_error < 1).float()
     return flag * abs_td_error.pow(2) * 0.5 + (1 - flag) * (abs_td_error - 0.5)
 
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description='DQN')
+    parser.add_argument('--number_timesteps', type=int, default=10000)
+    parser.add_argument('--no_dueling', action='store_false', dest='dueling')
+    parser.add_argument('--no_double_q', action='store_false', dest='double_q')
+    parser.add_argument('--param_noise', action='store_true')
+
+    parser.add_argument('--exploration_fraction', type=float, default=0.2)
+    parser.add_argument('--exploration_final_eps', type=float, default=0.1)
+    parser.add_argument('--batch_size', type=int, default=100)
+    parser.add_argument('--train_freq', type=int, default=4)
+    parser.add_argument('--learning_starts', type=int, default=100)
+    parser.add_argument('--target_network_update_freq', type=int, default=100)
+    parser.add_argument('--buffer_size', type=int, default=10000)
+    parser.add_argument('--prioritized_replay', action='store_true')
+    parser.add_argument('--prioritized_replay_alpha', type=float, default=0.6)
+    parser.add_argument('--prioritized_replay_beta0', type=float, default=0.4)
+    parser.add_argument('--min_value', type=int, default=-10)
+    parser.add_argument('--max_value', type=int, default=10)
+    parser.add_argument('--max_episode_length', type=int, default=100)
+
+    parser.add_argument('--atom_num', type=int, default=1)
+    parser.add_argument('--ob_scale', type=int, default=1)
+    parser.add_argument('--gamma', type=float, default=0.99)
+    parser.add_argument('--grad_norm', type=float, default=10.0)
+    parser.add_argument('--save_interval', type=int, default=1000)
+    parser.add_argument('--save_path', type=str, default='checkpoints', help='save model every x steps(0 = disabled)')
+    parser.add_argument('--log_path', type=str, default='rl_log')
+    parser.add_argument('--use_gpu', action='store_true')
+    args = parser.parse_args()
+
+    actions = SimpleActions()
+    sensor = Drone() 
+    env = RFEnv(sensor, actions)
+
+    device = torch.device('cuda' if (args.use_gpu and torch.cuda.is_available()) else 'cpu')
+    logger = init_logger(args.log_path)
+
+    policy_dim = len(env.actions.action_space)
+    in_dim = (1, 100, 100)
+    network = CNN(in_dim, policy_dim, args.atom_num, args.dueling)
+    optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
+
+    run_dqn(logger,
+            device, env,
+            args.number_timesteps,
+            network, optimizer,
+            args.save_path, args.save_interval, args.ob_scale,
+            args.gamma, args.grad_norm,
+            args.double_q, args.param_noise,
+            args.exploration_fraction, args.exploration_final_eps,
+            args.batch_size, args.train_freq, args.learning_starts, args.target_network_update_freq,
+            args.buffer_size, args.prioritized_replay, args.prioritized_replay_alpha,
+            args.prioritized_replay_beta0, args.atom_num, args.min_value, args.max_value, args.max_episode_length) 
