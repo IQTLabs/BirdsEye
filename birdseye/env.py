@@ -53,7 +53,9 @@ class RFEnv(object):
         # Get action based on index
         action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
-        next_state = self.update_state(self.state.state_vars, action)
+        next_state = self.state.update_state(self.state.state_vars, action)
+        # Update absolute position of sensor 
+        self.state.update_sensor(action)
         # Get sensor observation
         observation = self.sensor.observation(next_state)
         # Update particle filter
@@ -81,3 +83,9 @@ class RFEnv(object):
         heatmap, xedges, yedges = np.histogram2d(x, y, bins=100)
 
         return heatmap
+
+    def get_absolute_particles(self): 
+        return np.array([self.state.get_absolute_state(t) for t in self.pf.particles])
+    
+    def get_absolute_target(self): 
+        return self.state.get_absolute_state(self.state.state_vars)

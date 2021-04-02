@@ -198,6 +198,8 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
 
         # take action; get next true state, obs, and reward
         next_state = env.state.update_state(true_state, action)
+        # Update absolute position of sensor 
+        env.state.update_sensor(action)
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
         reward = env.state.reward_func(next_state, env.actions.action_to_index(action))
@@ -213,7 +215,7 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
             total_col = 1
 
         if plotting:
-            build_plots(true_state, belief, fig, ax, time_step)
+            build_plots(true_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
@@ -221,4 +223,4 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
         total_loss = 1
 
     return (total_reward, plots, total_col, total_loss)
-
+    
