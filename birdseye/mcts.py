@@ -12,11 +12,40 @@ from .env import RFEnv
 
 
 
-def run_mcts(env, N, DEPTH, lambda_arg, num_runs, iterations, COLLISION_REWARD, LOSS_REWARD, plotting, fig=None, ax=None):
+def run_mcts(env, 
+             N, DEPTH, 
+             lambda_arg, num_runs, 
+             iterations, COLLISION_REWARD, 
+             LOSS_REWARD, plotting, fig=None, ax=None):
+    """Function to run Monte Carlo Tree Search
+
+    Parameters
+    ----------
+    env : object
+        Environment definitions
+    N : int
+        Number of trials
+    DEPTH : int
+        Tree depth
+    lambda_arg : float
+        Lambda value
+    num_runs : int
+        Number of runs
+    iterations : int
+        Number of iterations
+    COLLISION_REWARD : float
+        Reward value for collision
+    LOSS_REWARD : float
+        Reward value for loss function
+    plotting : bool
+        Flag to plot or not
+    fig : object
+        Figure object
+    ax : object
+        Axis object
+    """
 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    plotting = plotting
-    testing = False
 
     #output header file
     header_string = ('MCTS Run: {}\n' +
@@ -90,14 +119,20 @@ if __name__ == '__main__':
     parser.add_argument('--loss', type=float, default=-2)
     parser.add_argument('--depth', type=float, default=10)
     parser.add_argument('--N', type=int, default=500)
+    parser.add_argument('--plotting', type=bool, default=False)
     parser.add_argument('--trials', type=int, default=100)
     parser.add_argument('--iterations', type=float, default=2000)
     parser.add_argument('--plot_header', type=str, default='out')
     args = parser.parse_args()
 
+    # Setup environment
     actions = SimpleActions()
     sensor = Drone() 
     state = RFState() 
     env = RFEnv(sensor, actions, state)
 
-    run_mcts(env, args.N, args.depth, args.lambda_arg, args.trials, args.iterations, args.collision, args.loss, False)
+    run_mcts(env, 
+             args.N, args.depth, 
+             args.lambda_arg, args.trials, 
+             args.iterations, args.collision, args.loss, args.plotting)
+
