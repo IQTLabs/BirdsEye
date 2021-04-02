@@ -24,51 +24,93 @@ from .rl_common.models import CNN, MLP
 
 from .actions import *
 from .sensor import *
+from .state import *
 from .definitions import *
 from .env import RFEnv
 
 
-def run_dqn(logger,
-          device, env,
-          number_timesteps,
-          network, optimizer,
+def run_dqn(env,
+          log_path, use_gpu,
+          number_timesteps, dueling,
           save_path, save_interval, ob_scale,
-          gamma, grad_norm,
-          double_q, param_noise,
+          gamma, grad_norm, double_q, param_noise,
           exploration_fraction, exploration_final_eps,
           batch_size, train_freq, learning_starts, target_network_update_freq,
           buffer_size, prioritized_replay, prioritized_replay_alpha,
           prioritized_replay_beta0, atom_num, min_value, max_value, max_episode_length):
-    """
-    Papers:
+    """Function to run DQN
+
+    Publications:
     Mnih V, Kavukcuoglu K, Silver D, et al. Human-level control through deep
     reinforcement learning[J]. Nature, 2015, 518(7540): 529.
     Hessel M, Modayil J, Van Hasselt H, et al. Rainbow: Combining Improvements
     in Deep Reinforcement Learning[J]. 2017.
 
-    Parameters:
+    Parameters
     ----------
-    double_q (bool): if True double DQN will be used
-    param_noise (bool): whether or not to use parameter space noise
-    dueling (bool): if True dueling value estimation will be used
-    exploration_fraction (float): fraction of entire training period over which
-                                  the exploration rate is annealed
-    exploration_final_eps (float): final value of random action probability
-    batch_size (int): size of a batched sampled from replay buffer for training
-    train_freq (int): update the model every `train_freq` steps
-    learning_starts (int): how many steps of the model to collect transitions
-                           for before learning starts
-    target_network_update_freq (int): update the target network every
-                                      `target_network_update_freq` steps
-    buffer_size (int): size of the replay buffer
-    prioritized_replay (bool): if True prioritized replay buffer will be used.
-    prioritized_replay_alpha (float): alpha parameter for prioritized replay
-    prioritized_replay_beta0 (float): beta parameter for prioritized replay
-    atom_num (int): atom number in distributional RL for atom_num > 1
-    min_value (float): min value in distributional RL
-    max_value (float): max value in distributional RL
-
+    env : object
+        Environment definitions
+    log_path : string
+        Path for logging output
+    use_gpu : bool
+        Flag for using GPU device
+    number_timesteps : int
+        Number of timesteps
+    dueling : bool
+        Flag: if True dueling value estimation will be used
+    save_path : string
+        Path for saving
+    save_interval : int
+        Interval for saving output values
+    ob_scale : int
+        Scale for observation
+    gamma : float
+        Gamma input value
+    grad_norm : ?
+        ?
+    double_q  : bool
+        Flag: if True double DQN will be used
+    param_noise : bool
+        Flag: whether or not to use parameter space noise
+    exploration_fraction : float
+        Fraction of entire training period over which the exploration rate is annealed
+    exploration_final_eps : float
+        Final value of random action probability
+    batch_size : int
+        Size of a batched sampled from replay buffer for training
+    train_freq : int
+        Update the model every `train_freq` steps
+    learning_starts : int 
+        How many steps of the model to collect transitions for before learning starts
+    target_network_update_freq : int 
+        Update the target network every `target_network_update_freq` steps
+    buffer_size : int
+        Size of the replay buffer
+    prioritized_replay : bool
+        Flag: if True prioritized replay buffer will be used.
+    prioritized_replay_alpha : float
+        Alpha parameter for prioritized replay
+    prioritized_replay_beta0 : float 
+        Beta parameter for prioritized replay
+    atom_num : int
+        Atom number in distributional RL for atom_num > 1
+    min_value : float
+        Min value in distributional RL
+    max_value : float
+        Max value in distributional RL
     """
+   
+    # Setup logging
+    logger = init_logger(log_path)
+
+    # Access requested device
+    device = torch.device('cuda' if (use_gpu and torch.cuda.is_available()) else 'cpu')
+
+    # Define network & training optimizer
+    policy_dim = len(env.actions.action_space)
+    in_dim = (1, 100, 100)
+    network = CNN(in_dim, policy_dim, atom_num, dueling)
+    optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
     qtar = deepcopy(qnet)
@@ -232,9 +274,11 @@ def _generate(device, env, qnet, ob_scale,
         if info['episode']['l'] > max_episode_length: 
             env.reset()
 
+
 def huber_loss(abs_td_error):
     flag = (abs_td_error < 1).float()
     return flag * abs_td_error.pow(2) * 0.5 + (1 - flag) * (abs_td_error - 0.5)
+
 
 if __name__ == '__main__':
 
@@ -268,26 +312,21 @@ if __name__ == '__main__':
     parser.add_argument('--use_gpu', action='store_true')
     args = parser.parse_args()
 
+    # Setup environment
     actions = SimpleActions()
     sensor = Drone() 
-    env = RFEnv(sensor, actions)
+    state = RFState() 
+    env = RFEnv(sensor, actions, state)
 
-    device = torch.device('cuda' if (args.use_gpu and torch.cuda.is_available()) else 'cpu')
-    logger = init_logger(args.log_path)
-
-    policy_dim = len(env.actions.action_space)
-    in_dim = (1, 100, 100)
-    network = CNN(in_dim, policy_dim, args.atom_num, args.dueling)
-    optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
-
-    run_dqn(logger,
-            device, env,
-            args.number_timesteps,
-            network, optimizer,
+    # Run dqn method
+    run_dqn(env,
+            args.log_path, args.use_gpu,
+            args.number_timesteps, args.dueling, 
             args.save_path, args.save_interval, args.ob_scale,
-            args.gamma, args.grad_norm,
-            args.double_q, args.param_noise,
+            args.gamma, args.grad_norm, args.double_q, args.param_noise,
             args.exploration_fraction, args.exploration_final_eps,
             args.batch_size, args.train_freq, args.learning_starts, args.target_network_update_freq,
             args.buffer_size, args.prioritized_replay, args.prioritized_replay_alpha,
-            args.prioritized_replay_beta0, args.atom_num, args.min_value, args.max_value, args.max_episode_length) 
+            args.prioritized_replay_beta0, args.atom_num, args.min_value, args.max_value, args.max_episode_length)
+
+
