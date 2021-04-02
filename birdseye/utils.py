@@ -78,32 +78,54 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
 
 
         ax.plot(abs_particles[:,1]*np.pi/180, abs_particles[:,0], 'ro', label='particles')
-        ax.plot(abs_sensor[1]*np.pi/180, abs_sensor[0], 'go', label='sensor')
-        ax.plot(abs_target[1]*np.pi/180, abs_target[0], 'bo', label='target')
+        ax.plot(np.mean(abs_particles[:,1]*np.pi/180), np.mean(abs_particles[:,0]), 'c*', label='centroid', markersize=12)
+        ax.plot(abs_sensor[1]*np.pi/180, abs_sensor[0], 'gp', label='sensor', markersize=12)
+        ax.plot(abs_target[1]*np.pi/180, abs_target[0], 'bX', label='target', markersize=12)
 
         ax.legend()
         ax.set_title('Absolute positions'.format(time_step), fontsize=16)
 
     plt.show()
-    mean_bel_err, rmse = tracking_error(abs_target, abs_particles)
-    print('mean belief error = {}, rmse = {}'.format(mean_bel_err, rmse))
+    r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target, abs_particles)
+    print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
+        r_error, theta_error, heading_error, centroid_distance_error, rmse))
     
     plt.show()
 
 # calculate different tracking errors 
 def tracking_error(target, particles): 
 
-    tar_x, tar_y = pol2cart(target[0], target[1]*np.pi/180)
+    target_r = target[0]
+    target_theta = target[1] * np.pi / 180 
+    target_heading = target[2]
+    target_x, target_y = pol2cart(target_r, target_theta)
 
-    particles_x, particles_y = pol2cart(particles[:,0], particles[:,1]*np.pi/180)
+    particles_r = particles[:,0]
+    particles_theta = particles[:,1] * np.pi / 180 
+    particles_heading = particles[:,2]
+    particles_x, particles_y = pol2cart(particles_r, particles_theta)
 
-    # mean belief error 
+    # centroid of particles r,theta
+    mean_r = np.mean(particles_r)
+    mean_theta = np.mean(particles_theta)
+
+    # centroid of particles x,y
     mean_x = np.mean(particles_x)
     mean_y = np.mean(particles_y)
-    mean_bel_err = (mean_x - tar_x)**2 + (mean_y - tar_y)**2
+
+    mean_heading = np.mean(particles_heading)
+
+    ## Error Measures
+
+    r_error = target_r - mean_r
+    theta_error = (target_theta - mean_theta) * 180 / np.pi # final error in degrees 
+    heading_error = target_heading - mean_heading
+
+    # centroid euclidean distance error x,y 
+    centroid_distance_error = (mean_x - target_x)**2 + (mean_y - target_y)**2
 
     # root mean square error
-    rmse = np.sqrt(np.mean((particles_x - tar_x)**2 + (particles_y - tar_y)**2))
+    rmse = np.sqrt(np.mean((particles_x - target_x)**2 + (particles_y - target_y)**2))
 
-    return mean_bel_err, rmse 
+    return r_error, theta_error, heading_error, centroid_distance_error, rmse 
 

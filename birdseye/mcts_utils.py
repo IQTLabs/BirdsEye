@@ -152,7 +152,7 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
     # state is [range, bearing, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     env.reset()
-    true_state = env.state.state_vars
+    true_state = env.state.target_state
 
     belief = env.pf.particles
 

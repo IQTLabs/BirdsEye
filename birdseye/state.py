@@ -34,12 +34,12 @@ class RFState(State):
         # Transition probability
         self.prob = prob
         # Setup an initial random state
-        self.state_vars = self.init_state()
+        self.target_state = self.init_target_state()
         # Setup an initial sensor state 
         self.sensor_state = self.init_sensor_state()
     
 
-    def init_state(self):
+    def init_target_state(self):
         # state is [range, bearing, relative course, own speed]
         return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
    
@@ -75,9 +75,9 @@ class RFState(State):
 
 
     # returns new state given last state and action (control)
-    def update_state(self, state_vars, control):
+    def update_state(self, target_state, control):
         TGT_SPD = 1
-        r, theta, crs, spd = state_vars
+        r, theta, crs, spd = target_state
         spd = control[1]
         
         theta = theta % 360
