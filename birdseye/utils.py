@@ -13,6 +13,13 @@ def pol2cart(rho, phi):
     y = rho * np.sin(phi)
     return(x, y)
 
+def cart2pol(x, y): 
+    rho = np.sqrt(x**2 + y**2)
+    phi = np.arctan2(y, x) * 180 / np.pi
+    if phi < 0:
+        phi += 360
+    return rho, phi 
+
 
 ##################################################################
 # Plotting
@@ -76,9 +83,11 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     if abs_sensor is not None and abs_target is not None and abs_particles is not None: 
         ax = fig.add_subplot(1, 4, 4, polar=True)
 
-
+        particles_x, particles_y = pol2cart(abs_particles[:,0], abs_particles[:,1] * np.pi / 180)
+        centroid_r, centroid_theta = cart2pol(np.mean(particles_x), np.mean(particles_y))
+        
         ax.plot(abs_particles[:,1]*np.pi/180, abs_particles[:,0], 'ro', label='particles')
-        ax.plot(np.mean(abs_particles[:,1]*np.pi/180), np.mean(abs_particles[:,0]), 'c*', label='centroid', markersize=12)
+        ax.plot(centroid_theta, centroid_r, 'c*', label='centroid', markersize=12)
         ax.plot(abs_sensor[1]*np.pi/180, abs_sensor[0], 'gp', label='sensor', markersize=12)
         ax.plot(abs_target[1]*np.pi/180, abs_target[0], 'bX', label='target', markersize=12)
 
@@ -105,13 +114,12 @@ def tracking_error(target, particles):
     particles_heading = particles[:,2]
     particles_x, particles_y = pol2cart(particles_r, particles_theta)
 
-    # centroid of particles r,theta
-    mean_r = np.mean(particles_r)
-    mean_theta = np.mean(particles_theta)
-
     # centroid of particles x,y
     mean_x = np.mean(particles_x)
     mean_y = np.mean(particles_y)
+
+    # centroid of particles r,theta
+    mean_r, mean_theta = cart2pol(mean_x, mean_y)
 
     mean_heading = np.mean(particles_heading)
 
@@ -122,7 +130,7 @@ def tracking_error(target, particles):
     heading_error = target_heading - mean_heading
 
     # centroid euclidean distance error x,y 
-    centroid_distance_error = (mean_x - target_x)**2 + (mean_y - target_y)**2
+    centroid_distance_error = np.sqrt((mean_x - target_x)**2 + (mean_y - target_y)**2)
 
     # root mean square error
     rmse = np.sqrt(np.mean((particles_x - target_x)**2 + (particles_y - target_y)**2))
