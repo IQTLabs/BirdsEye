@@ -13,7 +13,7 @@ from .env import RFEnv
 
 
 def run_mcts(env, 
-             N, DEPTH, 
+             simulations, DEPTH, 
              lambda_arg, num_runs, 
              iterations, COLLISION_REWARD, 
              LOSS_REWARD, plotting, fig=None, ax=None):
@@ -23,8 +23,8 @@ def run_mcts(env,
     ----------
     env : object
         Environment definitions
-    N : int
-        Number of trials
+    simulations : int
+        Number of simulations
     DEPTH : int
         Tree depth
     lambda_arg : float
@@ -55,7 +55,7 @@ def run_mcts(env,
                      'Iterations: {}\n' +
                      'Collision Reward: {}\n' +
                      'Loss Reward: {}\n').format(global_start_time, 
-                                                 DEPTH, N, lambda_arg,
+                                                 DEPTH, simulations, lambda_arg,
                                                  iterations, COLLISION_REWARD, LOSS_REWARD)
 
     #write output header
@@ -77,14 +77,13 @@ def run_mcts(env,
     run_data = []
 
     # trials
-    num_particles = N
     mcts_loss = 0
     mcts_coll = 0
     run_times = []
     for i  in range(num_runs):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
-        result = mcts_trial(env, DEPTH, 20, plotting, num_particles, fig=fig, ax=ax)
+        result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
         mcts_coll += result[2]
         mcts_loss += result[3]
         run_data.append(result[2:4])
@@ -93,8 +92,8 @@ def run_mcts(env,
         if i % 5 == 0:
 
             print("\n==============================")
-            print("Trials: "+ i)
-            print("NUM PARTICLES: "+ num_particles)
+            print("Runs: "+ i)
+            print("NUM PARTICLES: "+ simulations)
             print("MCTS Depth "+ DEPTH+ " Results")
             print("Collision Rate: "+ mcts_coll/i)
             print("Loss Rate: "+ mcts_loss/i)
@@ -118,7 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--collision', type=float, default=-2)
     parser.add_argument('--loss', type=float, default=-2)
     parser.add_argument('--depth', type=float, default=10)
-    parser.add_argument('--N', type=int, default=500)
+    parser.add_argument('--simulations', type=int, default=500)
     parser.add_argument('--plotting', type=bool, default=False)
     parser.add_argument('--trials', type=int, default=100)
     parser.add_argument('--iterations', type=float, default=2000)
@@ -132,7 +131,7 @@ if __name__ == '__main__':
     env = RFEnv(sensor, actions, state)
 
     run_mcts(env, 
-             args.N, args.depth, 
+             args.simulations, args.depth, 
              args.lambda_arg, args.trials, 
              args.iterations, args.collision, args.loss, args.plotting)
 

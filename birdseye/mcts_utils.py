@@ -145,7 +145,7 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 # Trial
 ##################################################################
 lambda_arg = 0.95
-def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None):
+def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=None, ax=None):
 
     # Initialize true state and belief state (particle filter);
     # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
@@ -178,7 +178,6 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
     total_loss = 0
 
     # 500 time steps with an action to be selected at each
-    num_iters = 500
     plots = []
     for time_step in range(num_iters):
 
@@ -193,7 +192,7 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
             N = {}
 
         # select an action
-        (Q, N, action) = select_action(env, Q, N, belief, depth, c, iterations)
+        (Q, N, action) = select_action(env, Q, N, belief, depth, c, simulations)
 
         # take action; get next true state, obs, and reward
         next_state = env.state.update_state(env.state.target_state, action)
