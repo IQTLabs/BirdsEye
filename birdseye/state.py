@@ -112,7 +112,7 @@ class RFState(State):
         return (r, theta, crs, spd)
 
     def update_sensor(self, control): 
-        r, theta, crs, spd = self.sensor_state
+        r, theta_deg, crs, spd = self.sensor_state
         
         spd = control[1]
 
@@ -122,34 +122,34 @@ class RFState(State):
             crs += 360
         crs = crs % 360
 
-        x, y = pol2cart(r, np.pi / 180 * theta)
+        x, y = pol2cart(r, np.radians(theta_deg))
 
-        dx, dy = pol2cart(spd, np.pi / 180 * crs)
+        dx, dy = pol2cart(spd, np.radians(crs))
         pos = [x + dx, y + dy]
 
         r = np.sqrt(pos[0]**2 + pos[1]**2)
-        theta = np.arctan2(pos[1], pos[0]) * 180 / np.pi
-        if theta < 0:
-            theta += 360
+        theta_deg = np.degrees(np.arctan2(pos[1], pos[0]))
+        if theta_deg < 0:
+            theta_deg += 360
 
-        self.sensor_state = np.array([r, theta, crs, spd])
+        self.sensor_state = np.array([r, theta_deg, crs, spd])
 
     # returns absolute state given base state(absolute) and relative state 
     def get_absolute_state(self, relative_state):
         r_t, theta_t, crs_t, spd = relative_state
         r_s, theta_s, crs_s, _ = self.sensor_state
 
-        x_t, y_t = pol2cart(r_t, np.pi / 180 * theta_t)
-        x_s, y_s = pol2cart(r_s, np.pi / 180 * theta_s)
+        x_t, y_t = pol2cart(r_t, np.radians(theta_t))
+        x_s, y_s = pol2cart(r_s, np.radians(theta_s))
 
         x = x_t + x_s
         y = y_t + y_s 
         r = np.sqrt(x**2 + y**2)
-        theta = np.arctan2(x, y) * 180 / np.pi
-        if theta < 0:
-            theta += 360
+        theta_deg = np.degrees(np.arctan2(y, x))
+        if theta_deg < 0:
+            theta_deg += 360
 
-        return [r, theta, crs_s+crs_t, spd]
+        return [r, theta_deg, crs_s+crs_t, spd]
 
     
 
