@@ -24,12 +24,13 @@ class RFEnv(object):
         """
 
         self.iters = 0
-        self.state.state_vars = self.state.init_state()
+        self.state.target_state = self.state.init_target_state()
+        self.state.sensor_state = self.state.init_sensor_state()
 
         num_particles=500
         # Setup particle filter
         self.pf = ParticleFilter(
-                        prior_fn=lambda n: np.array([self.sensor.near_state(self.state.state_vars) for i in range(n)]),
+                        prior_fn=lambda n: np.array([self.sensor.near_state(self.state.target_state) for i in range(n)]),
                         observe_fn=lambda states, **kwargs: np.array([np.array(self.sensor.observation(x)) for x in states]),
                         n_particles=num_particles,
                         dynamics_fn=self.dynamics,
@@ -53,7 +54,9 @@ class RFEnv(object):
         # Get action based on index
         action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
-        next_state = self.update_state(self.state.state_vars, action)
+        next_state = self.state.update_state(self.state.target_state, action)
+        # Update absolute position of sensor 
+        self.state.update_sensor(action)
         # Get sensor observation
         observation = self.sensor.observation(next_state)
         # Update particle filter
@@ -61,7 +64,7 @@ class RFEnv(object):
         # Calculate reward based on updated state & action
         reward = self.state.reward_func(next_state, action_idx)
         # Update the state variables
-        self.state.state_vars = next_state
+        self.state.target_state = next_state
 
         env_obs = self.env_observation()
         self.iters += 1 
@@ -81,3 +84,9 @@ class RFEnv(object):
         heatmap, xedges, yedges = np.histogram2d(x, y, bins=100)
 
         return heatmap
+
+    def get_absolute_particles(self): 
+        return np.array([self.state.get_absolute_state(t) for t in self.pf.particles])
+    
+    def get_absolute_target(self): 
+        return self.state.get_absolute_state(self.state.target_state)

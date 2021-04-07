@@ -152,7 +152,6 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
     # state is [range, bearing, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     env.reset()
-    true_state = env.state.state_vars
 
     belief = env.pf.particles
 
@@ -197,11 +196,13 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, iterations)
 
         # take action; get next true state, obs, and reward
-        next_state = env.state.update_state(true_state, action)
+        next_state = env.state.update_state(env.state.target_state, action)
+        # Update absolute position of sensor 
+        env.state.update_sensor(action)
         observation = env.sensor.observation(next_state)
-        #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(true_state, next_state, action, observation))
+        #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
         reward = env.state.reward_func(next_state, env.actions.action_to_index(action))
-        true_state = next_state
+        env.state.target_state = next_state
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
@@ -209,16 +210,16 @@ def mcts_trial(env, depth, c, plotting=False, iterations=1000, fig=None, ax=None
 
         # accumulate reward
         total_reward += reward
-        if true_state[0] < 10:
+        if env.state.target_state[0] < 10:
             total_col = 1
 
         if plotting:
-            build_plots(true_state, belief, fig, ax, time_step)
+            build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    if true_state[0] > 150:
+    if env.state.target_state[0] > 150:
         total_loss = 1
 
     return (total_reward, plots, total_col, total_loss)
-
+    
