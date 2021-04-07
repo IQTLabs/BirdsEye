@@ -66,8 +66,8 @@ def run_dqn(env,
         Scale for observation
     gamma : float
         Gamma input value
-    grad_norm : ?
-        ?
+    grad_norm : float
+        Max norm value of the gradients to be used in gradient clipping
     double_q  : bool
         Flag: if True double DQN will be used
     param_noise : bool
