@@ -32,7 +32,9 @@ class RFState(State):
         # Transition probability
         self.prob = prob
         # Setup an initial random state
-        self.state_vars = self.init_state()
+        self.target_state = self.init_target_state()
+        # Setup an initial sensor state 
+        self.sensor_state = self.init_sensor_state()
     
 
     def init_target_state(self):
@@ -46,6 +48,9 @@ class RFState(State):
         # state is [range, bearing, relative course, own speed]
         return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
    
+    def init_sensor_state(self): 
+        # state is [range, bearing, relative course, own speed]
+        return np.array([0,0,0,0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
     def reward_func(self, state, action_idx=None, action_penalty=-.05):
@@ -145,5 +150,47 @@ class RFState(State):
             theta += 360
 
         return (r, theta, crs, spd)
+
+    def update_sensor(self, control): 
+        r, theta_deg, crs, spd = self.sensor_state
+        
+        spd = control[1]
+
+        crs = crs % 360
+        crs += control[0]
+        if crs < 0:
+            crs += 360
+        crs = crs % 360
+
+        x, y = pol2cart(r, np.radians(theta_deg))
+
+        dx, dy = pol2cart(spd, np.radians(crs))
+        pos = [x + dx, y + dy]
+
+        r = np.sqrt(pos[0]**2 + pos[1]**2)
+        theta_deg = np.degrees(np.arctan2(pos[1], pos[0]))
+        if theta_deg < 0:
+            theta_deg += 360
+
+        self.sensor_state = np.array([r, theta_deg, crs, spd])
+
+    # returns absolute state given base state(absolute) and relative state 
+    def get_absolute_state(self, relative_state):
+        r_t, theta_t, crs_t, spd = relative_state
+        r_s, theta_s, crs_s, _ = self.sensor_state
+
+        x_t, y_t = pol2cart(r_t, np.radians(theta_t))
+        x_s, y_s = pol2cart(r_s, np.radians(theta_s))
+
+        x = x_t + x_s
+        y = y_t + y_s 
+        r = np.sqrt(x**2 + y**2)
+        theta_deg = np.degrees(np.arctan2(y, x))
+        if theta_deg < 0:
+            theta_deg += 360
+
+        return [r, theta_deg, crs_s+crs_t, spd]
+
+    
 
 

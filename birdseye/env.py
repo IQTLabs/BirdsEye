@@ -41,11 +41,12 @@ class RFEnv(object):
         """
 
         self.iters = 0
-        self.state.state_vars = self.state.init_state()
+        self.state.target_state = self.state.init_target_state()
+        self.state.sensor_state = self.state.init_sensor_state()
 
         # Setup particle filter
         self.pf = ParticleFilter(
-                        prior_fn=lambda n: np.array([self.sensor.near_state(self.state.state_vars) for i in range(n)]),
+                        prior_fn=lambda n: np.array([self.sensor.near_state(self.state.target_state) for i in range(n)]),
                         observe_fn=lambda states, **kwargs: np.array([np.array(self.sensor.observation(x)) for x in states]),
                         n_particles=num_particles,
                         dynamics_fn=self.dynamics,
@@ -138,3 +139,9 @@ class RFEnv(object):
         heatmap, xedges, yedges = np.histogram2d(x, y, bins=100)
 
         return heatmap
+
+    def get_absolute_particles(self): 
+        return np.array([self.state.get_absolute_state(t) for t in self.pf.particles])
+    
+    def get_absolute_target(self): 
+        return self.state.get_absolute_state(self.state.target_state)
