@@ -35,7 +35,7 @@ class RFState(State):
         self.state_vars = self.init_state()
     
 
-    def init_state(self):
+    def init_target_state(self):
         """Function to initialize a random state
 
         Returns
@@ -91,7 +91,7 @@ class RFState(State):
 
 
     # returns new state given last state and action (control)
-    def update_state(self, state_vars, control):
+    def update_state(self, target_state, control):
         """Update state based on state and action
 
         Parameters
@@ -109,7 +109,7 @@ class RFState(State):
 
         TGT_SPD = 1
         # Get current state vars
-        r, theta, crs, spd = state_vars
+        r, theta, crs, spd = target_state
         spd = control[1]
         
         theta = theta % 360

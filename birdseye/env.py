@@ -85,7 +85,9 @@ class RFEnv(object):
         # Get action based on index
         action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
-        next_state = self.state.update_state(self.state.state_vars, action)
+        next_state = self.state.update_state(self.state.target_state, action)
+        # Update absolute position of sensor
+        self.state.update_sensor(action)
         # Get sensor observation
         observation = self.sensor.observation(next_state)
         # Update particle filter
@@ -93,7 +95,7 @@ class RFEnv(object):
         # Calculate reward based on updated state & action
         reward = self.state.reward_func(next_state, action_idx)
         # Update the state variables
-        self.state.state_vars = next_state
+        self.state.target_state = next_state
 
         env_obs = self.env_observation()
         self.iters += 1 
