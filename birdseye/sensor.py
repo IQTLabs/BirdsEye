@@ -24,6 +24,7 @@ class Sensor(object):
         """
         pass
 
+
 class Drone(Sensor): 
     """Drone sensor
     """
@@ -52,7 +53,9 @@ class Drone(Sensor):
 
     # samples observation given state
     def observation(self, state):
-        weights = [1-self.obs1_prob(state), self.obs1_prob(state)]
+
+        obs1_val = self.obs1_prob(state)
+        weights = [1.-obs1_val, obs1_val]
         obsers = [0, 1]
         return random.choices(obsers, weights)[0]
 
@@ -81,9 +84,6 @@ class Drone(Sensor):
 
     def near_state(self, state): 
         return np.array(self.gen_state(self.observation(state)))
-
-    def random_state(self):
-        return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
 
 
 class Bearing(Sensor): 

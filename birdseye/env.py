@@ -6,28 +6,44 @@ from pfilter import ParticleFilter, systematic_resample
 
 class RFEnv(object): 
 
-    def __init__(self, sensor=None, actions=None, state=None): 
+    def __init__(self, sensor=None, actions=None, state=None, simulated=False): 
         # Sensor definitions
         self.sensor = sensor 
         # Action space and function to convert from action to index and vice versa
         self.actions = actions
         # Setup initial state
         self.state = state
+        # Flag for simulation vs real data
+        self.simulated = simulated
 
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics
+
+        Returns
+        -------
+        array_like
+            Updated particle state information
         """
         return np.array([list(self.state.update_state(p, control)) for p in particles])
 
-    def reset(self):
+    def reset(self, num_particles=500):
         """Reset initial state and particle filter
+
+        Parameters
+        ----------
+        num_particles : integer
+            Number of particles to build particle filter
+
+        Returns
+        -------
+        env_obs : array_like
+            Heatmap distribution of observed particles from reset filter
         """
 
         self.iters = 0
         self.state.target_state = self.state.init_target_state()
         self.state.sensor_state = self.state.init_sensor_state()
 
-        num_particles=500
         # Setup particle filter
         self.pf = ParticleFilter(
                         prior_fn=lambda n: np.array([self.sensor.near_state(self.state.target_state) for i in range(n)]),
@@ -49,13 +65,29 @@ class RFEnv(object):
     def step(self, action_idx):
         """Function to make step based on
            state variables and action index
+
+        Parameters
+        ----------
+        action_idx : integer
+            Index for action to make step
+
+        Returns
+        -------
+        env_obs : array_like
+            Heatmap distribution of observed particles from filter
+        reward : float
+            Reward value for specified action
+        0 : int
+            Placeholder integer value
+        info : dict
+            Dictionary to track step specific values (reward, iteration)
         """
 
         # Get action based on index
         action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
         next_state = self.state.update_state(self.state.target_state, action)
-        # Update absolute position of sensor 
+        # Update absolute position of sensor
         self.state.update_sensor(action)
         # Get sensor observation
         observation = self.sensor.observation(next_state)
@@ -71,16 +103,39 @@ class RFEnv(object):
         info = {'episode':{}}
         info['episode']['l'] = self.iters
         info['episode']['r'] = reward
+
         return (env_obs, reward, 0, info)
 
     def env_observation(self): 
+        """Helper function for environment observation
+
+        Returns
+        -------
+        array_like
+            Heatmap distribution of current observed particles
+        """
         return np.expand_dims(self.particle_heatmap_obs(self.pf.particles), axis=0)
         
     def particle_heatmap_obs(self, belief):
+        """Function to build histogram representing
+           belief distribution in cart coords
 
+        Parameters
+        ----------
+        belief : array_like
+            Belief distribution parameters
+
+        Returns
+        -------
+        heatmap : array_like
+            Histogram of belief state
+        """
+        # Transformation of belief to cartesian coords
         cart  = np.array(list(map(pol2cart, belief[:,0], np.radians(belief[:,1]))))
         x = cart[:,0]
         y = cart[:,1]
+
+        # Build two-dim histogram distribution
         heatmap, xedges, yedges = np.histogram2d(x, y, bins=100)
 
         return heatmap
