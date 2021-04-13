@@ -1,4 +1,6 @@
 from datetime import datetime
+import sys
+import configparser
 import argparse
 import pandas as pd
 import os.path
@@ -9,14 +11,20 @@ from .state import *
 from .definitions import *
 from .env import RFEnv
 
+# Default MCTS inputs
+mcts_defaults = {
+    'lambda_arg' : 0.8,
+    'collision' : -2.,
+    'loss' : -2.,
+    'depth' : 10,
+    'simulations' : 500,
+    'plotting' : False,
+    'trials' : 100,
+    'iterations' : 2000
+}
 
 
-
-def run_mcts(env, 
-             simulations, DEPTH, 
-             lambda_arg, num_runs, 
-             iterations, COLLISION_REWARD, 
-             LOSS_REWARD, plotting, fig=None, ax=None):
+def run_mcts(env, config, fig=None, ax=None):
     """Function to run Monte Carlo Tree Search
 
     Parameters
@@ -44,7 +52,14 @@ def run_mcts(env,
     ax : object
         Axis object
     """
-
+    simulations = config.simulations
+    DEPTH = config.depth
+    lambda_arg = config.lambda_arg
+    num_runs = config.trials
+    iterations = config.iterations
+    COLLISION_REWARD = config.collision
+    LOSS_REWARD = config.loss
+    plotting = config.plotting
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
     #output header file
@@ -108,30 +123,47 @@ def run_mcts(env,
             df.to_csv(namefile)
 
 
+def mcts(args=None, env=None):
+    # Configuration file parser
+    conf_parser = argparse.ArgumentParser(add_help=False)
+    conf_parser.add_argument('-c', '--config',
+                             help='Specify a configuration file',
+                             metavar='FILE')
+    args, remaining_argv = conf_parser.parse_known_args()
+
+    # Grab mcts specific defaults
+    defaults = mcts_defaults
+
+    if args.config:
+        config = configparser.ConfigParser(defaults)
+        config.read([args.config])
+        defaults = dict(config.items('Defaults'))
+        # Fix for boolean args
+        defaults['plotting'] = config.getboolean('Defaults', 'plotting')
+    
+    parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
+                                     parents=[conf_parser],
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.set_defaults(**defaults)
+    parser.add_argument('--lambda_arg', type=float, help='Lambda value')
+    parser.add_argument('--collision', type=float, help='Reward value for collision')
+    parser.add_argument('--loss', type=float, help='Reward value for loss function')
+    parser.add_argument('--depth', type=float, help='Tree depth')
+    parser.add_argument('--simulations', type=int, help='Number of simulations')
+    parser.add_argument('--plotting', type=bool, help='Flag to plot or not')
+    parser.add_argument('--trials', type=int, help='Number of runs')
+    parser.add_argument('--iterations', type=int, help='Number of iterations')
+    args = parser.parse_args(remaining_argv)
+    
+    if not env:
+        # Setup environment
+        actions = SimpleActions()
+        sensor = Drone()
+        state = RFState()
+        env = RFEnv(sensor, actions, state)
+
+    run_mcts(env=env, config=args)
+
+
 if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description='Monte Carlo Tree Search')
-    parser.add_argument('--lambda', type=float, default=0.8, dest='lambda_arg')
-    parser.add_argument('--alpha', type=float, default=0.7)
-    parser.add_argument('--gamma', type=float, default=0.5)
-    parser.add_argument('--collision', type=float, default=-2)
-    parser.add_argument('--loss', type=float, default=-2)
-    parser.add_argument('--depth', type=float, default=10)
-    parser.add_argument('--simulations', type=int, default=500)
-    parser.add_argument('--plotting', type=bool, default=False)
-    parser.add_argument('--trials', type=int, default=100)
-    parser.add_argument('--iterations', type=float, default=2000)
-    parser.add_argument('--plot_header', type=str, default='out')
-    args = parser.parse_args()
-
-    # Setup environment
-    actions = SimpleActions()
-    sensor = Drone() 
-    state = RFState() 
-    env = RFEnv(sensor, actions, state)
-
-    run_mcts(env, 
-             args.simulations, args.depth, 
-             args.lambda_arg, args.trials, 
-             args.iterations, args.collision, args.loss, args.plotting)
-
+    mcts(args=sys.argv[1:])
