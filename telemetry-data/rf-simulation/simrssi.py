@@ -42,7 +42,7 @@ freq = 915000000 # Hz
 c    = 300000000*3.28; # ft/sec
 lamda = c/freq
 
-source_x, source_y = 39.034554,-76.655594 # lat/lon of RF source
+source_x, source_y = 39.034554,-76.655594 # lat/lon in decimal degrees of RF source
 
 #Variable declaration
 #hb=100; #in feets(height of BS antenna)
@@ -60,9 +60,10 @@ Tx=15         # in dBm
 
 def get_rssi(tx_power, source_x, source_y, current_x, current_y):
 
-  #calculate the distance from lat/lon coords
+  #calculate the distance from lat/lon coords in feet
   #
   #Note: one degree of latitude = approx. 364000 feet, one degree of longitude = approx. 288200 feet
+  #
 
   d1=math.sqrt((((current_x-source_x)*364000)**2) + (((current_y-source_y)*288200)**2))
   d=round(d1,2)
