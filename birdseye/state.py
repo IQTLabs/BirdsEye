@@ -191,6 +191,26 @@ class RFState(State):
 
         return [r, theta_deg, crs_s+crs_t, spd]
 
-    
 
+AVAIL_STATES = {'rfstate' : RFState,
+                }
+
+def get_state(state_name=''):
+    """Convenience function for retrieving BirdsEye state methods
+    Parameters
+    ----------
+    state_name : {'rfstate'}
+        Name of state method.
+    Returns
+    -------
+    state_obj : State class object
+        BirdsEye state method.
+    """
+    state_name = state_name.lower()
+    if state_name in AVAIL_STATES:
+        state_obj = AVAIL_STATES[state_name]
+        return state_obj
+    else:
+        raise ValueError('Invalid action method name, {}, entered. Must be '
+                         'in {}'.format(state_name, AVAIL_STATES.keys()))
 
