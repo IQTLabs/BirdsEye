@@ -4,6 +4,7 @@ attrs==20.3.0
 backcall==0.2.0
 bleach==3.2.2
 cffi==1.14.4
+configparser==5.0.2
 cycler==0.10.0
 decorator==4.4.2
 defusedxml==0.6.0
