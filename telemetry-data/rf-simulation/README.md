@@ -4,4 +4,6 @@ To facilitate the validation of the BirdsEye Reinforced Learning (RL) and other 
 
 In this directory is a pyton script (simrssi.py) used to calculate RSSI values based on lat/lon input coordinates. These are plotted using one of two plotting scripts: plot-lin.py or plot-cub.py which use either linear or cubic interpolation for generating a heat-map of RF signal strength. Examples are shown below:
 
-
+<p align="center">
+  <img src="./images/grid-linear-1.png" width="350" title="hover text">
+</p>
