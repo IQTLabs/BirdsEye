@@ -8,7 +8,7 @@ from birdseye.env import RFEnv
 from birdseye.method_utils import get_method
 
 
-def run(args=None, env=None):
+def run_birdseye(args=None, env=None):
     # Configuration file parser
     conf_parser = argparse.ArgumentParser(add_help=False)
     conf_parser.add_argument('-c', '--config',
@@ -40,4 +40,4 @@ def run(args=None, env=None):
 
 
 if __name__ == '__main__':
-    run(args=sys.argv[1:])
+    run_birdseye(args=sys.argv[1:])
