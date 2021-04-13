@@ -74,6 +74,9 @@ def run_dqn(env, config):
     ----------
     env : object
         Environment definitions
+    config : object
+        Config object which must have following:
+
     log_path : string
         Path for logging output
     use_gpu : bool

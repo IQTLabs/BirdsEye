@@ -31,6 +31,9 @@ def run_mcts(env, config, fig=None, ax=None):
     ----------
     env : object
         Environment definitions
+    config : object
+        Config object which must have following:
+
     simulations : int
         Number of simulations
     DEPTH : int
@@ -47,6 +50,7 @@ def run_mcts(env, config, fig=None, ax=None):
         Reward value for loss function
     plotting : bool
         Flag to plot or not
+    ------------
     fig : object
         Figure object
     ax : object
