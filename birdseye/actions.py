@@ -82,3 +82,25 @@ class SimpleActions(Actions):
         return self.action_space[a_idx]
 
 
+AVAIL_ACTIONS = {'simpleactions' : SimpleActions,
+                }
+
+def get_action(action_name=''):
+    """Convenience function for retrieving BirdsEye action methods
+    Parameters
+    ----------
+    action_name : {'simpleactions'}
+        Name of action method.
+    Returns
+    -------
+    action_obj : Action class object
+        BirdsEye action method.
+    """
+    action_name = action_name.lower()
+    if action_name in AVAIL_ACTIONS:
+        action_obj = AVAIL_ACTIONS[action_name]
+        return action_obj
+    else:
+        raise ValueError('Invalid action method name, {}, entered. Must be '
+                         'in {}'.format(action_name, AVAIL_ACTIONS.keys()))
+

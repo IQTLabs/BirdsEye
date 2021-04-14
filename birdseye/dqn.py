@@ -2,9 +2,11 @@
 These functions are adapted from github.com/Officium/RL-Experiments
 
 """
+import configparser
 import argparse
 import math
 import os
+import sys
 import random
 import time
 from collections import deque
@@ -29,15 +31,37 @@ from .definitions import *
 from .env import RFEnv
 
 
-def run_dqn(env,
-          log_path, use_gpu,
-          number_timesteps, dueling,
-          save_path, save_interval, ob_scale,
-          gamma, grad_norm, double_q, param_noise,
-          exploration_fraction, exploration_final_eps,
-          batch_size, train_freq, learning_starts, target_network_update_freq,
-          buffer_size, prioritized_replay, prioritized_replay_alpha,
-          prioritized_replay_beta0, atom_num, min_value, max_value, max_episode_length):
+# Default DQN inputs
+dqn_defaults = {
+    'number_timesteps' : 10000,
+    'dueling' : False,
+    'double_q' : False,
+    'param_noise' : True,
+    'exploration_fraction' : 0.2,
+    'exploration_final_eps' : 0.1,
+    'batch_size' : 100,
+    'train_freq' : 4,
+    'learning_starts' : 100,
+    'target_network_update_freq' : 100,
+    'buffer_size' : 10000,
+    'prioritized_replay' : True,
+    'prioritized_replay_alpha' : 0.6,
+    'prioritized_replay_beta0' : 0.4,
+    'min_value' : -10,
+    'max_value' : 10,
+    'max_episode_length' : 100,
+    'atom_num' : 1,
+    'ob_scale' : 1,
+    'gamma' : 0.99,
+    'grad_norm' : 10.0,
+    'save_interval' : 1000,
+    'save_path' : 'checkpoints',
+    'log_path' : 'rl_log',
+    'use_gpu' : True
+}
+
+
+def run_dqn(env, config):
     """Function to run DQN
 
     Publications:
@@ -50,6 +74,9 @@ def run_dqn(env,
     ----------
     env : object
         Environment definitions
+    config : object
+        Config object which must have following:
+
     log_path : string
         Path for logging output
     use_gpu : bool
@@ -99,7 +126,32 @@ def run_dqn(env,
     max_value : float
         Max value in distributional RL
     """
-   
+    log_path = config.log_path
+    use_gpu = config.use_gpu
+    number_timesteps = config.number_timesteps
+    dueling = config.dueling
+    save_path = config.save_path
+    save_interval = config.save_interval
+    ob_scale = config.ob_scale
+    gamma = config.gamma
+    grad_norm = config.grad_norm
+    double_q = config.double_q
+    param_noise = config.param_noise
+    exploration_fraction = config.exploration_fraction
+    exploration_final_eps = config.exploration_final_eps
+    batch_size = config.batch_size
+    train_freq = config.train_freq
+    learning_starts = config.learning_starts
+    target_network_update_freq = config.target_network_update_freq
+    buffer_size = config.buffer_size
+    prioritized_replay = config.prioritized_replay
+    prioritized_replay_alpha = config.prioritized_replay_alpha
+    prioritized_replay_beta0 = config.prioritized_replay_beta0
+    atom_num = config.atom_num
+    min_value = config.min_value
+    max_value = config.max_value
+    max_episode_length = config.max_episode_length
+
     # Setup logging
     logger = init_logger(log_path)
 
@@ -280,53 +332,70 @@ def huber_loss(abs_td_error):
     return flag * abs_td_error.pow(2) * 0.5 + (1 - flag) * (abs_td_error - 0.5)
 
 
-if __name__ == '__main__':
+def dqn(args=None, env=None):
+    # Configuration file parser
+    conf_parser = argparse.ArgumentParser(add_help=False)
+    conf_parser.add_argument('-c', '--config',
+                             help='Specify a configuration file',
+                             metavar='FILE')
+    args, remaining_argv = conf_parser.parse_known_args()
 
-    parser = argparse.ArgumentParser(description='DQN')
-    parser.add_argument('--number_timesteps', type=int, default=10000)
-    parser.add_argument('--no_dueling', action='store_false', dest='dueling')
-    parser.add_argument('--no_double_q', action='store_false', dest='double_q')
-    parser.add_argument('--param_noise', action='store_true')
+    defaults = dqn_defaults
 
-    parser.add_argument('--exploration_fraction', type=float, default=0.2)
-    parser.add_argument('--exploration_final_eps', type=float, default=0.1)
-    parser.add_argument('--batch_size', type=int, default=100)
-    parser.add_argument('--train_freq', type=int, default=4)
-    parser.add_argument('--learning_starts', type=int, default=100)
-    parser.add_argument('--target_network_update_freq', type=int, default=100)
-    parser.add_argument('--buffer_size', type=int, default=10000)
-    parser.add_argument('--prioritized_replay', action='store_true')
-    parser.add_argument('--prioritized_replay_alpha', type=float, default=0.6)
-    parser.add_argument('--prioritized_replay_beta0', type=float, default=0.4)
-    parser.add_argument('--min_value', type=int, default=-10)
-    parser.add_argument('--max_value', type=int, default=10)
-    parser.add_argument('--max_episode_length', type=int, default=100)
+    if args.config:
+        config = configparser.ConfigParser(defaults)
+        config.read([args.config])
+        defaults = dict(config.items('Defaults'))
+        # Fix for boolean args
+        defaults['param_noise'] = config.getboolean('Defaults', 'param_noise')
+        defaults['dueling'] = config.getboolean('Defaults', 'dueling')
+        defaults['double_q'] = config.getboolean('Defaults', 'double_q')
+        defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
+        defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
+    
+    parser = argparse.ArgumentParser(description='DQN',
+                                     parents=[conf_parser],
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.set_defaults(**defaults)
+    parser.add_argument('--number_timesteps', type=int, help='Number of timesteps')
+    parser.add_argument('--dueling', type=bool, help='lag: if True dueling value estimation will be used')
+    parser.add_argument('--double_q', type=bool, help='Flag: if True double DQN will be used')
+    parser.add_argument('--param_noise', type=bool, help='Flag: whether or not to use parameter space noise')
 
-    parser.add_argument('--atom_num', type=int, default=1)
-    parser.add_argument('--ob_scale', type=int, default=1)
-    parser.add_argument('--gamma', type=float, default=0.99)
-    parser.add_argument('--grad_norm', type=float, default=10.0)
-    parser.add_argument('--save_interval', type=int, default=1000)
-    parser.add_argument('--save_path', type=str, default='checkpoints', help='save model every x steps(0 = disabled)')
-    parser.add_argument('--log_path', type=str, default='rl_log')
-    parser.add_argument('--use_gpu', action='store_true')
-    args = parser.parse_args()
+    parser.add_argument('--exploration_fraction', type=float, help='Fraction of entire training period over which the exploration rate is annealed')
+    parser.add_argument('--exploration_final_eps', type=float, help='Final value of random action probability')
+    parser.add_argument('--batch_size', type=int, help='Size of a batched sampled from replay buffer for training')
+    parser.add_argument('--train_freq', type=int, help='Update the model every `train_freq` steps')
+    parser.add_argument('--learning_starts', type=int, help='How many steps of the model to collect transitions for before learning starts')
+    parser.add_argument('--target_network_update_freq', type=int, help='Update the target network every `target_network_update_freq` steps')
+    parser.add_argument('--buffer_size', type=int, help='Size of the replay buffer')
+    parser.add_argument('--prioritized_replay', type=bool, help='Flag: if True prioritized replay buffer will be used.')
+    parser.add_argument('--prioritized_replay_alpha', type=float, help='Alpha parameter for prioritized replay')
+    parser.add_argument('--prioritized_replay_beta0', type=float, help='Beta parameter for prioritized replay')
+    parser.add_argument('--min_value', type=int, help='Min value in distributional RL')
+    parser.add_argument('--max_value', type=int, help='Max value in distributional RL')
+    parser.add_argument('--max_episode_length', type=int, help='Max episode length')
 
-    # Setup environment
-    actions = SimpleActions()
-    sensor = Drone() 
-    state = RFState() 
-    env = RFEnv(sensor, actions, state)
+    parser.add_argument('--atom_num', type=int, help='Atom number in distributional RL for atom_num > 1')
+    parser.add_argument('--ob_scale', type=int, help='Scale for observation')
+    parser.add_argument('--gamma', type=float, help='Gamma input value')
+    parser.add_argument('--grad_norm', type=float, help='Max norm value of the gradients to be used in gradient clipping')
+    parser.add_argument('--save_interval', type=int, help='Interval for saving output values')
+    parser.add_argument('--save_path', type=str, help='Path for saving')
+    parser.add_argument('--log_path', type=str, help='Path for logging output')
+    parser.add_argument('--use_gpu', type=bool, help='Flag for using GPU device')
+    args = parser.parse_args(remaining_argv)
+
+    if not env:
+        # Setup environment
+        actions = SimpleActions()
+        sensor = Drone() 
+        state = RFState() 
+        env = RFEnv(sensor, actions, state)
 
     # Run dqn method
-    run_dqn(env,
-            args.log_path, args.use_gpu,
-            args.number_timesteps, args.dueling, 
-            args.save_path, args.save_interval, args.ob_scale,
-            args.gamma, args.grad_norm, args.double_q, args.param_noise,
-            args.exploration_fraction, args.exploration_final_eps,
-            args.batch_size, args.train_freq, args.learning_starts, args.target_network_update_freq,
-            args.buffer_size, args.prioritized_replay, args.prioritized_replay_alpha,
-            args.prioritized_replay_beta0, args.atom_num, args.min_value, args.max_value, args.max_episode_length)
+    run_dqn(env=env, config=args)
 
 
+if __name__ == '__main__':
+    dqn(args=sys.argv[1:])

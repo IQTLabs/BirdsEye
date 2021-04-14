@@ -1,0 +1,15 @@
+[Methods]
+method : mcts
+action : simpleactions
+sensor : drone
+state : rfstate 
+
+[Defaults]
+lambda_arg : 0.8
+collision : -2.
+loss : -2.
+depth : 10
+simulations : 500
+plotting : False
+trials : 100
+iterations : 2000

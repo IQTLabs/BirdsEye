@@ -2,11 +2,14 @@
 BirdsEye RL/RF Project
 
 
-## Installation
+## Installation & Usage
 
 ```
 python3 -m venv venv
 source venv/bin/activate
-jupyter notebook demo.ipynb
+pip install -r requirements.txt
+python3 run_birdseye.py -c configs/mcts.yaml
 ```
-or can be run from cmd line vi `python3 -m birdseye.mcts`
+
+Individual methods can still be run on the cmd 
+line via `python3 -m birdseye.mcts`, e.g.

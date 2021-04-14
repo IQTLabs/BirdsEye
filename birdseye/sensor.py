@@ -195,3 +195,27 @@ class Bearing(Sensor):
             return 2*state_range/self.sensor_range - 1
         else:
             return 0.0001
+
+
+AVAIL_SENSORS = {'drone' : Drone,
+                 'bearing' : Bearing,
+                }
+
+def get_sensor(sensor_name=''):
+    """Convenience function for retrieving BirdsEye sensor methods
+    Parameters
+    ----------
+    sensor_name : {'simpleactions'}
+        Name of sensor method.
+    Returns
+    -------
+    sensor_obj : Sensor class object
+        BirdsEye sensor method.
+    """
+    if sensor_name in AVAIL_SENSORS:
+        sensor_obj = AVAIL_SENSORS[sensor_name]
+        return sensor_obj
+    else:
+        raise ValueError('Invalid sensor method name, {}, entered. Must be '
+                         'in {}'.format(sensor_name, AVAIL_SENSORS.keys()))
+
