@@ -5,8 +5,11 @@ To facilitate the validation of the BirdsEye Reinforced Learning (RL) and other 
 <p align="center">
   <img src="./images/transmission.png" width="350" title="hover text">
 </p>
-Where:  Gr = receive antenna gain (dB), Gt = transmit antenna gain (dB), Pt = transmitted power (dBm)
+Where:  
+
+Gr = receive antenna gain (dB), Gt = transmit antenna gain (dB), Pt = transmitted power (dBm)
         f = frequency (Hz), C = speed of light (m/s), R = distance in feet, Pr = received power (dBm)
+        
 
 In this directory is a python script (simrssi.py) used to calculate RSSI values based on lat/lon input coordinates. These are plotted using one of two plotting scripts: plot-lin.py or plot-cub.py which use either linear or cubic interpolation for generating a heat-map of RF signal strength. Examples are shown below:
 
