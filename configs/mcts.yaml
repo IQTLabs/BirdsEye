@@ -3,6 +3,7 @@ method : mcts
 action : simpleactions
 sensor : drone
 state : rfstate 
+target_speed: 0.0
 
 [Defaults]
 lambda_arg : 0.8

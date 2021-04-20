@@ -15,7 +15,10 @@ def run_birdseye(args=None, env=None):
                              help='Specify a configuration file',
                              required=True,
                              metavar='FILE')
-    args = conf_parser.parse_known_args()[0]
+    if args is not None: 
+        args = conf_parser.parse_known_args(args)[0]
+    else: 
+        args = conf_parser.parse_known_args()[0]
 
     # Grab Methods information from config file
     config = configparser.ConfigParser()
@@ -25,6 +28,10 @@ def run_birdseye(args=None, env=None):
     action_name = config_dict['action']
     sensor_name = config_dict['sensor']
     state_name = config_dict['state']
+    target_speed = None
+    if 'target_speed' in config_dict: 
+        target_speed = config_dict['target_speed']
+    print({section: dict(config[section]) for section in config.sections()})
 
     # Setup requested method objects
     run_method = get_method(method_name)
@@ -33,7 +40,7 @@ def run_birdseye(args=None, env=None):
     state = get_state(state_name)
     
     # Setup environment
-    env = RFEnv(sensor(), actions(), state())
+    env = RFEnv(sensor(), actions(), state(target_speed=target_speed))
 
     # Run the requested algorithm
     run_method(args=config, env=env)

@@ -28,9 +28,12 @@ class State(object):
 class RFState(State):
     """RF State
     """
-    def __init__(self, prob=0.9):
+    def __init__(self, prob=0.9, target_speed=None):
+
         # Transition probability
         self.prob = prob
+        # Target speed
+        self.target_speed = float(target_speed) if target_speed is not None else 1.
         # Setup an initial random state
         self.target_state = self.init_target_state()
         # Setup an initial sensor state 
@@ -112,7 +115,6 @@ class RFState(State):
             Updated state values array
         """
 
-        TGT_SPD = 1
         # Get current state vars
         r, theta, crs, spd = target_state
         spd = control[1]
@@ -133,7 +135,7 @@ class RFState(State):
         x, y = pol2cart(r, np.radians(theta))
 
         # Transform changes to coords to cartesian
-        dx, dy = pol2cart(TGT_SPD, np.radians(crs))
+        dx, dy = pol2cart(self.target_speed, np.radians(crs))
         pos = [x + dx - spd, y + dy]
 
         # Generate next course given current course

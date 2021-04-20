@@ -24,7 +24,7 @@ mcts_defaults = {
 }
 
 
-def run_mcts(env, config=None, fig=None, ax=None):
+def run_mcts(env, config=None, fig=None, ax=None, full_config=None):
     """Function to run Monte Carlo Tree Search
 
     Parameters
@@ -67,6 +67,10 @@ def run_mcts(env, config=None, fig=None, ax=None):
     LOSS_REWARD = config.loss
     plotting = config.plotting
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    if full_config is not None: 
+        config2log = {section: dict(full_config[section]) for section in full_config.sections()}
+    else: 
+        config2log = vars(config)
 
     #output header file
     header_string = ('config: {}\n' +
@@ -76,7 +80,7 @@ def run_mcts(env, config=None, fig=None, ax=None):
                      'Lambda: {}\n' +
                      'Iterations: {}\n' +
                      'Collision Reward: {}\n' +
-                     'Loss Reward: {}\n').format(config, global_start_time, 
+                     'Loss Reward: {}\n').format(config2log, global_start_time, 
                                                  DEPTH, simulations, lambda_arg,
                                                  iterations, COLLISION_REWARD, LOSS_REWARD)
 
@@ -141,7 +145,7 @@ def mcts(args=None, env=None):
 
     # Grab mcts specific defaults
     defaults = mcts_defaults
-
+    
     if args.config:
         config = configparser.ConfigParser(defaults)
         config.read([args.config])
@@ -170,38 +174,7 @@ def mcts(args=None, env=None):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    run_mcts(env=env, config=args)
-
-
-def mcts_notebook(args=None, env=None):
-
-
-    # Grab mcts specific defaults
-    defaults = mcts_defaults
-
-   
-    
-    parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.set_defaults(**defaults)
-    parser.add_argument('--lambda_arg', type=float, help='Lambda value')
-    parser.add_argument('--collision', type=float, help='Reward value for collision')
-    parser.add_argument('--loss', type=float, help='Reward value for loss function')
-    parser.add_argument('--depth', type=float, help='Tree depth')
-    parser.add_argument('--simulations', type=int, help='Number of simulations')
-    parser.add_argument('--plotting', type=bool, help='Flag to plot or not')
-    parser.add_argument('--trials', type=int, help='Number of runs')
-    parser.add_argument('--iterations', type=int, help='Number of iterations')
-    args = parser.parse_args(args)
-    
-    if not env:
-        # Setup environment
-        actions = SimpleActions()
-        sensor = Drone()
-        state = RFState()
-        env = RFEnv(sensor, actions, state)
-
-    run_mcts(env=env, config=args)
+    run_mcts(env=env, config=args, full_config=config)
 
 
 if __name__ == '__main__':
