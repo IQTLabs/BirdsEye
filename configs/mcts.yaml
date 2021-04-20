@@ -12,4 +12,4 @@ depth : 10
 simulations : 500
 plotting : False
 trials : 100
-iterations : 2000
+iterations : 500
