@@ -251,5 +251,5 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     avg_centroid_err /= num_iters
     average_rmse /= num_iters
 
-    return (plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse)
+    return [plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
     

@@ -31,7 +31,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import tracking_error
+from .utils import tracking_error, write_header_log
 
 
 # Default DQN inputs
@@ -64,7 +64,7 @@ dqn_defaults = {
 }
 
 
-def run_dqn(env, config, full_config=None):
+def run_dqn(env, config, global_start_time):
     """Function to run DQN
 
     Publications:
@@ -154,24 +154,6 @@ def run_dqn(env, config, full_config=None):
     min_value = config.min_value
     max_value = config.max_value
     max_episode_length = config.max_episode_length
-
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-    if full_config is not None:
-        config2log = {section: dict(full_config[section]) for section in full_config.sections()}
-    else:
-        config2log = vars(config)
-
-    #output header file
-    header_string = ('config: {}\n').format(config2log)
-
-    #write output header
-    run_dir = RUN_DIR
-    if not os.path.isdir(RUN_DIR+'/dqn/'):
-        os.mkdir(RUN_DIR+'/dqn/')
-    header_filename = "{}/dqn/{}_header.txt".format(RUN_DIR, global_start_time)
-    with open(header_filename, "w") as file:
-        file.write(header_string)
 
     # Setup logging
     logger = init_logger(log_path)
@@ -277,7 +259,7 @@ def run_dqn(env, config, full_config=None):
                 logger.info('vloss: {:.6f}'.format(loss.item()))
 
             result = test(env, qnet, max_episode_length, device, ob_scale)
-            result = [time.time(), n_iter] + result
+            result = [datetime.now(), n_iter] + result
             run_data.append(result)
 
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
@@ -467,8 +449,11 @@ def dqn(args=None, env=None):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
+    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    write_header_log(config, 'dqn', global_start_time)
+
     # Run dqn method
-    run_dqn(env=env, config=args, full_config=config)
+    run_dqn(env=env, config=args, global_start_time=global_start_time)
 
 
 if __name__ == '__main__':
