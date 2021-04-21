@@ -4,6 +4,7 @@ action : simpleactions
 sensor : drone
 state : rfstate 
 target_speed: 0.0
+target_movement: circular
 
 [Defaults]
 lambda_arg : 0.8

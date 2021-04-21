@@ -28,12 +28,15 @@ class State(object):
 class RFState(State):
     """RF State
     """
-    def __init__(self, prob=0.9, target_speed=None):
+    def __init__(self, prob=0.9, target_speed=None, target_movement=None):
 
         # Transition probability
         self.prob = prob
         # Target speed
         self.target_speed = float(target_speed) if target_speed is not None else 1.
+        # Target movement pattern
+        self.target_movement = target_movement if target_movement is not None else 'random'
+        self.target_move_iter = 0 
         # Setup an initial random state
         self.target_state = self.init_target_state()
         # Setup an initial sensor state 
@@ -99,7 +102,7 @@ class RFState(State):
 
 
     # returns new state given last state and action (control)
-    def update_state(self, target_state, control):
+    def update_state(self, state, control, target_update=False):
         """Update state based on state and action
 
         Parameters
@@ -114,9 +117,8 @@ class RFState(State):
         State (array_like)
             Updated state values array
         """
-
         # Get current state vars
-        r, theta, crs, spd = target_state
+        r, theta, crs, spd = state
         spd = control[1]
         
         theta = theta % 360
@@ -139,11 +141,18 @@ class RFState(State):
         pos = [x + dx - spd, y + dy]
 
         # Generate next course given current course
-        if random.random() >= self.prob:
-            crs += random.choice([-1, 1]) * 30
-            crs %= 360
-            if crs < 0:
-                crs += 360
+        if target_update: 
+            if self.target_movement == 'circular': 
+                crs += self.circular_control(5)[0]
+            else: 
+                if random.random() >= self.prob:
+                    crs += random.choice([-1, 1]) * 30
+        else: 
+            if random.random() >= self.prob:
+                crs += random.choice([-1, 1]) * 30
+        crs %= 360
+        if crs < 0:
+            crs += 360
 
         r = np.sqrt(pos[0]**2 + pos[1]**2)
         theta_rad = np.arctan2(pos[1], pos[0])
@@ -192,6 +201,13 @@ class RFState(State):
             theta_deg += 360
 
         return [r, theta_deg, crs_s+crs_t, spd]
+
+    def circular_control(self, size):
+        d_crs = 30 if self.target_move_iter%size == 0 else 0 
+        self.target_move_iter += 1 
+        print('d_crs ',d_crs)
+        return [d_crs, self.target_speed]
+
 
 
 AVAIL_STATES = {'rfstate' : RFState,

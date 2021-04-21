@@ -86,9 +86,9 @@ def run_mcts(env, config=None, fig=None, ax=None, full_config=None):
 
     #write output header
     run_dir = RUN_DIR
-    if not os.path.isdir(RUN_DIR): 
-        os.mkdir(RUN_DIR)
-    header_filename = "{}/{}_header.txt".format(RUN_DIR, global_start_time)
+    if not os.path.isdir(RUN_DIR+'/mcts/'): 
+        os.mkdir(RUN_DIR+'/mcts/')
+    header_filename = "{}/mcts/{}_header.txt".format(RUN_DIR, global_start_time)
     with open(header_filename, "w") as file:
         file.write(header_string)
 
@@ -112,7 +112,7 @@ def run_mcts(env, config=None, fig=None, ax=None, full_config=None):
         result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
         mcts_coll += result[2]
         mcts_loss += result[3]
-        run_data.append(result[2:])
+        run_data.append(result[1:])
         
         run_times.append(datetime.now()-run_start_time)
         print(".")
@@ -125,13 +125,12 @@ def run_mcts(env, config=None, fig=None, ax=None, full_config=None):
         print("Collision Rate: {}".format(mcts_coll/i))
         print("Loss Rate: {}".format(mcts_loss/i))
         print("==============================")
-        namefile = '{}/{}_data.csv'.format(RUN_DIR, global_start_time)
         updated_header = header_string + '\nAverage Runtime: {}'.format(np.mean(run_times))
-
         with open(header_filename, "w") as file:
             file.write(updated_header)
 
-        df = pd.DataFrame(run_data, columns=['total_col','total_loss', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
+        namefile = '{}/mcts/{}_data.csv'.format(RUN_DIR, global_start_time)
+        df = pd.DataFrame(run_data, columns=['total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
         df.to_csv(namefile)
 
 
@@ -145,7 +144,7 @@ def mcts(args=None, env=None):
 
     # Grab mcts specific defaults
     defaults = mcts_defaults
-    
+
     if args.config:
         config = configparser.ConfigParser(defaults)
         config.read([args.config])

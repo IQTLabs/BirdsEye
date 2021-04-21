@@ -206,7 +206,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, simulations)
 
         # take action; get next true state, obs, and reward
-        next_state = env.state.update_state(env.state.target_state, action)
+        next_state = env.state.update_state(env.state.target_state, action, target_update=True)
+        #next_state = env.state.update_state(env.state.target_state, action, target_control=env.state.circular_control(time_step, size=5))
         # Update absolute position of sensor 
         env.state.update_sensor(action)
         observation = env.sensor.observation(next_state)
@@ -228,22 +229,23 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         avg_heading_err += heading_error
         avg_centroid_err += centroid_distance_error
         average_rmse += rmse
-        #print(r_error, theta_error, heading_error, centroid_distance_error, rmse)
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
-        #print(r_error, theta_error, heading_error, centroid_distance_error, rmse)
 
         # accumulate reward
         total_reward += reward
+        
         if env.state.target_state[0] < 10:
             total_col = 1
+
+        if env.state.target_state[0] > 150:
+            total_loss = 1
 
         if plotting:
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    if env.state.target_state[0] > 150:
-        total_loss = 1
+    
 
     avg_r_err /= num_iters
     avg_theta_err /= num_iters
@@ -251,5 +253,5 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     avg_centroid_err /= num_iters
     average_rmse /= num_iters
 
-    return (total_reward, plots, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse)
+    return (plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse)
     
