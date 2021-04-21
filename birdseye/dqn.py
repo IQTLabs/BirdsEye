@@ -110,9 +110,9 @@ def run_dqn(env, config, full_config=None):
         Size of a batched sampled from replay buffer for training
     train_freq : int
         Update the model every `train_freq` steps
-    learning_starts : int 
+    learning_starts : int
         How many steps of the model to collect transitions for before learning starts
-    target_network_update_freq : int 
+    target_network_update_freq : int
         Update the target network every `target_network_update_freq` steps
     buffer_size : int
         Size of the replay buffer
@@ -120,7 +120,7 @@ def run_dqn(env, config, full_config=None):
         Flag: if True prioritized replay buffer will be used.
     prioritized_replay_alpha : float
         Alpha parameter for prioritized replay
-    prioritized_replay_beta0 : float 
+    prioritized_replay_beta0 : float
         Beta parameter for prioritized replay
     atom_num : int
         Atom number in distributional RL for atom_num > 1
@@ -157,9 +157,9 @@ def run_dqn(env, config, full_config=None):
 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
 
-    if full_config is not None: 
+    if full_config is not None:
         config2log = {section: dict(full_config[section]) for section in full_config.sections()}
-    else: 
+    else:
         config2log = vars(config)
 
     #output header file
@@ -167,7 +167,7 @@ def run_dqn(env, config, full_config=None):
 
     #write output header
     run_dir = RUN_DIR
-    if not os.path.isdir(RUN_DIR+'/dqn/'): 
+    if not os.path.isdir(RUN_DIR+'/dqn/'):
         os.mkdir(RUN_DIR+'/dqn/')
     header_filename = "{}/dqn/{}_header.txt".format(RUN_DIR, global_start_time)
     with open(header_filename, "w") as file:
@@ -277,7 +277,7 @@ def run_dqn(env, config, full_config=None):
                 logger.info('vloss: {:.6f}'.format(loss.item()))
 
             result = test(env, qnet, max_episode_length, device, ob_scale)
-            result = [time.time(), n_iter]
+            result = [time.time(), n_iter] + result
             run_data.append(result)
 
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
@@ -289,7 +289,7 @@ def run_dqn(env, config, full_config=None):
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
 
-def test(env, qnet, number_timesteps, device, ob_scale): 
+def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """
     total_reward = 0
     total_col = 0
@@ -311,8 +311,8 @@ def test(env, qnet, number_timesteps, device, ob_scale):
 
             # take action in env
             o, r, done, info = env.step(a)
-            
-            # error metrics 
+
+            # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
             avg_r_err += r_error
             avg_theta_err += theta_error
@@ -323,7 +323,7 @@ def test(env, qnet, number_timesteps, device, ob_scale):
 
             # accumulate reward
             total_reward += r
-            
+
             if env.state.target_state[0] < 10:
                 total_col = 1
 
@@ -397,7 +397,7 @@ def _generate(device, env, qnet, ob_scale,
         infos = dict()
         o = o_ if not done else env.reset()
 
-        if info['episode']['l'] > max_episode_length: 
+        if info['episode']['l'] > max_episode_length:
             env.reset()
 
 
@@ -426,7 +426,7 @@ def dqn(args=None, env=None):
         defaults['double_q'] = config.getboolean('Defaults', 'double_q')
         defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
         defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
-    
+
     parser = argparse.ArgumentParser(description='DQN',
                                      parents=[conf_parser],
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -463,8 +463,8 @@ def dqn(args=None, env=None):
     if not env:
         # Setup environment
         actions = SimpleActions()
-        sensor = Drone() 
-        state = RFState() 
+        sensor = Drone()
+        state = RFState()
         env = RFEnv(sensor, actions, state)
 
     # Run dqn method
