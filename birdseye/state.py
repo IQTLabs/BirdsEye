@@ -136,10 +136,6 @@ class RFState(State):
         # Get cartesian coords
         x, y = pol2cart(r, np.radians(theta))
 
-        # Transform changes to coords to cartesian
-        dx, dy = pol2cart(self.target_speed, np.radians(crs))
-        pos = [x + dx - spd, y + dy]
-
         # Generate next course given current course
         if target_update: 
             if self.target_movement == 'circular': 
@@ -153,6 +149,10 @@ class RFState(State):
         crs %= 360
         if crs < 0:
             crs += 360
+
+        # Transform changes to coords to cartesian
+        dx, dy = pol2cart(self.target_speed, np.radians(crs))
+        pos = [x + dx - spd, y + dy]
 
         r = np.sqrt(pos[0]**2 + pos[1]**2)
         theta_rad = np.arctan2(pos[1], pos[0])
@@ -205,7 +205,6 @@ class RFState(State):
     def circular_control(self, size):
         d_crs = 30 if self.target_move_iter%size == 0 else 0 
         self.target_move_iter += 1 
-        print('d_crs ',d_crs)
         return [d_crs, self.target_speed]
 
 

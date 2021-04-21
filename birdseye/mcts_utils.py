@@ -245,8 +245,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    
-
     avg_r_err /= num_iters
     avg_theta_err /= num_iters
     avg_heading_err /= num_iters
