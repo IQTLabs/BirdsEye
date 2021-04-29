@@ -1,6 +1,7 @@
 import numpy as np 
 import random 
 from .utils import pol2cart
+from birdseye.pfrnn.pfrnn import pfrnn
 from pfilter import ParticleFilter, systematic_resample
 
 
@@ -15,6 +16,8 @@ class RFEnv(object):
         self.state = state
         # Flag for simulation vs real data
         self.simulated = simulated
+
+        self.pfrnn = pfrnn()
 
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics
@@ -145,3 +148,30 @@ class RFEnv(object):
     
     def get_absolute_target(self): 
         return self.state.get_absolute_state(self.state.target_state)
+
+    def get_particle_centroid(self): 
+
+        particles = self.pf.particles
+
+        particles_r = particles[:,0]
+        particles_theta = np.radians(particles[:,1])
+        particles_heading = particles[:,2]
+        particles_x, particles_y = pol2cart(particles_r, particles_theta)
+
+        # centroid of particles x,y
+        mean_x = np.mean(particles_x)
+        mean_y = np.mean(particles_y)
+
+        return mean_x, mean_y
+
+    def get_distance_error(self): 
+
+        mean_x, mean_y = self.get_particle_centroid()
+
+        target_r = self.state.target_state[0]
+        target_theta = np.radians(self.state.target_state[1])
+        target_x, target_y = pol2cart(target_r, target_theta)
+
+        centroid_distance_error = np.sqrt((mean_x - target_x)**2 + (mean_y - target_y)**2)
+
+        return centroid_distance_error

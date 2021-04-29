@@ -3,6 +3,8 @@ method : mcts
 action : simpleactions
 sensor : drone
 state : rfstate 
+target_speed: 0.0
+target_movement: circular
 
 [Defaults]
 lambda_arg : 0.8
@@ -12,4 +14,4 @@ depth : 10
 simulations : 500
 plotting : False
 trials : 100
-iterations : 2000
+iterations : 500

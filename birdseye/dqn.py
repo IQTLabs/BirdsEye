@@ -2,6 +2,7 @@
 These functions are adapted from github.com/Officium/RL-Experiments
 
 """
+from datetime import datetime
 import configparser
 import argparse
 import math
@@ -12,6 +13,7 @@ import time
 from collections import deque
 from copy import deepcopy
 import numpy as np
+import pandas as pd
 
 import torch
 import torch.distributions
@@ -29,6 +31,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
+from .utils import tracking_error, write_header_log
 
 
 # Default DQN inputs
@@ -49,7 +52,7 @@ dqn_defaults = {
     'prioritized_replay_beta0' : 0.4,
     'min_value' : -10,
     'max_value' : 10,
-    'max_episode_length' : 100,
+    'max_episode_length' : 500,
     'atom_num' : 1,
     'ob_scale' : 1,
     'gamma' : 0.99,
@@ -61,7 +64,7 @@ dqn_defaults = {
 }
 
 
-def run_dqn(env, config):
+def run_dqn(env, config, global_start_time):
     """Function to run DQN
 
     Publications:
@@ -107,9 +110,9 @@ def run_dqn(env, config):
         Size of a batched sampled from replay buffer for training
     train_freq : int
         Update the model every `train_freq` steps
-    learning_starts : int 
+    learning_starts : int
         How many steps of the model to collect transitions for before learning starts
-    target_network_update_freq : int 
+    target_network_update_freq : int
         Update the target network every `target_network_update_freq` steps
     buffer_size : int
         Size of the replay buffer
@@ -117,7 +120,7 @@ def run_dqn(env, config):
         Flag: if True prioritized replay buffer will be used.
     prioritized_replay_alpha : float
         Alpha parameter for prioritized replay
-    prioritized_replay_beta0 : float 
+    prioritized_replay_beta0 : float
         Beta parameter for prioritized replay
     atom_num : int
         Atom number in distributional RL for atom_num > 1
@@ -186,6 +189,8 @@ def run_dqn(env, config):
         os.makedirs(save_path)
 
     start_ts = time.time()
+    run_data = []
+
     for n_iter in range(1, number_timesteps + 1):
         if prioritized_replay:
             buffer.beta += (1 - prioritized_replay_beta0) / number_timesteps
@@ -253,10 +258,61 @@ def run_dqn(env, config):
             if n_iter > learning_starts and n_iter % train_freq == 0:
                 logger.info('vloss: {:.6f}'.format(loss.item()))
 
+            result = test(env, qnet, max_episode_length, device, ob_scale)
+            result = [datetime.now(), n_iter] + result
+            run_data.append(result)
+
+            filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
+            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
+            df.to_csv(filename)
+
+
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
-                       os.path.join(save_path, '{}.checkpoint'.format(n_iter)))
+                       os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
 
+def test(env, qnet, number_timesteps, device, ob_scale):
+    """ Perform one test run """
+    total_reward = 0
+    total_col = 0
+    total_lost = 0
+    avg_r_err = 0
+    avg_theta_err = 0
+    avg_heading_err = 0
+    avg_centroid_err = 0
+    average_rmse = 0
+
+    o = env.reset()
+
+    for n in range(number_timesteps):
+        with torch.no_grad():
+            ob = scale_ob(np.expand_dims(o, 0), device, ob_scale)
+            q = qnet(ob)
+
+            a = q.argmax(1).cpu().numpy()[0]
+
+            # take action in env
+            o, r, done, info = env.step(a)
+
+            # error metrics
+            r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
+            avg_r_err += r_error
+            avg_theta_err += theta_error
+            avg_heading_err += heading_error
+            avg_centroid_err += centroid_distance_error
+            average_rmse += rmse
+            #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
+
+            # accumulate reward
+            total_reward += r
+
+            if env.state.target_state[0] < 10:
+                total_col = 1
+
+            if env.state.target_state[0] > 150:
+                total_lost = 1
+
+    return [total_reward, total_col, total_lost, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,
@@ -323,7 +379,7 @@ def _generate(device, env, qnet, ob_scale,
         infos = dict()
         o = o_ if not done else env.reset()
 
-        if info['episode']['l'] > max_episode_length: 
+        if info['episode']['l'] > max_episode_length:
             env.reset()
 
 
@@ -352,7 +408,7 @@ def dqn(args=None, env=None):
         defaults['double_q'] = config.getboolean('Defaults', 'double_q')
         defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
         defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
-    
+
     parser = argparse.ArgumentParser(description='DQN',
                                      parents=[conf_parser],
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -389,12 +445,15 @@ def dqn(args=None, env=None):
     if not env:
         # Setup environment
         actions = SimpleActions()
-        sensor = Drone() 
-        state = RFState() 
+        sensor = Drone()
+        state = RFState()
         env = RFEnv(sensor, actions, state)
 
+    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    write_header_log(config, 'dqn', global_start_time)
+
     # Run dqn method
-    run_dqn(env=env, config=args)
+    run_dqn(env=env, config=args, global_start_time=global_start_time)
 
 
 if __name__ == '__main__':

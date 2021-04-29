@@ -10,6 +10,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
+from .utils import write_header_log
 
 # Default MCTS inputs
 mcts_defaults = {
@@ -24,7 +25,7 @@ mcts_defaults = {
 }
 
 
-def run_mcts(env, config, fig=None, ax=None):
+def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     """Function to run Monte Carlo Tree Search
 
     Parameters
@@ -56,6 +57,8 @@ def run_mcts(env, config, fig=None, ax=None):
     ax : object
         Axis object
     """
+    if config is None: 
+        config = mcts_defaults
     simulations = config.simulations
     DEPTH = config.depth
     lambda_arg = config.lambda_arg
@@ -64,26 +67,6 @@ def run_mcts(env, config, fig=None, ax=None):
     COLLISION_REWARD = config.collision
     LOSS_REWARD = config.loss
     plotting = config.plotting
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
-    #output header file
-    header_string = ('MCTS Run: {}\n' +
-                     'Depth: {}\n' +
-                     'N: {}\n' +
-                     'Lambda: {}\n' +
-                     'Iterations: {}\n' +
-                     'Collision Reward: {}\n' +
-                     'Loss Reward: {}\n').format(global_start_time, 
-                                                 DEPTH, simulations, lambda_arg,
-                                                 iterations, COLLISION_REWARD, LOSS_REWARD)
-
-    #write output header
-    run_dir = RUN_DIR
-    if not os.path.isdir(RUN_DIR): 
-        os.mkdir(RUN_DIR)
-    header_filename = "{}/{}_header.txt".format(RUN_DIR, global_start_time)
-    with open(header_filename, "w") as file:
-        file.write(header_string)
 
     #cumulative collisions, losses, and number of trials
     #total reward, and best average tracking
@@ -99,32 +82,29 @@ def run_mcts(env, config, fig=None, ax=None):
     mcts_loss = 0
     mcts_coll = 0
     run_times = []
-    for i  in range(num_runs):
+    for i  in range(1, num_runs+1):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
         result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
+        run_time = datetime.now()-run_start_time
+        run_times.append(run_time)
         mcts_coll += result[2]
         mcts_loss += result[3]
-        run_data.append(result[2:4])
+        run_data.append([datetime.now(), run_time]+result[1:])
+       
         print(".")
-        run_times.append(datetime.now()-run_start_time)
-        if i % 5 == 0:
+        print("\n==============================")
+        print("Runs: {}".format(i))
+        print("NUM PARTICLES: {}".format(simulations))
+        print("MCTS Depth {} Results".format(DEPTH))
+        print("Collision Rate: {}".format(mcts_coll/i))
+        print("Loss Rate: {}".format(mcts_loss/i))
+        print("==============================")
+        
 
-            print("\n==============================")
-            print("Runs: "+ i)
-            print("NUM PARTICLES: "+ simulations)
-            print("MCTS Depth "+ DEPTH+ " Results")
-            print("Collision Rate: "+ mcts_coll/i)
-            print("Loss Rate: "+ mcts_loss/i)
-            print("==============================")
-            namefile = '{}_data.csv'.format(global_start_time)
-            updated_header = header_string + '\nAverage Runtime: {}'.format(np.mean(run_times))
-
-            with open(header_filename, "w") as file:
-                file.write(updated_header)
-
-            df = pd.DataFrame(run_data)
-            df.to_csv(namefile)
+        namefile = '{}/mcts/{}_data.csv'.format(RUN_DIR, global_start_time)
+        df = pd.DataFrame(run_data, columns=['time','run_time','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
+        df.to_csv(namefile)
 
 
 def mcts(args=None, env=None):
@@ -166,7 +146,10 @@ def mcts(args=None, env=None):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    run_mcts(env=env, config=args)
+    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    write_header_log(config, 'mcts', global_start_time)
+
+    run_mcts(env=env, config=args, global_start_time=global_start_time)
 
 
 if __name__ == '__main__':

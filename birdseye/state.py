@@ -28,9 +28,15 @@ class State(object):
 class RFState(State):
     """RF State
     """
-    def __init__(self, prob=0.9):
+    def __init__(self, prob=0.9, target_speed=None, target_movement=None):
+
         # Transition probability
         self.prob = prob
+        # Target speed
+        self.target_speed = float(target_speed) if target_speed is not None else 1.
+        # Target movement pattern
+        self.target_movement = target_movement if target_movement is not None else 'random'
+        self.target_move_iter = 0 
         # Setup an initial random state
         self.target_state = self.init_target_state()
         # Setup an initial sensor state 
@@ -46,7 +52,7 @@ class RFState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1])
+        return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
    
     def init_sensor_state(self): 
         # state is [range, bearing, relative course, own speed]
@@ -96,7 +102,7 @@ class RFState(State):
 
 
     # returns new state given last state and action (control)
-    def update_state(self, target_state, control):
+    def update_state(self, state, control, target_update=False):
         """Update state based on state and action
 
         Parameters
@@ -111,11 +117,9 @@ class RFState(State):
         State (array_like)
             Updated state values array
         """
-
-        TGT_SPD = 1
         # Get current state vars
-        r, theta, crs, spd = target_state
-        spd = control[1]
+        r, theta, crs, spd = state
+        control_spd = control[1]
         
         theta = theta % 360
         theta -= control[0]
@@ -132,16 +136,25 @@ class RFState(State):
         # Get cartesian coords
         x, y = pol2cart(r, np.radians(theta))
 
-        # Transform changes to coords to cartesian
-        dx, dy = pol2cart(TGT_SPD, np.radians(crs))
-        pos = [x + dx - spd, y + dy]
-
         # Generate next course given current course
-        if random.random() >= self.prob:
-            crs += random.choice([-1, 1]) * 30
-            crs %= 360
-            if crs < 0:
-                crs += 360
+        if target_update: 
+            if self.target_movement == 'circular': 
+                d_crs, circ_spd = self.circular_control(50)
+                crs += d_crs
+                spd = circ_spd
+            else: 
+                if random.random() >= self.prob:
+                    crs += random.choice([-1, 1]) * 30
+        else: 
+            if random.random() >= self.prob:
+                crs += random.choice([-1, 1]) * 30
+        crs %= 360
+        if crs < 0:
+            crs += 360
+
+        # Transform changes to coords to cartesian
+        dx, dy = pol2cart(spd, np.radians(crs))
+        pos = [x + dx - control_spd, y + dy]
 
         r = np.sqrt(pos[0]**2 + pos[1]**2)
         theta_rad = np.arctan2(pos[1], pos[0])
@@ -179,7 +192,7 @@ class RFState(State):
         r_t, theta_t, crs_t, spd = relative_state
         r_s, theta_s, crs_s, _ = self.sensor_state
 
-        x_t, y_t = pol2cart(r_t, np.radians(theta_t))
+        x_t, y_t = pol2cart(r_t, np.radians(theta_t+crs_s))
         x_s, y_s = pol2cart(r_s, np.radians(theta_s))
 
         x = x_t + x_s
@@ -190,6 +203,12 @@ class RFState(State):
             theta_deg += 360
 
         return [r, theta_deg, crs_s+crs_t, spd]
+
+    def circular_control(self, size):
+        self.target_move_iter += 1 
+        d_crs = 2*self.target_speed
+        circ_spd = (6.5*size)/(360/self.target_speed)
+        return [d_crs, circ_spd]
 
 
 AVAIL_STATES = {'rfstate' : RFState,

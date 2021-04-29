@@ -3,8 +3,9 @@
 
 # Imports
 import random
+import csv 
 import numpy as np
-from .utils import pol2cart, build_plots
+from .utils import pol2cart, build_plots, tracking_error
 from pfilter import ParticleFilter, systematic_resample
 
 ##################################################################
@@ -176,9 +177,19 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     total_reward = 0
     total_col = 0
     total_loss = 0
+    avg_r_err = 0
+    avg_theta_err = 0
+    avg_heading_err = 0
+    avg_centroid_err = 0
+    average_rmse = 0
 
     # 500 time steps with an action to be selected at each
     plots = []
+
+    log_file = open('employee_file2.csv', mode='w')
+    fieldnames = ['time', 'dept', 'birth_month']
+    log_writer = csv.DictWriter(log_file, fieldnames=fieldnames)
+
     for time_step in range(num_iters):
 
         #if time_step % 100 == 0
@@ -195,7 +206,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, simulations)
 
         # take action; get next true state, obs, and reward
-        next_state = env.state.update_state(env.state.target_state, action)
+        next_state = env.state.update_state(env.state.target_state, action, target_update=True)
+        #next_state = env.state.update_state(env.state.target_state, action, target_control=env.state.circular_control(time_step, size=5))
         # Update absolute position of sensor 
         env.state.update_sensor(action)
         observation = env.sensor.observation(next_state)
@@ -203,22 +215,41 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         reward = env.state.reward_func(next_state, env.actions.action_to_index(action))
         env.state.target_state = next_state
 
+        # pfrnn
+        #env.pfrnn.train_iter(env.pfrnn.prep_data(observation, env.get_absolute_target(), env.actions.action_to_index(action)))
+
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
         belief = env.pf.particles
 
+        # error metrics 
+        r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
+        avg_r_err += r_error
+        avg_theta_err += theta_error
+        avg_heading_err += heading_error
+        avg_centroid_err += centroid_distance_error
+        average_rmse += rmse
+        #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
+
         # accumulate reward
         total_reward += reward
+        
         if env.state.target_state[0] < 10:
             total_col = 1
+
+        if env.state.target_state[0] > 150:
+            total_loss = 1
 
         if plotting:
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    if env.state.target_state[0] > 150:
-        total_loss = 1
+    avg_r_err /= num_iters
+    avg_theta_err /= num_iters
+    avg_heading_err /= num_iters
+    avg_centroid_err /= num_iters
+    average_rmse /= num_iters
 
-    return (total_reward, plots, total_col, total_loss)
+    return [plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
     

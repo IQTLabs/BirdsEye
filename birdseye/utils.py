@@ -1,13 +1,17 @@
 # utils.py
 
 import numpy as np
+import json 
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from IPython.display import clear_output
 
+from .definitions import *
 
-# Some transform functions
+##################################################################
+# Transforms
+##################################################################
 def pol2cart(rho, phi):
     x = rho * np.cos(phi)
     y = rho * np.sin(phi)
@@ -17,6 +21,21 @@ def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
     return rho, phi 
+
+##################################################################
+# Logging
+##################################################################
+def write_header_log(config, method, global_start_time): 
+    
+    config2log = {section: dict(config[section]) for section in config.sections()}
+
+    #write output header
+    run_dir = RUN_DIR
+    if not os.path.isdir('{}/{}/'.format(RUN_DIR, method)):
+        os.mkdir('{}/{}/'.format(RUN_DIR, method))
+    header_filename = "{}/{}/{}_header.txt".format(RUN_DIR, method, global_start_time)
+    with open(header_filename, "w") as file:
+        file.write(json.dumps(config2log))
 
 ##################################################################
 # Plotting
