@@ -108,25 +108,17 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
 
 
 def mcts(args=None, env=None):
-    # Configuration file parser
-    conf_parser = argparse.ArgumentParser(add_help=False)
-    conf_parser.add_argument('-c', '--config',
-                             help='Specify a configuration file',
-                             metavar='FILE')
-    args, remaining_argv = conf_parser.parse_known_args()
-
     # Grab mcts specific defaults
     defaults = mcts_defaults
 
-    if args.config:
+    if args:
         config = configparser.ConfigParser(defaults)
-        config.read([args.config])
+        config.read_dict({section: dict(args[section]) for section in args.sections()})
         defaults = dict(config.items('Defaults'))
         # Fix for boolean args
         defaults['plotting'] = config.getboolean('Defaults', 'plotting')
     
     parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
-                                     parents=[conf_parser],
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
     parser.add_argument('--lambda_arg', type=float, help='Lambda value')
@@ -137,7 +129,7 @@ def mcts(args=None, env=None):
     parser.add_argument('--plotting', type=bool, help='Flag to plot or not')
     parser.add_argument('--trials', type=int, help='Number of runs')
     parser.add_argument('--iterations', type=int, help='Number of iterations')
-    args = parser.parse_args(remaining_argv)
+    args,_ = parser.parse_known_args()
     
     if not env:
         # Setup environment

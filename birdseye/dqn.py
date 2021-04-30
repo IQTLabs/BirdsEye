@@ -395,18 +395,11 @@ def huber_loss(abs_td_error):
 
 
 def dqn(args=None, env=None):
-    # Configuration file parser
-    conf_parser = argparse.ArgumentParser(add_help=False)
-    conf_parser.add_argument('-c', '--config',
-                             help='Specify a configuration file',
-                             metavar='FILE')
-    args, remaining_argv = conf_parser.parse_known_args()
-
     defaults = dqn_defaults
 
-    if args.config:
+    if args:
         config = configparser.ConfigParser(defaults)
-        config.read([args.config])
+        config.read_dict({section: dict(args[section]) for section in args.sections()})
         defaults = dict(config.items('Defaults'))
         # Fix for boolean args
         defaults['param_noise'] = config.getboolean('Defaults', 'param_noise')
@@ -416,7 +409,6 @@ def dqn(args=None, env=None):
         defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
 
     parser = argparse.ArgumentParser(description='DQN',
-                                     parents=[conf_parser],
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
     parser.add_argument('--number_timesteps', type=int, help='Number of timesteps')
@@ -446,7 +438,7 @@ def dqn(args=None, env=None):
     parser.add_argument('--save_path', type=str, help='Path for saving')
     parser.add_argument('--log_path', type=str, help='Path for logging output')
     parser.add_argument('--use_gpu', type=bool, help='Flag for using GPU device')
-    args = parser.parse_args(remaining_argv)
+    args,_ = parser.parse_known_args()
 
     if not env:
         # Setup environment

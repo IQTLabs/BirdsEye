@@ -71,7 +71,7 @@ class SimpleActions(Actions):
         self.del_theta = [-30, 0, 30]
         self.del_r = [1, 2]
         simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
-        super().__init__(action_space=simple_action_space, verbose=True)
+        super().__init__(action_space=simple_action_space, verbose=False)
 
     #returns index of action given an action
     def action_to_index(self, action):
