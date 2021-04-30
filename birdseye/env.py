@@ -1,15 +1,15 @@
-import numpy as np 
-import random 
+import numpy as np
+import random
 from .utils import pol2cart
 from birdseye.pfrnn.pfrnn import pfrnn
 from pfilter import ParticleFilter, systematic_resample
 
 
-class RFEnv(object): 
+class RFEnv(object):
 
-    def __init__(self, sensor=None, actions=None, state=None, simulated=False): 
+    def __init__(self, sensor=None, actions=None, state=None, simulated=False):
         # Sensor definitions
-        self.sensor = sensor 
+        self.sensor = sensor
         # Action space and function to convert from action to index and vice versa
         self.actions = actions
         # Setup initial state
@@ -59,7 +59,7 @@ class RFEnv(object):
                         weight_fn=lambda hyp, o, xp=None,**kwargs: [self.sensor.weight(None, o, state=x) for x in xp],
                         resample_fn=systematic_resample,
                         column_names = ['range', 'bearing', 'relative_course', 'own_speed'])
-        
+
         env_obs = self.env_observation()
         return env_obs
 
@@ -97,19 +97,20 @@ class RFEnv(object):
         # Update particle filter
         self.pf.update(np.array(observation), xp=self.pf.particles, control=action)
         # Calculate reward based on updated state & action
-        reward = self.state.reward_func(next_state, action_idx)
+        #reward = self.state.reward_func(next_state, action_idx)
+        reward = -1. * self.get_distance_error()
         # Update the state variables
         self.state.target_state = next_state
 
         env_obs = self.env_observation()
-        self.iters += 1 
+        self.iters += 1
         info = {'episode':{}}
         info['episode']['l'] = self.iters
         info['episode']['r'] = reward
 
         return (env_obs, reward, 0, info)
 
-    def env_observation(self): 
+    def env_observation(self):
         """Helper function for environment observation
 
         Returns
@@ -118,7 +119,7 @@ class RFEnv(object):
             Heatmap distribution of current observed particles
         """
         return np.expand_dims(self.particle_heatmap_obs(self.pf.particles), axis=0)
-        
+
     def particle_heatmap_obs(self, belief):
         """Function to build histogram representing
            belief distribution in cart coords
@@ -143,13 +144,13 @@ class RFEnv(object):
 
         return heatmap
 
-    def get_absolute_particles(self): 
+    def get_absolute_particles(self):
         return np.array([self.state.get_absolute_state(t) for t in self.pf.particles])
-    
-    def get_absolute_target(self): 
+
+    def get_absolute_target(self):
         return self.state.get_absolute_state(self.state.target_state)
 
-    def get_particle_centroid(self): 
+    def get_particle_centroid(self):
 
         particles = self.pf.particles
 
@@ -164,7 +165,7 @@ class RFEnv(object):
 
         return mean_x, mean_y
 
-    def get_distance_error(self): 
+    def get_distance_error(self):
 
         mean_x, mean_y = self.get_particle_centroid()
 

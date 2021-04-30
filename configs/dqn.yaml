@@ -3,10 +3,10 @@ method : dqn
 action : simpleactions
 sensor : drone
 state : rfstate 
-target_speed: 0.0
+target_speed: 0
 
 [Defaults]
-number_timesteps : 10000
+number_timesteps : 100000
 dueling : False
 double_q : False
 param_noise : True
@@ -22,12 +22,12 @@ prioritized_replay_alpha : 0.6
 prioritized_replay_beta0 : 0.4
 min_value : -10
 max_value : 10
-max_episode_length : 500
+max_episode_length : 250
 atom_num : 1
 ob_scale : 1
 gamma : 0.99
 grad_norm : 10.0
-save_interval : 100
-save_path : 'checkpoints'
-log_path : 'rl_log'
+save_interval : 1000
+save_path : checkpoints
+log_path : rl_log
 use_gpu : True

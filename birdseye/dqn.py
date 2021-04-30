@@ -159,7 +159,7 @@ def run_dqn(env, config, global_start_time):
     logger = init_logger(log_path)
 
     # Access requested device
-    device = torch.device('cuda' if (use_gpu and torch.cuda.is_available()) else 'cpu')
+    device = torch.device('cuda:1' if (use_gpu and torch.cuda.is_available()) else 'cpu')
 
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)

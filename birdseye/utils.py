@@ -1,7 +1,7 @@
 # utils.py
 
 import numpy as np
-import json 
+import json
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
@@ -17,16 +17,16 @@ def pol2cart(rho, phi):
     y = rho * np.sin(phi)
     return(x, y)
 
-def cart2pol(x, y): 
+def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
-    return rho, phi 
+    return rho, phi
 
 ##################################################################
 # Logging
 ##################################################################
-def write_header_log(config, method, global_start_time): 
-    
+def write_header_log(config, method, global_start_time):
+
     config2log = {section: dict(config[section]) for section in config.sections()}
 
     #write output header
@@ -34,8 +34,15 @@ def write_header_log(config, method, global_start_time):
     if not os.path.isdir('{}/{}/'.format(RUN_DIR, method)):
         os.mkdir('{}/{}/'.format(RUN_DIR, method))
     header_filename = "{}/{}/{}_header.txt".format(RUN_DIR, method, global_start_time)
-    with open(header_filename, "w") as file:
-        file.write(json.dumps(config2log))
+    with open(header_filename, "w") as f:
+        f.write(json.dumps(config2log))
+
+def read_header_log(filename):
+
+    with open(filename) as f:
+        config = json.load(f)
+    return config
+
 
 ##################################################################
 # Plotting
@@ -48,7 +55,7 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     plt.tight_layout()
     # Put space between plots
     plt.subplots_adjust(wspace=0.2, hspace=0.2)
-    
+
     # Particle Plot (Polar)
     ax = fig.add_subplot(1, 5, 1, polar=True)
 
@@ -57,12 +64,12 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     plot_theta = np.radians(np.array([row[1] for row in belief]))
     plot_x_theta = np.radians(xp[1])
     plot_x_r = xp[0]
-    
+
     ax.plot(plot_theta, plot_r, 'ro')
     ax.plot(plot_x_theta, plot_x_r, 'bo')
     ax.set_ylim(-150,150)
     ax.set_title('iteration {}'.format(time_step), fontsize=16)
-   
+
 
     # Particle Plot (Polar) with Interpolation
     ax = fig.add_subplot(1, 5, 2, polar=True)
@@ -80,10 +87,10 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     ax.plot(plot_x_theta, plot_x_r, 'bo')
     ax.set_ylim(-150,150)
     ax.set_title('Interpolated Belief'.format(time_step), fontsize=16)
-    
+
     # Heatmap Plot (Cartesian)
     ax = fig.add_subplot(1, 5, 3)
-    
+
     cart  = np.array(list(map(pol2cart, belief[:,0], np.radians(belief[:,1]))))
     x = cart[:,0]
     y = cart[:,1]
@@ -96,7 +103,7 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     ax.set_title('Particle heatmap (relative to sensor)')
 
     # Particle/Sensor Plot (absolute)
-    if abs_sensor is not None and abs_target is not None and abs_particles is not None: 
+    if abs_sensor is not None and abs_target is not None and abs_particles is not None:
 
         particles_x, particles_y = pol2cart(abs_particles[:,0], np.radians(abs_particles[:,1]))
         centroid_x = np.mean(particles_x)
@@ -131,10 +138,10 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target, abs_particles)
     print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         r_error, theta_error, heading_error, centroid_distance_error, rmse))
-    
 
-# calculate different tracking errors 
-def tracking_error(target, particles): 
+
+# calculate different tracking errors
+def tracking_error(target, particles):
 
     target_r = target[0]
     target_theta = np.radians(target[1])
@@ -158,16 +165,16 @@ def tracking_error(target, particles):
     ## Error Measures
 
     r_error = target_r - mean_r
-    theta_error = np.degrees(target_theta - mean_theta) # final error in degrees 
-    if theta_error > 360: 
+    theta_error = np.degrees(target_theta - mean_theta) # final error in degrees
+    if theta_error > 360:
         theta_error = theta_error % 360
     heading_error = target_heading - mean_heading
 
-    # centroid euclidean distance error x,y 
+    # centroid euclidean distance error x,y
     centroid_distance_error = np.sqrt((mean_x - target_x)**2 + (mean_y - target_y)**2)
 
     # root mean square error
     rmse = np.sqrt(np.mean((particles_x - target_x)**2 + (particles_y - target_y)**2))
 
-    return r_error, theta_error, heading_error, centroid_distance_error, rmse 
+    return r_error, theta_error, heading_error, centroid_distance_error, rmse
 
