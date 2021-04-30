@@ -312,6 +312,12 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             if env.state.target_state[0] > 150:
                 total_lost = 1
 
+    avg_r_err /= number_timesteps
+    avg_theta_err /= number_timesteps
+    avg_heading_err /= number_timesteps
+    avg_centroid_err /= number_timesteps
+    average_rmse /= number_timesteps
+
     return [total_reward, total_col, total_lost, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
 
 def _generate(device, env, qnet, ob_scale,
