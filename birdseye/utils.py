@@ -116,26 +116,26 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
 
         # Polar (absolute)
         ax = fig.add_subplot(1, 5, 4, polar=True)
-        ax.plot(np.radians(abs_particles[:,1]), abs_particles[:,0], 'ro', label='particles')
+        ax.plot(np.radians(abs_particles[:,1]), abs_particles[:,0], 'ro', label='particles', alpha=0.5)
         ax.plot(centroid_theta, centroid_r, 'c*', label='centroid', markersize=12)
         ax.plot(np.radians(abs_sensor[49][1]), abs_sensor[49][0], 'gp', label='sensor', markersize=12)
         ax.plot(np.radians(abs_target[49][1]), abs_target[49][0], 'bX', label='target', markersize=12)
         for i in range(2,6):
-                ax.plot(np.radians(abs_target[i*10-1][1]), abs_target[i*10-1][0], 'bX', markersize=6)
-                ax.plot(np.radians(abs_sensor[i*10-1][1]), abs_sensor[i*10-1][0], 'gp', markersize=6)
+                ax.plot(np.radians(abs_target[i*10-1][1]), abs_target[i*10-1][0], 'bX', markersize=6, alpha=0.75)
+                ax.plot(np.radians(abs_sensor[i*10-1][1]), abs_sensor[i*10-1][0], 'gp', markersize=6, alpha=0.75)
 
         ax.legend()
         ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
 
         # Cartesian (absolute)
         ax = fig.add_subplot(1, 5, 5)
-        ax.plot(particles_x, particles_y, 'ro', label='particles')
+        ax.plot(particles_x, particles_y, 'ro', label='particles', alpha=0.5)
         ax.plot(centroid_x, centroid_y, 'c*', label='centroid', markersize=12)
         ax.plot(sensor_x[4], sensor_y[4], 'gp', label='sensor', markersize=12)
         ax.plot(target_x[4], target_y[4], 'bX', label='target', markersize=12)
         for i in range(4):
-            ax.plot(sensor_x[i], sensor_y[i], 'gp', markersize=6)
-            ax.plot(target_x[i], target_y[i], 'bX', markersize=6)
+            ax.plot(sensor_x[i], sensor_y[i], 'gp', markersize=6, alpha=0.55)
+            ax.plot(target_x[i], target_y[i], 'bX', markersize=6, alpha=0.55)
         ax.legend()
         ax.set_xlim(-200,200)
         ax.set_ylim(-200,200)
