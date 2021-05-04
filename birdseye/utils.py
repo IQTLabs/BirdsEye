@@ -1,7 +1,7 @@
 # utils.py
 
 import numpy as np
-import json 
+import json
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
@@ -17,16 +17,16 @@ def pol2cart(rho, phi):
     y = rho * np.sin(phi)
     return(x, y)
 
-def cart2pol(x, y): 
+def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
-    return rho, phi 
+    return rho, phi
 
 ##################################################################
 # Logging
 ##################################################################
-def write_header_log(config, method, global_start_time): 
-    
+def write_header_log(config, method, global_start_time):
+
     config2log = {section: dict(config[section]) for section in config.sections()}
 
     #write output header
@@ -44,11 +44,11 @@ def write_header_log(config, method, global_start_time):
 def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particles=None, time_step=None, fig=None, ax=None):
 
     clear_output(wait=True)
-    fig = plt.figure(figsize=(30, 6))
+    fig = plt.figure(figsize=(25, 4))
     plt.tight_layout()
     # Put space between plots
     plt.subplots_adjust(wspace=0.2, hspace=0.2)
-    
+
     # Particle Plot (Polar)
     ax = fig.add_subplot(1, 5, 1, polar=True)
 
@@ -57,12 +57,12 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     plot_theta = np.radians(np.array([row[1] for row in belief]))
     plot_x_theta = np.radians(xp[1])
     plot_x_r = xp[0]
-    
+
     ax.plot(plot_theta, plot_r, 'ro')
     ax.plot(plot_x_theta, plot_x_r, 'bo')
     ax.set_ylim(-150,150)
     ax.set_title('iteration {}'.format(time_step), fontsize=16)
-   
+
 
     # Particle Plot (Polar) with Interpolation
     ax = fig.add_subplot(1, 5, 2, polar=True)
@@ -80,10 +80,10 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     ax.plot(plot_x_theta, plot_x_r, 'bo')
     ax.set_ylim(-150,150)
     ax.set_title('Interpolated Belief'.format(time_step), fontsize=16)
-    
+
     # Heatmap Plot (Cartesian)
     ax = fig.add_subplot(1, 5, 3)
-    
+
     cart  = np.array(list(map(pol2cart, belief[:,0], np.radians(belief[:,1]))))
     x = cart[:,0]
     y = cart[:,1]
@@ -96,45 +96,60 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     ax.set_title('Particle heatmap (relative to sensor)')
 
     # Particle/Sensor Plot (absolute)
-    if abs_sensor is not None and abs_target is not None and abs_particles is not None: 
+    if abs_sensor[0] is not None and abs_target[0] is not None and abs_particles is not None:
 
         particles_x, particles_y = pol2cart(abs_particles[:,0], np.radians(abs_particles[:,1]))
         centroid_x = np.mean(particles_x)
         centroid_y = np.mean(particles_y)
         centroid_r, centroid_theta = cart2pol(centroid_x, centroid_y)
 
-        target_x, target_y = pol2cart(abs_target[0], np.radians(abs_target[1]))
+        # target_x, target_y = pol2cart(abs_target[49][0], np.radians(abs_target[49][1]))
+        #sensor_x, sensor_y = pol2cart(abs_sensor[49][0], np.radians(abs_sensor[49][1]))
 
-        sensor_x, sensor_y = pol2cart(abs_sensor[0], np.radians(abs_sensor[1]))
+
+        sensor_x, sensor_y = [i for i in range(5)],[i for i in range(5)]
+        target_x, target_y = [i for i in range(5)],[i for i in range(5)]
+
+        for i in range(5):
+            sensor_x[i], sensor_y[i] = pol2cart(abs_sensor[10*(i+1)-1][0], np.radians(abs_sensor[10*(i+1)-1][1]))
+            target_x[i], target_y[i] = pol2cart(abs_target[10*(i+1)-1][0], np.radians(abs_target[10*(i+1)-1][1]))
 
         # Polar (absolute)
         ax = fig.add_subplot(1, 5, 4, polar=True)
-        ax.plot(np.radians(abs_particles[:,1]), abs_particles[:,0], 'ro', label='particles')
+        ax.plot(np.radians(abs_particles[:,1]), abs_particles[:,0], 'ro', label='particles', alpha=0.5)
         ax.plot(centroid_theta, centroid_r, 'c*', label='centroid', markersize=12)
-        ax.plot(np.radians(abs_sensor[1]), abs_sensor[0], 'gp', label='sensor', markersize=12)
-        ax.plot(np.radians(abs_target[1]), abs_target[0], 'bX', label='target', markersize=12)
+        ax.plot(np.radians(abs_sensor[49][1]), abs_sensor[49][0], 'gp', label='sensor', markersize=12)
+        ax.plot(np.radians(abs_target[49][1]), abs_target[49][0], 'bX', label='target', markersize=12)
+        for i in range(2,6):
+                ax.plot(np.radians(abs_target[i*10-1][1]), abs_target[i*10-1][0], 'bX', markersize=6, alpha=0.75)
+                ax.plot(np.radians(abs_sensor[i*10-1][1]), abs_sensor[i*10-1][0], 'gp', markersize=6, alpha=0.75)
+
         ax.legend()
         ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
 
         # Cartesian (absolute)
         ax = fig.add_subplot(1, 5, 5)
-        ax.plot(particles_x, particles_y, 'ro', label='particles')
+        ax.plot(particles_x, particles_y, 'ro', label='particles', alpha=0.5)
         ax.plot(centroid_x, centroid_y, 'c*', label='centroid', markersize=12)
-        ax.plot(sensor_x, sensor_y, 'gp', label='sensor', markersize=12)
-        ax.plot(target_x, target_y, 'bX', label='target', markersize=12)
+        ax.plot(sensor_x[4], sensor_y[4], 'gp', label='sensor', markersize=12)
+        ax.plot(target_x[4], target_y[4], 'bX', label='target', markersize=12)
+        for i in range(4):
+            ax.plot(sensor_x[i], sensor_y[i], 'gp', markersize=6, alpha=0.55)
+            ax.plot(target_x[i], target_y[i], 'bX', markersize=6, alpha=0.55)
         ax.legend()
         ax.set_xlim(-200,200)
         ax.set_ylim(-200,200)
         ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)
 
     plt.show()
-    r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target, abs_particles)
+    r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target[49], abs_particles)
     print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         r_error, theta_error, heading_error, centroid_distance_error, rmse))
-    
+    print(abs_target[49])
 
-# calculate different tracking errors 
-def tracking_error(target, particles): 
+
+# calculate different tracking errors
+def tracking_error(target, particles):
 
     target_r = target[0]
     target_theta = np.radians(target[1])
@@ -158,16 +173,15 @@ def tracking_error(target, particles):
     ## Error Measures
 
     r_error = target_r - mean_r
-    theta_error = np.degrees(target_theta - mean_theta) # final error in degrees 
-    if theta_error > 360: 
+    theta_error = np.degrees(target_theta - mean_theta) # final error in degrees
+    if theta_error > 360:
         theta_error = theta_error % 360
     heading_error = target_heading - mean_heading
 
-    # centroid euclidean distance error x,y 
+    # centroid euclidean distance error x,y
     centroid_distance_error = np.sqrt((mean_x - target_x)**2 + (mean_y - target_y)**2)
 
     # root mean square error
     rmse = np.sqrt(np.mean((particles_x - target_x)**2 + (particles_y - target_y)**2))
 
-    return r_error, theta_error, heading_error, centroid_distance_error, rmse 
-
+    return r_error, theta_error, heading_error, centroid_distance_error, rmse

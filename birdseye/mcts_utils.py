@@ -3,7 +3,7 @@
 
 # Imports
 import random
-import csv 
+import csv
 import numpy as np
 from .utils import pol2cart, build_plots, tracking_error
 from pfilter import ParticleFilter, systematic_resample
@@ -183,6 +183,9 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     avg_centroid_err = 0
     average_rmse = 0
 
+    abs_particle_hist = []
+    abs_target_hist = []
+
     # 500 time steps with an action to be selected at each
     plots = []
 
@@ -208,7 +211,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         # take action; get next true state, obs, and reward
         next_state = env.state.update_state(env.state.target_state, action, target_update=True)
         #next_state = env.state.update_state(env.state.target_state, action, target_control=env.state.circular_control(time_step, size=5))
-        # Update absolute position of sensor 
+        # Update absolute position of sensor
         env.state.update_sensor(action)
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
@@ -222,7 +225,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         env.pf.update(np.array(observation), xp=belief, control=action)
         belief = env.pf.particles
 
-        # error metrics 
+        # error metrics
         r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
         avg_r_err += r_error
         avg_theta_err += theta_error
@@ -233,7 +236,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # accumulate reward
         total_reward += reward
-        
+
         if env.state.target_state[0] < 10:
             total_col = 1
 
@@ -241,7 +244,16 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
             total_loss = 1
 
         if plotting:
-            build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
+            if len(abs_target_hist) < 50:
+                abs_target_hist = [env.get_absolute_target() for _ in range(50)]
+                abs_sensor_hist = [env.state.sensor_state for _ in range(50)]
+                build_plots(env.state.target_state, belief, abs_sensor_hist, abs_target_hist, env.get_absolute_particles(), time_step, fig, ax)
+            else:
+                abs_target_hist.pop(0)
+                abs_target_hist.append(env.get_absolute_target())
+                abs_sensor_hist.pop(0)
+                abs_sensor_hist.append(env.state.sensor_state)
+                build_plots(env.state.target_state, belief, abs_sensor_hist, abs_target_hist, env.get_absolute_particles(), time_step, fig, ax)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
@@ -252,4 +264,3 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     average_rmse /= num_iters
 
     return [plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
-    
