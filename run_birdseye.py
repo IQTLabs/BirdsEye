@@ -28,6 +28,7 @@ def batch_run():
             env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=None))
 
             config.read(['configs/{}.yaml'.format(method_name)])
+            config.set('Methods', 'target_speed', target_speed)
 
             # Run the requested algorithm
             run_method(args=config, env=env)

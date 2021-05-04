@@ -1,5 +1,6 @@
 import random
 import numpy as np 
+import scipy.stats
 
 class Sensor(object):
     """Common base class for sensor & assoc methods
@@ -24,6 +25,33 @@ class Sensor(object):
         """
         pass
 
+class SignalStrength(Sensor): 
+    """
+    Uses signal strength as observation
+    """
+    def __init__(self): 
+        self.num_avail_obs = 1 
+        self.std_dev = 0.1
+
+    def weight(self, hyp, obs, state): 
+        expected_rssi = 1/(state[0]**2)
+        weight = scipy.stats.norm(expected_rssi, self.std_dev).pdf(obs)
+    
+    # samples observation given state
+    def observation(self, state):
+
+        return np.random.normal(1/(state[0]**2), self.std_dev)
+
+    # sample state from observation 
+    def gen_state(self, obs): 
+        
+        r = np.sqrt(1/obs)
+            
+        return [random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1]
+
+    def near_state(self, state): 
+        return np.array(self.gen_state(self.observation(state)))
+    
 
 class Drone(Sensor): 
     """Drone sensor
