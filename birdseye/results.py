@@ -1,6 +1,7 @@
 # results.py
 
 import pandas as pd
+from datetime import datetime
 
 from .utils import read_header_log
 from .definitions import *
@@ -39,6 +40,19 @@ def filter_runs(method_name, runs, config_filter=None):
                 v = float(v)
                 if ((config.get(k) is None) and (v != 1.)) or (float(config.get(k)) != v):
                     match = False
+                    break 
+            elif k == 'datetime_start': 
+                config_datetime = datetime.strptime(v, '%Y-%m-%dT%H:%M:%S')
+                run_datetime = datetime.strptime(r, '%Y-%m-%dT%H:%M:%S')
+                if run_datetime < config_datetime: 
+                    match = False
+                    break
+            elif k == 'datetime_end': 
+                config_datetime = datetime.strptime(v, '%Y-%m-%dT%H:%M:%S')
+                run_datetime = datetime.strptime(r, '%Y-%m-%dT%H:%M:%S')
+                if run_datetime > config_datetime: 
+                    match = False
+                    break
             elif config.get(k) != v:
                 match = False
                 break
