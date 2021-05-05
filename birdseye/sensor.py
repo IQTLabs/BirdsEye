@@ -31,23 +31,21 @@ class SignalStrength(Sensor):
     """
     def __init__(self): 
         self.num_avail_obs = 1 
-        self.std_dev = 0.1
+        self.std_dev = 10
 
     def weight(self, hyp, obs, state): 
-        expected_rssi = 1/(state[0]**2)
-        weight = scipy.stats.norm(expected_rssi, self.std_dev).pdf(obs)[0][0]
+        expected_r = state[0]
+        obs_r = np.sqrt(1/obs)
+        weight = scipy.stats.norm(expected_r, self.std_dev).pdf(obs_r)[0][0]
         return weight
     
     # samples observation given state
     def observation(self, state):
-
-        return np.random.normal(1/(state[0]**2), self.std_dev)
+        return 1/ ((np.random.normal(state[0], self.std_dev)) ** 2)
 
     # sample state from observation 
     def gen_state(self, obs): 
-        
-        r = np.sqrt(1/obs)
-            
+        r = np.sqrt(1/obs)    
         return [random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, 1]
 
     def near_state(self, state): 
