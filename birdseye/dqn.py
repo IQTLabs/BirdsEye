@@ -258,6 +258,9 @@ def run_dqn(env, config, global_start_time):
             if n_iter > learning_starts and n_iter % train_freq == 0:
                 logger.info('vloss: {:.6f}'.format(loss.item()))
 
+        if save_interval and n_iter % save_interval == 0:
+            torch.save([qnet.state_dict(), optimizer.state_dict()],
+                       os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
             result = test(env, qnet, max_episode_length, device, ob_scale)
             result = [datetime.now(), n_iter] + result
             run_data.append(result)
@@ -265,11 +268,6 @@ def run_dqn(env, config, global_start_time):
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
             df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
             df.to_csv(filename)
-
-
-        if save_interval and n_iter % save_interval == 0:
-            torch.save([qnet.state_dict(), optimizer.state_dict()],
-                       os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
 
 def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """
