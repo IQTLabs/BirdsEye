@@ -1,6 +1,7 @@
 
 # Don't save any run output
 runs*
+*csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
