@@ -28,12 +28,13 @@ class State(object):
 class RFState(State):
     """RF State
     """
-    def __init__(self, prob=0.9, target_speed=None, target_movement=None):
+    def __init__(self, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None):
 
         # Transition probability
         self.prob = prob
         # Target speed
         self.target_speed = float(target_speed) if target_speed is not None else 1.
+        self.target_speed_range = [float(t) for t in target_speed_range.strip("'[]").split(',')] if target_speed_range is not None else [self.target_speed]
         # Target movement pattern
         self.target_movement = target_movement if target_movement is not None else 'random'
         self.target_move_iter = 0 
@@ -138,6 +139,7 @@ class RFState(State):
 
         # Generate next course given current course
         if target_update: 
+            spd = random.choice(self.target_speed_range)
             if self.target_movement == 'circular': 
                 d_crs, circ_spd = self.circular_control(50)
                 crs += d_crs

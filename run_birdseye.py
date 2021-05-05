@@ -44,6 +44,7 @@ def run_birdseye(args=None, env=None):
     sensor_name = config_dict['sensor']
     state_name = config_dict['state']
     target_speed = config_dict.get('target_speed')
+    target_speed_range = config_dict.get('target_speed_range')
     target_movement = config_dict.get('target_movement')
     print({section: dict(config[section]) for section in config.sections()})
 
@@ -54,7 +55,7 @@ def run_birdseye(args=None, env=None):
     state = get_state(state_name)
 
     # Setup environment
-    env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=target_movement))
+    env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement))
 
     # Run the requested algorithm
     run_method(args=config, env=env)
