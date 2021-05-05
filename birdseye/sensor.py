@@ -35,7 +35,8 @@ class SignalStrength(Sensor):
 
     def weight(self, hyp, obs, state): 
         expected_rssi = 1/(state[0]**2)
-        weight = scipy.stats.norm(expected_rssi, self.std_dev).pdf(obs)
+        weight = scipy.stats.norm(expected_rssi, self.std_dev).pdf(obs)[0][0]
+        return weight
     
     # samples observation given state
     def observation(self, state):
@@ -227,6 +228,7 @@ class Bearing(Sensor):
 
 AVAIL_SENSORS = {'drone' : Drone,
                  'bearing' : Bearing,
+                 'signalstrength': SignalStrength
                 }
 
 def get_sensor(sensor_name=''):
