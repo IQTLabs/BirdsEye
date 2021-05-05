@@ -7,15 +7,15 @@ from birdseye.state import get_state, AVAIL_STATES
 from birdseye.env import RFEnv
 from birdseye.method_utils import get_method, AVAIL_METHODS
 
-def batch_run(): 
+def batch_run():
 
     config = configparser.ConfigParser()
 
     # Setup requested method objects
-    for method_name in AVAIL_METHODS.keys(): 
+    for method_name in AVAIL_METHODS.keys():
         for target_speed in ['0', '1', '2', '3']:
             print('===========================')
-            print('Batch Run: ') 
+            print('Batch Run: ')
             print('method = {}'.format(method_name))
             print('target_speed = {}'.format(target_speed))
             print('===========================')
@@ -28,6 +28,7 @@ def batch_run():
             env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=None))
 
             config.read(['configs/{}.yaml'.format(method_name)])
+            config.set('Methods', 'target_speed', target_speed)
 
             # Run the requested algorithm
             run_method(args=config, env=env)
@@ -62,19 +63,19 @@ def run_birdseye(args=None, env=None):
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-b', '--batch',
-                             action='store_true', 
+                             action='store_true',
                              help='Specify batch run option')
-    
+
     args,remaining_args = arg_parser.parse_known_args()
 
-    if not args.batch: 
+    if not args.batch:
         arg_parser.add_argument('-c', '--config',
                              help='Specify a configuration file',
                              required=True,
                              metavar='FILE')
         args, remaining_args = arg_parser.parse_known_args(remaining_args, namespace=args)
 
-    if args.batch: 
+    if args.batch:
         batch_run()
-    else: 
+    else:
         run_birdseye(args=args)
