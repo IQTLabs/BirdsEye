@@ -97,8 +97,8 @@ class RFEnv(object):
         # Update particle filter
         self.pf.update(np.array(observation), xp=self.pf.particles, control=action)
         # Calculate reward based on updated state & action
-        #reward = self.state.reward_func(next_state, action_idx)
-        reward = -1. * self.get_distance_error()
+        reward = self.state.reward_func(state=next_state, action_idx=action_idx, particles=self.pf.particles)
+        #reward = -1. * self.get_distance_error()
         # Update the state variables
         self.state.target_state = next_state
 
@@ -109,6 +109,21 @@ class RFEnv(object):
         info['episode']['r'] = reward
 
         return (env_obs, reward, 0, info)
+
+    def entropy_collision_reward(self, state, action_idx=None, delta=10, collision_weight=1): 
+        pf_r = self.pf.particles[:,0]
+        pf_theta = np.radians(self.pf.particles[:,1])
+        pf_x, pf_y = pol2cart(pf_r, pf_theta)
+        b = np.histogram2d(pf_x, pf_y)
+        b /= np.sum(b)
+        b += 0.0000001
+
+        H = -1. * np.sum([b * np.log(b)])
+        collision_rate = np.mean(self.pf.particles[:,0] < delta)
+
+        cost = H + collision_weight * collision_rate
+
+        return -1. * cost 
 
     def env_observation(self):
         """Helper function for environment observation

@@ -63,7 +63,7 @@ def rollout_random(env, state, depth):
 
     # generate next state and reward with random action; observation doesn't matter
     state_prime = env.state.update_state(state, action)
-    reward = env.state.reward_func(state_prime, action_index)
+    reward = env.state.reward_func(state=state_prime, action_idx=action_index, particles=env.pf.particles)
 
     return reward + lambda_arg * rollout_random(env, state_prime, depth-1)
 
@@ -99,7 +99,7 @@ def simulate(env, Q, N, state, history, depth, c):
     # take action; get new state, observation, and reward
     state_prime = env.state.update_state(state, action)
     observation = env.sensor.observation(state_prime)
-    reward = env.state.reward_func(state_prime, search_action_index)
+    reward = env.state.reward_func(state=state_prime, action_idx=search_action_index, particles=env.pf.particles)
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
@@ -212,7 +212,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         env.state.update_sensor(action)
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
-        reward = env.state.reward_func(next_state, env.actions.action_to_index(action))
+        reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
         env.state.target_state = next_state
 
         # pfrnn

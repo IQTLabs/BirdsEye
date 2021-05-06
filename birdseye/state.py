@@ -25,10 +25,11 @@ class State(object):
         pass
 
 
+
 class RFState(State):
     """RF State
     """
-    def __init__(self, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None):
+    def __init__(self, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, reward=None):
 
         # Transition probability
         self.prob = prob
@@ -42,6 +43,12 @@ class RFState(State):
         self.target_state = self.init_target_state()
         # Setup an initial sensor state 
         self.sensor_state = self.init_sensor_state()
+        # Setup reward
+        reward = 'range_reward' if reward is None else reward 
+        self.AVAIL_REWARDS = {'range_reward' : self.range_reward,
+                              'entropy_collision_reward': self.entropy_collision_reward,
+                }
+        self.reward_func = self.AVAIL_REWARDS[reward]
     
 
     def init_target_state(self):
@@ -60,7 +67,7 @@ class RFState(State):
         return np.array([0,0,0,0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
-    def reward_func(self, state, action_idx=None, action_penalty=-.05):
+    def range_reward(self, state, action_idx=None, particles=None, action_penalty=-.05):
         """Function to calculate reward based on state and selected action
 
         Parameters
@@ -100,6 +107,20 @@ class RFState(State):
             else:
                 reward_val = 0.1
         return reward_val
+
+    def entropy_collision_reward(self, state, action_idx=None, particles=None, delta=10, collision_weight=1): 
+        pf_r = particles[:,0]
+        pf_theta = np.radians(particles[:,1])
+        pf_x, pf_y = pol2cart(pf_r, pf_theta)
+        b,_,_ = np.histogram2d(pf_x, pf_y)
+
+        b /= np.sum(b)
+        b += 0.0000001
+        H = -1. * np.sum([b * np.log(b)])
+        collision_rate = np.mean(particles[:,0] < delta)
+        cost = H + collision_weight * collision_rate
+
+        return -1. * cost 
 
 
     # returns new state given last state and action (control)
