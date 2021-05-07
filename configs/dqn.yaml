@@ -3,7 +3,8 @@ method : dqn
 action : simpleactions
 sensor : drone
 state : rfstate 
-target_speed: 0
+target_speed: 1.0
+#target_speed_range: [0,1,2,3,4]
 
 [Defaults]
 number_timesteps : 100000

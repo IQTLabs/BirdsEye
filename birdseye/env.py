@@ -110,7 +110,7 @@ class RFEnv(object):
 
         return (env_obs, reward, 0, info)
 
-    def entropy_collision_reward(self, state, action_idx=None, delta=10, collision_weight=1): 
+    def entropy_collision_reward(self, state, action_idx=None, delta=10, collision_weight=1):
         pf_r = self.pf.particles[:,0]
         pf_theta = np.radians(self.pf.particles[:,1])
         pf_x, pf_y = pol2cart(pf_r, pf_theta)
@@ -123,7 +123,7 @@ class RFEnv(object):
 
         cost = H + collision_weight * collision_rate
 
-        return -1. * cost 
+        return -1. * cost
 
     def env_observation(self):
         """Helper function for environment observation

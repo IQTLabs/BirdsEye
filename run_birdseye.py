@@ -12,23 +12,32 @@ def batch_run():
     config = configparser.ConfigParser()
 
     # Setup requested method objects
-    for method_name in AVAIL_METHODS.keys():
-        for target_speed in ['0', '1', '2', '3']:
+    for method_name in ['mcts', 'dqn']:
+        for target_speed in ['0', '1', '2']:
             print('===========================')
             print('Batch Run: ')
             print('method = {}'.format(method_name))
             print('target_speed = {}'.format(target_speed))
             print('===========================')
             run_method = get_method(method_name)
-            actions = get_action('simpleactions')
-            sensor = get_sensor('drone')
-            state = get_state('rfstate')
+            action_config = 'simpleactions'
+            sensor_config = 'drone'
+            state_config = 'rfstate'
+            actions = get_action(action_config)
+            sensor = get_sensor(sensor_config)
+            state = get_state(state_config)
+            reward = 'entropy_collision_reward'
 
             # Setup environment
-            env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=None))
+            env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=None, reward=reward))
 
             config.read(['configs/{}.yaml'.format(method_name)])
+            config.set('Methods', 'action', action_config)
+            config.set('Methods', 'sensor', sensor_config)
+            config.set('Methods', 'state', state_config)
             config.set('Methods', 'target_speed', target_speed)
+            config.set('Methods', 'reward', reward)
+
 
             # Run the requested algorithm
             run_method(args=config, env=env)
