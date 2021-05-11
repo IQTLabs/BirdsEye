@@ -177,11 +177,11 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     total_reward = 0
     total_col = 0
     total_loss = 0
-    avg_r_err = 0
-    avg_theta_err = 0
-    avg_heading_err = 0
-    avg_centroid_err = 0
-    average_rmse = 0
+    r_err_log = []
+    theta_err_log = []
+    heading_err_log = []
+    centroid_err_log = []
+    rmse_log = []
 
     # 500 time steps with an action to be selected at each
     plots = []
@@ -216,7 +216,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         env.state.target_state = next_state
 
         # pfrnn
-        #env.pfrnn.train_iter(env.pfrnn.prep_data(observation, env.get_absolute_target(), env.actions.action_to_index(action)))
+        #env.pfrnn.update(observation, env.get_absolute_target(), env.actions.action_to_index(action))
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
@@ -224,11 +224,12 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # error metrics 
         r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
-        avg_r_err += r_error
-        avg_theta_err += theta_error
-        avg_heading_err += heading_error
-        avg_centroid_err += centroid_distance_error
-        average_rmse += rmse
+        r_err_log.append(r_error)
+        theta_err_log.append(theta_error)
+        heading_err_log.append(heading_error)
+        centroid_err_log.append(centroid_distance_error)
+        rmse_log.append(rmse)
+        
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
 
         # accumulate reward
@@ -245,11 +246,5 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    avg_r_err /= num_iters
-    avg_theta_err /= num_iters
-    avg_heading_err /= num_iters
-    avg_centroid_err /= num_iters
-    average_rmse /= num_iters
-
-    return [plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
+    return [plots, total_reward, total_col, total_loss, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
     

@@ -103,7 +103,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         
 
         namefile = '{}/mcts/{}_data.csv'.format(RUN_DIR, global_start_time)
-        df = pd.DataFrame(run_data, columns=['time','run_time','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
+        df = pd.DataFrame(run_data, columns=['time','run_time','total_reward','total_col','total_lost', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
         df.to_csv(namefile)
 
 
