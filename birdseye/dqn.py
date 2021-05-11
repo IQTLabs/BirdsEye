@@ -266,7 +266,7 @@ def run_dqn(env, config, global_start_time):
             run_data.append(result)
 
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
-            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
+            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
             df.to_csv(filename)
 
 def test(env, qnet, number_timesteps, device, ob_scale):
@@ -274,11 +274,11 @@ def test(env, qnet, number_timesteps, device, ob_scale):
     total_reward = 0
     total_col = 0
     total_lost = 0
-    avg_r_err = 0
-    avg_theta_err = 0
-    avg_heading_err = 0
-    avg_centroid_err = 0
-    average_rmse = 0
+    r_err_log = []
+    theta_err_log = []
+    heading_err_log = []
+    centroid_err_log = []
+    rmse_log = []
 
     o = env.reset()
 
@@ -294,11 +294,11 @@ def test(env, qnet, number_timesteps, device, ob_scale):
 
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
-            avg_r_err += r_error
-            avg_theta_err += theta_error
-            avg_heading_err += heading_error
-            avg_centroid_err += centroid_distance_error
-            average_rmse += rmse
+            r_err_log.append(r_error)
+            theta_err_log.append(theta_error)
+            heading_err_log.append(heading_error)
+            centroid_err_log.append(centroid_distance_error)
+            rmse_log.append(rmse)
             #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
 
             # accumulate reward
@@ -310,13 +310,7 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             if env.state.target_state[0] > 150:
                 total_lost = 1
 
-    avg_r_err /= number_timesteps
-    avg_theta_err /= number_timesteps
-    avg_heading_err /= number_timesteps
-    avg_centroid_err /= number_timesteps
-    average_rmse /= number_timesteps
-
-    return [total_reward, total_col, total_lost, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
+    return [total_reward, total_col, total_lost, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,
