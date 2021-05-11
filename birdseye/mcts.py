@@ -10,7 +10,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import write_header_log
+from .utils import write_header_log, Results
 
 # Default MCTS inputs
 mcts_defaults = {
@@ -68,6 +68,11 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     LOSS_REWARD = config.loss
     plotting = config.plotting
 
+    # Results instance for saving results to file
+    results = Results(method_name='mcts',
+                        global_start_time=global_start_time,
+                        num_iters=num_runs)
+
     #cumulative collisions, losses, and number of trials
     #total reward, and best average tracking
     cum_coll = 0
@@ -101,14 +106,8 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         print("Loss Rate: {}".format(mcts_loss/i))
         print("==============================")
 
-        # Prepare dataframe for saving results to CSV file
-        namefile = '{}/mcts/{}_data.csv'.format(RUN_DIR, global_start_time)
-        col_names =['time', 'run_time', 'reward',
-                    'col', 'loss', 'r_err', 'theta_err', 
-                    'heading_err', 'centroid_err', 'rmse']
-        df = pd.DataFrame(run_data, columns=col_names)
-        df.to_csv(namefile)
-        print('Saving file to {}'.format(namefile))
+        # Saving results to CSV file
+        results.write_dataframe(run_data=run_data)
 
 
 def mcts(args=None, env=None):
