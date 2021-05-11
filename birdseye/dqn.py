@@ -31,7 +31,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import tracking_error, write_header_log
+from .utils import tracking_error, write_header_log, Results
 
 
 # Default DQN inputs
@@ -155,6 +155,11 @@ def run_dqn(env, config, global_start_time):
     max_value = config.max_value
     max_episode_length = config.max_episode_length
 
+    # Results instance for saving results to file
+    results = Results(method_name='dqn',
+                        global_start_time=global_start_time,
+                        num_iters=number_timesteps)
+
     # Setup logging
     logger = init_logger(log_path)
 
@@ -265,27 +270,31 @@ def run_dqn(env, config, global_start_time):
             result = [datetime.now(), n_iter] + result
             run_data.append(result)
 
-            # Prepare dataframe for saving results to CSV file
-            namefile = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
-            col_names =['time', 'run_time', 'reward',
-                        'col', 'loss', 'r_err', 'theta_err', 
-                        'heading_err', 'centroid_err', 'rmse']
-            df = pd.DataFrame(run_data, columns=col_names)
-            df.to_csv(namefile)
-            print('Saving file to {}'.format(namefile))
+            # Saving results to CSV file
+            results.write_dataframe(run_data=run_data)
+
 
 def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """
-    total_reward = 0
     total_col = 0
     total_lost = 0
-    avg_r_err = 0
-    avg_theta_err = 0
-    avg_heading_err = 0
-    avg_centroid_err = 0
-    average_rmse = 0
+    total_reward = 0
 
     o = env.reset()
+
+    # Save values for all iterations and episodes
+    all_target_states = []
+    all_sensor_states = []
+    all_actions = []
+    all_obs = []
+    all_reward = np.zeros(number_timesteps)
+    all_col = np.zeros(number_timesteps)
+    all_loss = np.zeros(number_timesteps)
+    all_r_err = np.zeros(number_timesteps)
+    all_theta_err = np.zeros(number_timesteps)
+    all_heading_err = np.zeros(number_timesteps)
+    all_centroid_err = np.zeros(number_timesteps)
+    all_rmse = np.zeros(number_timesteps)
 
     for n in range(number_timesteps):
         with torch.no_grad():
@@ -300,13 +309,6 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
 
-            avg_r_err += r_error
-            avg_theta_err += theta_error
-            avg_heading_err += heading_error
-            avg_centroid_err += centroid_distance_error
-            average_rmse += rmse
-            #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
-
             # accumulate reward
             total_reward += r
 
@@ -317,23 +319,22 @@ def test(env, qnet, number_timesteps, device, ob_scale):
                 total_lost = 1
 
             # Save results to output arrays
-            all_r_err[time_step] = r_error
-            all_theta_err[time_step] = theta_error
-            all_heading_err[time_step] = heading_error
-            all_centroid_err[time_step] = centroid_distance_error
-            all_rmse[time_step] = rmse
-            all_reward[time_step] = r
-            all_col[time_step] = total_col
-            all_loss[time_step] = total_lost
+            all_target_states.append(env.state.target_state)
+            all_sensor_states.append(env.state.sensor_state)
+            all_actions.append(a)
+            all_obs.append(o)
+            all_r_err[n] = r_error
+            all_theta_err[n] = theta_error
+            all_heading_err[n] = heading_error
+            all_centroid_err[n] = centroid_distance_error
+            all_rmse[n] = rmse
+            all_reward[n] = r
+            all_col[n] = total_col
+            all_loss[n] = total_lost
 
-    avg_r_err /= number_timesteps
-    avg_theta_err /= number_timesteps
-    avg_heading_err /= number_timesteps
-    avg_centroid_err /= number_timesteps
-    average_rmse /= number_timesteps
-
-    #return [total_reward, total_col, total_lost, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
-    return [all_reward, all_col, all_loss, all_r_err, all_theta_err, all_heading_err, all_centroid_err, all_rmse]
+    return [all_target_states, all_sensor_states, all_actions, 
+            all_obs, all_reward, all_col, all_loss, all_r_err, 
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse]
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,
