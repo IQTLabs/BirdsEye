@@ -2,6 +2,7 @@
 
 import numpy as np
 import json
+import pandas as pd
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
@@ -21,6 +22,34 @@ def cart2pol(x, y):
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
     return rho, phi
+
+##################################################################
+# Saving Results
+##################################################################
+class Results(object):
+    '''
+    Results class for saving run results
+    to file with common format.
+    '''
+    def __init__(self, method_name='', global_start_time='', num_iters=0):
+        self.num_iters = num_iters
+        self.method_name = method_name
+        self.global_start_time = global_start_time
+        self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
+        self.col_names =['time', 'run_time', 'state', 
+                         'action', 'observation', 'reward', 
+                         'col', 'loss', 'r_err', 'theta_err', 
+                         'heading_err', 'centroid_err', 'rmse']
+
+    # Save dataframe to CSV file
+    def write_dataframe(self, run_data):
+        if os.path.isfile(self.namefile):
+            print('Updating file {}'.format(self.namefile))
+        else:
+            print('Saving file to {}'.format(self.namefile))
+        df = pd.DataFrame(run_data, columns=self.col_names)
+        df.to_csv(self.namefile)
+
 
 ##################################################################
 # Logging
