@@ -265,9 +265,14 @@ def run_dqn(env, config, global_start_time):
             result = [datetime.now(), n_iter] + result
             run_data.append(result)
 
-            filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
-            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
-            df.to_csv(filename)
+            # Prepare dataframe for saving results to CSV file
+            namefile = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
+            col_names =['time', 'run_time', 'reward',
+                        'col', 'loss', 'r_err', 'theta_err', 
+                        'heading_err', 'centroid_err', 'rmse']
+            df = pd.DataFrame(run_data, columns=col_names)
+            df.to_csv(namefile)
+            print('Saving file to {}'.format(namefile))
 
 def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """
@@ -294,6 +299,7 @@ def test(env, qnet, number_timesteps, device, ob_scale):
 
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
+
             avg_r_err += r_error
             avg_theta_err += theta_error
             avg_heading_err += heading_error
@@ -310,13 +316,24 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             if env.state.target_state[0] > 150:
                 total_lost = 1
 
+            # Save results to output arrays
+            all_r_err[time_step] = r_error
+            all_theta_err[time_step] = theta_error
+            all_heading_err[time_step] = heading_error
+            all_centroid_err[time_step] = centroid_distance_error
+            all_rmse[time_step] = rmse
+            all_reward[time_step] = r
+            all_col[time_step] = total_col
+            all_loss[time_step] = total_lost
+
     avg_r_err /= number_timesteps
     avg_theta_err /= number_timesteps
     avg_heading_err /= number_timesteps
     avg_centroid_err /= number_timesteps
     average_rmse /= number_timesteps
 
-    return [total_reward, total_col, total_lost, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
+    #return [total_reward, total_col, total_lost, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
+    return [all_reward, all_col, all_loss, all_r_err, all_theta_err, all_heading_err, all_centroid_err, all_rmse]
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,
