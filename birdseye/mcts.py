@@ -57,7 +57,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     ax : object
         Axis object
     """
-    if config is None: 
+    if config is None:
         config = mcts_defaults
     simulations = config.simulations
     DEPTH = config.depth
@@ -82,16 +82,16 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     mcts_loss = 0
     mcts_coll = 0
     run_times = []
-    for i  in range(1, num_runs+1):
+    for i in range(1, num_runs+1):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
         result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
         run_time = datetime.now()-run_start_time
         run_times.append(run_time)
-        mcts_coll += result[2]
-        mcts_loss += result[3]
-        run_data.append([datetime.now(), run_time]+result[1:])
-       
+        mcts_coll += np.sum(result[2])
+        mcts_loss += np.sum(result[3])
+        run_data.append([datetime.now(), run_time] + result[1:])
+
         print(".")
         print("\n==============================")
         print("Runs: {}".format(i))
@@ -100,11 +100,15 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         print("Collision Rate: {}".format(mcts_coll/i))
         print("Loss Rate: {}".format(mcts_loss/i))
         print("==============================")
-        
 
+        # Prepare dataframe for saving results to CSV file
         namefile = '{}/mcts/{}_data.csv'.format(RUN_DIR, global_start_time)
-        df = pd.DataFrame(run_data, columns=['time','run_time','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
+        col_names =['time', 'run_time', 'reward',
+                    'col', 'loss', 'r_err', 'theta_err', 
+                    'heading_err', 'centroid_err', 'rmse']
+        df = pd.DataFrame(run_data, columns=col_names)
         df.to_csv(namefile)
+        print('Saving file to {}'.format(namefile))
 
 
 def mcts(args=None, env=None):

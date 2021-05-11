@@ -183,13 +183,22 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     avg_centroid_err = 0
     average_rmse = 0
 
+    # Save values for all iterations and episodes
+    all_reward = np.zeros(num_iters)
+    all_col = np.zeros(num_iters)
+    all_loss = np.zeros(num_iters)
+    all_r_err = np.zeros(num_iters)
+    all_theta_err = np.zeros(num_iters)
+    all_heading_err = np.zeros(num_iters)
+    all_centroid_err = np.zeros(num_iters)
+    all_rmse = np.zeros(num_iters)
+
     # 500 time steps with an action to be selected at each
     plots = []
 
     log_file = open('employee_file2.csv', mode='w')
     fieldnames = ['time', 'dept', 'birth_month']
     log_writer = csv.DictWriter(log_file, fieldnames=fieldnames)
-
     for time_step in range(num_iters):
 
         #if time_step % 100 == 0
@@ -243,6 +252,16 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         if plotting:
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
+        # Save results to output arrays
+        all_r_err[time_step] = r_error
+        all_theta_err[time_step] = theta_error
+        all_heading_err[time_step] = heading_error
+        all_centroid_err[time_step] = centroid_distance_error
+        all_rmse[time_step] = rmse
+        all_reward[time_step] = reward
+        all_col[time_step] = total_col
+        all_loss[time_step] = total_loss
+
         # TODO: flags for collision, lost track, end of simulation lost track
 
     avg_r_err /= num_iters
@@ -251,5 +270,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     avg_centroid_err /= num_iters
     average_rmse /= num_iters
 
-    return [plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
+    #return [plots, total_reward, total_col, total_loss, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
+    return [plots, all_reward, all_col, all_loss, all_r_err, all_theta_err, all_heading_err, all_centroid_err, all_rmse]
     
