@@ -36,10 +36,9 @@ class Results(object):
         self.method_name = method_name
         self.global_start_time = global_start_time
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
-        self.col_names =['time', 'run_time', 'state', 
-                         'action', 'observation', 'reward', 
-                         'col', 'loss', 'r_err', 'theta_err', 
-                         'heading_err', 'centroid_err', 'rmse']
+        self.col_names =['time', 'run_time', 'target_state', 'sensor_state', 
+                         'action', 'observation', 'reward', 'col', 'loss',
+                         'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse']
 
     # Save dataframe to CSV file
     def write_dataframe(self, run_data):
