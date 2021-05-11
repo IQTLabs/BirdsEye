@@ -266,7 +266,7 @@ def run_dqn(env, config, global_start_time):
             run_data.append(result)
 
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
-            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
+            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'reward', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
             df.to_csv(filename)
 
 def test(env, qnet, number_timesteps, device, ob_scale):
@@ -274,6 +274,7 @@ def test(env, qnet, number_timesteps, device, ob_scale):
     total_reward = 0
     total_col = 0
     total_lost = 0
+    reward_log = []
     r_err_log = []
     theta_err_log = []
     heading_err_log = []
@@ -291,6 +292,7 @@ def test(env, qnet, number_timesteps, device, ob_scale):
 
             # take action in env
             o, r, done, info = env.step(a)
+            reward_log.append(r)
 
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
@@ -310,7 +312,7 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             if env.state.target_state[0] > 150:
                 total_lost = 1
 
-    return [total_reward, total_col, total_lost, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
+    return [total_reward, total_col, total_lost, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,

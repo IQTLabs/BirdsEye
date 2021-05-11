@@ -177,6 +177,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     total_reward = 0
     total_col = 0
     total_loss = 0
+    reward_log = []
     r_err_log = []
     theta_err_log = []
     heading_err_log = []
@@ -213,6 +214,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
         reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
+        reward_log.append(reward)
         env.state.target_state = next_state
 
         # pfrnn
@@ -246,5 +248,5 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    return [plots, total_reward, total_col, total_loss, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
+    return [plots, total_reward, total_col, total_loss, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
     
