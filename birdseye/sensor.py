@@ -1,6 +1,5 @@
 import random
-import numpy as np 
-import scipy.stats
+import numpy as np
 
 class Sensor(object):
     """Common base class for sensor & assoc methods
