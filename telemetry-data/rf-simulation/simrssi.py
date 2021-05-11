@@ -54,6 +54,8 @@ source_x, source_y = 39.034554,-76.655594 # lat/lon in decimal degrees of RF sou
 Gb=10**0.2;   # 2dB(BS antenna gain)
 Gm=10**0.1;   # 1dB (Mobile antenna gain)
 Tx=15         # in dBm
+Sigma = 2     # Noise power in dB
+Offset = 148  # No units (This is used to correct for sensor range which can vary between manufacturers)
 
 # Function to calculate free space path loss from lat/lon
 #
@@ -68,16 +70,19 @@ def get_rssi(tx_power, source_x, source_y, current_x, current_y):
   d1=math.sqrt((((current_x-source_x)*364000)**2) + (((current_y-source_y)*288200)**2))
   d=round(d1,2)
   
+  #add guassian noise
+  noise = np.random.normal(0, Sigma)
+
   #free space attenuation
   #
   #Using the Friis transmission equation, see: https://en.wikipedia.org/wiki/Free-space_path_loss
 
   free_atten=(4*math.pi*d/lamda)**2*(Gb*Gm)**-1; 
 
-  y=round(10*math.log10(free_atten+.0001));
+  y=(10*math.log10(free_atten+.0001));
   print ('Free space attenuation is %d dB'%y)
   print ('Distance is %.2f feet'%d)
-  return tx_power-y+148
+  return round(tx_power-y+noise+Offset)
 
 def main():
     file_in_path = sys.argv[1]		# input file
