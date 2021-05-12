@@ -283,10 +283,10 @@ def test(env, qnet, number_timesteps, device, ob_scale):
     o = env.reset()
 
     # Save values for all iterations and episodes
-    all_target_states = []
-    all_sensor_states = []
-    all_actions = []
-    all_obs = []
+    all_target_states = [None]*number_timesteps
+    all_sensor_states = [None]*number_timesteps
+    all_actions = [None]*number_timesteps
+    all_obs = [None]*number_timesteps
     all_reward = np.zeros(number_timesteps)
     all_col = np.zeros(number_timesteps)
     all_loss = np.zeros(number_timesteps)
@@ -319,10 +319,10 @@ def test(env, qnet, number_timesteps, device, ob_scale):
                 total_lost = 1
 
             # Save results to output arrays
-            all_target_states.append(env.state.target_state)
-            all_sensor_states.append(env.state.sensor_state)
-            all_actions.append(a)
-            all_obs.append(o)
+            all_target_states[n] = env.state.target_state
+            all_sensor_states[n] = env.state.sensor_state
+            all_actions[n] = a
+            all_obs[n] = o
             all_r_err[n] = r_error
             all_theta_err[n] = theta_error
             all_heading_err[n] = heading_error

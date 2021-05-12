@@ -179,10 +179,10 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     total_loss = 0
 
     # Save values for all iterations and episodes
-    all_target_states = []
-    all_sensor_states = []
-    all_actions = []
-    all_obs = []
+    all_target_states = [None]*num_iters
+    all_sensor_states = [None]*num_iters
+    all_actions = [None]*num_iters
+    all_obs = [None]*num_iters
     all_reward = np.zeros(num_iters)
     all_col = np.zeros(num_iters)
     all_loss = np.zeros(num_iters)
@@ -247,10 +247,10 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
         # Save results to output arrays
-        all_target_states.append(env.state.target_state)
-        all_sensor_states.append(env.state.sensor_state)
-        all_actions.append(action)
-        all_obs.append(observation)
+        all_target_states[time_step] = env.state.target_state
+        all_sensor_states[time_step] = env.state.sensor_state
+        all_actions[time_step] = action
+        all_obs[time_step] = observation
         all_r_err[time_step] = r_error
         all_theta_err[time_step] = theta_error
         all_heading_err[time_step] = heading_error
