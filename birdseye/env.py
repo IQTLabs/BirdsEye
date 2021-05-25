@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from .utils import pol2cart
+from .utils import pol2cart, particles_mean_belief
 from birdseye.pfrnn.pfrnn import pfrnn
 from pfilter import ParticleFilter, systematic_resample
 
@@ -120,7 +120,6 @@ class RFEnv(object):
 
         H = -1. * np.sum([b * np.log(b)])
         collision_rate = np.mean(self.pf.particles[:,0] < delta)
-
         cost = H + collision_weight * collision_rate
 
         return -1. * cost
@@ -133,7 +132,11 @@ class RFEnv(object):
         array_like
             Heatmap distribution of current observed particles
         """
-        return np.expand_dims(self.particle_heatmap_obs(self.pf.particles), axis=0)
+        #return np.expand_dims(self.particle_heatmap_obs(self.pf.particles), axis=0)
+        pf_map = np.expand_dims(self.particle_heatmap_obs(self.pf.particles), axis=0).reshape(-1)
+        _,_,_,_, mean_r, mean_theta, mean_heading, mean_spd = particles_mean_belief(self.pf.particles)
+        mean_belief = np.array([mean_r, mean_theta, mean_heading, mean_spd])
+        return np.concatenate((mean_belief, pf_map))
 
     def particle_heatmap_obs(self, belief):
         """Function to build histogram representing

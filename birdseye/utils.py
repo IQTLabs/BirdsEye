@@ -139,6 +139,26 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         r_error, theta_error, heading_error, centroid_distance_error, rmse))
 
+def particles_mean_belief(particles): 
+    particles_r = particles[:,0]
+    particles_theta = np.radians(particles[:,1])
+    particles_x, particles_y = pol2cart(particles_r, particles_theta)
+
+    # centroid of particles x,y
+    mean_x = np.mean(particles_x)
+    mean_y = np.mean(particles_y)
+
+    # centroid of particles r,theta
+    mean_r, mean_theta = cart2pol(mean_x, mean_y)
+    
+    particles_heading = particles[:,2]
+    particles_heading_rad = np.radians(particles_heading)
+    mean_heading_rad = np.arctan2(np.mean(np.sin(particles_heading_rad)), np.mean(np.cos(particles_heading_rad)))
+    mean_heading = np.degrees(mean_heading_rad)
+
+    mean_spd = np.mean(particles[:,3])
+
+    return particles_x, particles_y, mean_x, mean_y, mean_r, mean_theta, mean_heading, mean_spd
 
 # calculate different tracking errors
 def tracking_error(target, particles):
@@ -148,27 +168,15 @@ def tracking_error(target, particles):
     target_heading = target[2]
     target_x, target_y = pol2cart(target_r, target_theta)
 
-    particles_r = particles[:,0]
-    particles_theta = np.radians(particles[:,1])
-    particles_heading = particles[:,2]
-    particles_x, particles_y = pol2cart(particles_r, particles_theta)
-
-    # centroid of particles x,y
-    mean_x = np.mean(particles_x)
-    mean_y = np.mean(particles_y)
-
-    # centroid of particles r,theta
-    mean_r, mean_theta = cart2pol(mean_x, mean_y)
-
-    mean_heading = np.mean(particles_heading)
+    particles_x, particles_y, mean_x, mean_y, mean_r, mean_theta, mean_heading, mean_spd = particles_mean_belief(particles)
 
     ## Error Measures
-
     r_error = target_r - mean_r
     theta_error = np.degrees(target_theta - mean_theta) # final error in degrees
     if theta_error > 360:
         theta_error = theta_error % 360
-    heading_error = target_heading - mean_heading
+    heading_diff = np.abs(target_heading - mean_heading) % 360
+    heading_error = heading_diff if heading_diff <= 180 else 360-heading_diff
 
     # centroid euclidean distance error x,y
     centroid_distance_error = np.sqrt((mean_x - target_x)**2 + (mean_y - target_y)**2)

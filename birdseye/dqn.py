@@ -24,7 +24,7 @@ from torch.optim import Adam
 from .rl_common.util import scale_ob
 from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 from .rl_common.logger import init_logger
-from .rl_common.models import CNN, MLP
+from .rl_common.models import CNN, MLP, RFPFQnet
 
 from .actions import *
 from .sensor import *
@@ -164,7 +164,8 @@ def run_dqn(env, config, global_start_time):
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
     in_dim = (1, 100, 100)
-    network = CNN(in_dim, policy_dim, atom_num, dueling)
+    #network = CNN(in_dim, policy_dim, atom_num, dueling)
+    network = RFPFQnet(in_dim, 4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
@@ -215,8 +216,8 @@ def run_dqn(env, config, global_start_time):
                 b_q = qnet(b_o).gather(1, b_a)
                 abs_td_error = (b_q - (b_r + gamma * b_q_)).abs()
                 priorities = abs_td_error.detach().cpu().clamp(1e-6).numpy()
-                if extra:
-                    loss = (extra[0] * huber_loss(abs_td_error)).mean()
+                if prioritized_replay:
+                    loss = (extra[-2] * huber_loss(abs_td_error)).mean()
                 else:
                     loss = huber_loss(abs_td_error).mean()
             else:
@@ -244,7 +245,7 @@ def run_dqn(env, config, global_start_time):
                 nn.utils.clip_grad_norm_(qnet.parameters(), grad_norm)
             optimizer.step()
             if prioritized_replay:
-                buffer.update_priorities(extra[1], priorities)
+                buffer.update_priorities(extra[-1], priorities)
 
         # update target net and log
         if n_iter % target_network_update_freq == 0:
