@@ -158,7 +158,9 @@ class RFEnv(object):
         y = cart[:,1]
 
         # Build two-dim histogram distribution
-        heatmap, xedges, yedges = np.histogram2d(x, y, bins=100)
+        xedges = np.arange(-150, 153, 3)
+        yedges = np.arange(-150, 153, 3)
+        heatmap, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
 
         return heatmap
 
