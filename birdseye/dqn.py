@@ -267,7 +267,7 @@ def run_dqn(env, config, global_start_time):
             run_data.append(result)
 
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
-            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'reward', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
+            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','collisions','lost', 'reward', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
             df.to_csv(filename)
 
 def test(env, qnet, number_timesteps, device, ob_scale):
