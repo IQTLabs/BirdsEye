@@ -88,8 +88,8 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
         run_time = datetime.now()-run_start_time
         run_times.append(run_time)
-        mcts_coll += result[2]
-        mcts_loss += result[3]
+        mcts_coll += result[2][-1]
+        mcts_loss += result[3][-1]
         run_data.append([datetime.now(), run_time]+result[1:])
        
         print(".")

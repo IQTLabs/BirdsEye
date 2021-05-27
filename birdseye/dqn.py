@@ -281,6 +281,8 @@ def test(env, qnet, number_timesteps, device, ob_scale):
     heading_err_log = []
     centroid_err_log = []
     rmse_log = []
+    collision_log = []
+    lost_log = []
 
     o = env.reset()
 
@@ -308,12 +310,14 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             total_reward += r
 
             if env.state.target_state[0] < 10:
-                total_col = 1
+                total_col += 1
+            collision_log.append(total_col)
 
             if env.state.target_state[0] > 150:
-                total_lost = 1
+                total_lost += 1
+            lost_log.append(total_lost)
 
-    return [total_reward, total_col, total_lost, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
+    return [total_reward, collision_log, lost_log, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,

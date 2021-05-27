@@ -183,6 +183,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     heading_err_log = []
     centroid_err_log = []
     rmse_log = []
+    collision_log = []
+    lost_log = []
 
     # 500 time steps with an action to be selected at each
     plots = []
@@ -238,15 +240,17 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         total_reward += reward
         
         if env.state.target_state[0] < 10:
-            total_col = 1
+            total_col += 1
+        collision_log.append(total_col)
 
         if env.state.target_state[0] > 150:
-            total_loss = 1
+            total_loss += 1
+        lost_log.append(total_loss)
 
         if plotting:
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    return [plots, total_reward, total_col, total_loss, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
+    return [plots, total_reward, collision_log, lost_log, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
     
