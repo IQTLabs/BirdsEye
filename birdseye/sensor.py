@@ -35,10 +35,10 @@ class SignalStrength(Sensor):
 
     def weight(self, hyp, obs, state): 
         expected_r = state[0]
-        obs_r = np.sqrt(1/obs)
+        obs_r = np.sqrt(1/obs[0][0]) 
         p = (1/(self.std_dev * np.sqrt(2*np.pi))) * np.exp(-0.5 * ((obs_r - expected_r)/self.std_dev) ** 2)
         #weight = scipy.stats.norm(expected_r, self.std_dev).pdf(obs_r)[0][0]
-        return weight
+        return p
     
     # samples observation given state
     def observation(self, state):
