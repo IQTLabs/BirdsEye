@@ -269,6 +269,7 @@ def run_dqn(env, config, global_start_time):
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
             df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','collisions','lost', 'reward', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
             df.to_csv(filename)
+    logger.shutdown()
 
 def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """
