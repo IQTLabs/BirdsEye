@@ -3,6 +3,7 @@ These functions are adapted from github.com/Officium/RL-Experiments
 
 """
 from datetime import datetime
+import logging
 import configparser
 import argparse
 import math
@@ -262,19 +263,20 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-            trials = 100
+            trials = 40
             results_list = []
-            for i in range(trials): 
+            for i in range(trials):
+                print('test trial {}/{}'.format(i, trials))
                 result = test(env, qnet, max_episode_length, device, ob_scale)
                 results_list.append(result)
-            result_avg = [np.mean(results_list[:][i]) for i in range(len(results_list[0]))]
+            result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
             result = [datetime.now(), n_iter] + result_avg
             run_data.append(result)
 
             filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
             df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','collisions','lost', 'reward', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
             df.to_csv(filename)
-    logger.shutdown()
+    logging.shutdown()
 
 def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """

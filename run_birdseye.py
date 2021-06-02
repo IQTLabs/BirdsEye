@@ -11,37 +11,38 @@ def batch_run():
 
     config = configparser.ConfigParser()
 
-    # Setup requested method objects
-    for method_name in ['mcts', 'dqn']:
-        for target_speed in ['0', '1', '2']:
-            print('===========================')
-            print('Batch Run: ')
-            print('method = {}'.format(method_name))
-            print('target_speed = {}'.format(target_speed))
-            print('===========================')
-            run_method = get_method(method_name)
-            action_config = 'simpleactions'
-            sensor_config = 'drone'
-            state_config = 'rfstate'
-            actions = get_action(action_config)
-            sensor = get_sensor(sensor_config)
-            state = get_state(state_config)
-            reward = 'entropy_collision_reward'
+    for method_name in ['mcts']:
+        for sensor_config in ['signalstrength', 'drone','signalstrength']:
+            for reward in ['entropy_collision_reward', 'range_reward']:
+                for target_speed in ['0', '1', '2']:
+                    print('===========================')
+                    print('Batch Run: ')
+                    print('method = {}'.format(method_name))
+                    print('sensor_config = {}'.format(sensor_config))
+                    print('reward = {}'.format(reward))
+                    print('target_speed = {}'.format(target_speed))
+                    print('===========================')
+                    run_method = get_method(method_name)
+                    action_config = 'simpleactions'
+                    #sensor_config = 'drone'
+                    state_config = 'rfstate'
+                    actions = get_action(action_config)
+                    sensor = get_sensor(sensor_config)
+                    state = get_state(state_config)
+                    #reward = 'entropy_collision_reward'
 
-            # Setup environment
-            env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=None, reward=reward))
+                    # Setup environment
+                    env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=None, reward=reward))
 
-            config.read(['configs/{}.yaml'.format(method_name)])
-            config.set('Methods', 'action', action_config)
-            config.set('Methods', 'sensor', sensor_config)
-            config.set('Methods', 'state', state_config)
-            config.set('Methods', 'target_speed', target_speed)
-            config.set('Methods', 'reward', reward)
+                    config.read(['configs/{}.yaml'.format(method_name)])
+                    config.set('Methods', 'action', action_config)
+                    config.set('Methods', 'sensor', sensor_config)
+                    config.set('Methods', 'state', state_config)
+                    config.set('Methods', 'target_speed', target_speed)
+                    config.set('Methods', 'reward', reward)
 
-
-            # Run the requested algorithm
-            run_method(args=config, env=env)
-
+                    # Run the requested algorithm
+                    run_method(args=config, env=env)
 
 def run_birdseye(args=None, env=None):
     # Grab Methods information from config file
