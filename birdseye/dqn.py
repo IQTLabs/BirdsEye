@@ -3,6 +3,7 @@ These functions are adapted from github.com/Officium/RL-Experiments
 
 """
 from datetime import datetime
+import logging
 import configparser
 import argparse
 import math
@@ -267,18 +268,18 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-            trials = 100
+            trials = 40
             results_list = []
-            for i in range(trials): 
+            for i in range(trials):
+                print('test trial {}/{}'.format(i, trials))
                 result = test(env, qnet, max_episode_length, device, ob_scale)
                 results_list.append(result)
-            result_avg = [np.mean(results_list[:][i]) for i in range(len(results_list[0]))]
+            result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
             result = [datetime.now(), n_iter] + result_avg
             run_data.append(result)
 
             # Saving results to CSV file
             results.write_dataframe(run_data=run_data)
-            
     logging.shutdown()
 
 def test(env, qnet, number_timesteps, device, ob_scale):
@@ -335,8 +336,8 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             all_col[n] = total_col
             all_loss[n] = total_lost
 
-    return [all_target_states, all_sensor_states, all_actions, 
-            all_obs, all_reward, all_col, all_loss, all_r_err, 
+    return [all_target_states, all_sensor_states, all_actions,
+            all_obs, all_reward, all_col, all_loss, all_r_err,
             all_theta_err, all_heading_err, all_centroid_err, all_rmse]
 
 
