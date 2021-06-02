@@ -177,14 +177,21 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     total_reward = 0
     total_col = 0
     total_loss = 0
-    reward_log = []
-    r_err_log = []
-    theta_err_log = []
-    heading_err_log = []
-    centroid_err_log = []
-    rmse_log = []
-    collision_log = []
-    lost_log = []
+    
+    # Save values for all iterations and episodes
+    all_target_states = [None]*num_iters
+    all_sensor_states = [None]*num_iters
+    all_actions = [None]*num_iters
+    all_obs = [None]*num_iters
+    all_reward = np.zeros(num_iters)
+    all_col = np.zeros(num_iters)
+    all_loss = np.zeros(num_iters)
+    all_r_err = np.zeros(num_iters)
+    all_theta_err = np.zeros(num_iters)
+    all_heading_err = np.zeros(num_iters)
+    all_centroid_err = np.zeros(num_iters)
+    all_rmse = np.zeros(num_iters)
+
 
     # 500 time steps with an action to be selected at each
     plots = []
@@ -192,7 +199,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     log_file = open('employee_file2.csv', mode='w')
     fieldnames = ['time', 'dept', 'birth_month']
     log_writer = csv.DictWriter(log_file, fieldnames=fieldnames)
-
     for time_step in range(num_iters):
 
         #if time_step % 100 == 0
@@ -228,12 +234,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # error metrics 
         r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
-        r_err_log.append(r_error)
-        theta_err_log.append(theta_error)
-        heading_err_log.append(heading_error)
-        centroid_err_log.append(centroid_distance_error)
-        rmse_log.append(rmse)
-        
+
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
 
         # accumulate reward
@@ -250,7 +251,22 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         if plotting:
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
+        # Save results to output arrays
+        all_target_states[time_step] = env.state.target_state
+        all_sensor_states[time_step] = env.state.sensor_state
+        all_actions[time_step] = action
+        all_obs[time_step] = observation
+        all_r_err[time_step] = r_error
+        all_theta_err[time_step] = theta_error
+        all_heading_err[time_step] = heading_error
+        all_centroid_err[time_step] = centroid_distance_error
+        all_rmse[time_step] = rmse
+        all_reward[time_step] = reward
+        all_col[time_step] = total_col
+        all_loss[time_step] = total_loss
+
         # TODO: flags for collision, lost track, end of simulation lost track
 
-    return [plots, total_reward, collision_log, lost_log, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
-    
+    return [plots, all_target_states, all_sensor_states, all_actions, 
+            all_obs, all_reward, all_col, all_loss, all_r_err, 
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse]

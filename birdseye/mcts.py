@@ -10,7 +10,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import write_header_log
+from .utils import write_header_log, Results
 
 # Default MCTS inputs
 mcts_defaults = {
@@ -21,7 +21,7 @@ mcts_defaults = {
     'simulations' : 500,
     'plotting' : False,
     'trials' : 100,
-    'iterations' : 2000
+    'iterations' : 500
 }
 
 
@@ -57,7 +57,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     ax : object
         Axis object
     """
-    if config is None: 
+    if config is None:
         config = mcts_defaults
     simulations = config.simulations
     DEPTH = config.depth
@@ -67,6 +67,11 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     COLLISION_REWARD = config.collision
     LOSS_REWARD = config.loss
     plotting = config.plotting
+
+    # Results instance for saving results to file
+    results = Results(method_name='mcts',
+                        global_start_time=global_start_time,
+                        num_iters=num_runs)
 
     #cumulative collisions, losses, and number of trials
     #total reward, and best average tracking
@@ -82,16 +87,15 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     mcts_loss = 0
     mcts_coll = 0
     run_times = []
-    for i  in range(1, num_runs+1):
+    for i in range(1, num_runs+1):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
         result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
         run_time = datetime.now()-run_start_time
         run_times.append(run_time)
-        mcts_coll += result[2][-1]
-        mcts_loss += result[3][-1]
-        run_data.append([datetime.now(), run_time]+result[1:])
-       
+        mcts_coll += np.sum(result[2])
+        mcts_loss += np.sum(result[3])
+        run_data.append([datetime.now(), run_time] + result[1:])
         print(".")
         print("\n==============================")
         print("Runs: {}".format(i))
@@ -100,11 +104,10 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         print("Collision Rate: {}".format(mcts_coll/i))
         print("Loss Rate: {}".format(mcts_loss/i))
         print("==============================")
-        
 
-        namefile = '{}/mcts/{}_data.csv'.format(RUN_DIR, global_start_time)
-        df = pd.DataFrame(run_data, columns=['time','run_time','total_reward','collisions','lost', 'reward', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
-        df.to_csv(namefile)
+        # Saving results to CSV file
+        results.write_dataframe(run_data=run_data)
+
 
 
 def mcts(args=None, env=None):

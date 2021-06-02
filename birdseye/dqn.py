@@ -31,7 +31,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import tracking_error, write_header_log
+from .utils import tracking_error, write_header_log, Results
 
 
 # Default DQN inputs
@@ -155,6 +155,11 @@ def run_dqn(env, config, global_start_time):
     max_value = config.max_value
     max_episode_length = config.max_episode_length
 
+    # Results instance for saving results to file
+    results = Results(method_name='dqn',
+                        global_start_time=global_start_time,
+                        num_iters=number_timesteps)
+
     # Setup logging
     logger = init_logger(log_path)
 
@@ -271,26 +276,31 @@ def run_dqn(env, config, global_start_time):
             result = [datetime.now(), n_iter] + result_avg
             run_data.append(result)
 
-            filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
-            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','collisions','lost', 'reward', 'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
-            df.to_csv(filename)
-    logger.shutdown()
+            # Saving results to CSV file
+            results.write_dataframe(run_data=run_data)
+            
+    logging.shutdown()
 
 def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """
-    total_reward = 0
     total_col = 0
     total_lost = 0
-    reward_log = []
-    r_err_log = []
-    theta_err_log = []
-    heading_err_log = []
-    centroid_err_log = []
-    rmse_log = []
-    collision_log = []
-    lost_log = []
 
     o = env.reset()
+
+    # Save values for all iterations and episodes
+    all_target_states = [None]*number_timesteps
+    all_sensor_states = [None]*number_timesteps
+    all_actions = [None]*number_timesteps
+    all_obs = [None]*number_timesteps
+    all_reward = np.zeros(number_timesteps)
+    all_col = np.zeros(number_timesteps)
+    all_loss = np.zeros(number_timesteps)
+    all_r_err = np.zeros(number_timesteps)
+    all_theta_err = np.zeros(number_timesteps)
+    all_heading_err = np.zeros(number_timesteps)
+    all_centroid_err = np.zeros(number_timesteps)
+    all_rmse = np.zeros(number_timesteps)
 
     for n in range(number_timesteps):
         with torch.no_grad():
@@ -301,29 +311,34 @@ def test(env, qnet, number_timesteps, device, ob_scale):
 
             # take action in env
             o, r, done, info = env.step(a)
-            reward_log.append(r)
 
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
-            r_err_log.append(r_error)
-            theta_err_log.append(theta_error)
-            heading_err_log.append(heading_error)
-            centroid_err_log.append(centroid_distance_error)
-            rmse_log.append(rmse)
-            #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
-
-            # accumulate reward
-            total_reward += r
 
             if env.state.target_state[0] < 10:
                 total_col += 1
-            collision_log.append(total_col)
 
             if env.state.target_state[0] > 150:
                 total_lost += 1
-            lost_log.append(total_lost)
 
-    return [total_reward, collision_log, lost_log, reward_log, r_err_log, theta_err_log, heading_err_log, centroid_err_log, rmse_log]
+            # Save results to output arrays
+            all_target_states[n] = env.state.target_state
+            all_sensor_states[n] = env.state.sensor_state
+            all_actions[n] = a
+            all_obs[n] = o
+            all_r_err[n] = r_error
+            all_theta_err[n] = theta_error
+            all_heading_err[n] = heading_error
+            all_centroid_err[n] = centroid_distance_error
+            all_rmse[n] = rmse
+            all_reward[n] = r
+            all_col[n] = total_col
+            all_loss[n] = total_lost
+
+    return [all_target_states, all_sensor_states, all_actions, 
+            all_obs, all_reward, all_col, all_loss, all_r_err, 
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse]
+
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,

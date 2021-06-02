@@ -63,10 +63,10 @@ def run_birdseye(args=None, env=None):
     actions = get_action(action_name)
     sensor = get_sensor(sensor_name)
     state = get_state(state_name)
-
+    
     # Setup environment
     env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement, reward=reward))
-
+    
     # Run the requested algorithm
     run_method(args=config, env=env)
 
