@@ -24,7 +24,7 @@ from torch.optim import Adam
 from .rl_common.util import scale_ob
 from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 from .rl_common.logger import init_logger
-from .rl_common.models import CNN, MLP
+from .rl_common.models import CNN, MLP, RFPFQnet
 
 from .actions import *
 from .sensor import *
@@ -169,7 +169,8 @@ def run_dqn(env, config, global_start_time):
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
     in_dim = (1, 100, 100)
-    network = CNN(in_dim, policy_dim, atom_num, dueling)
+    #network = CNN(in_dim, policy_dim, atom_num, dueling)
+    network = RFPFQnet(in_dim, 4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
@@ -220,8 +221,8 @@ def run_dqn(env, config, global_start_time):
                 b_q = qnet(b_o).gather(1, b_a)
                 abs_td_error = (b_q - (b_r + gamma * b_q_)).abs()
                 priorities = abs_td_error.detach().cpu().clamp(1e-6).numpy()
-                if extra:
-                    loss = (extra[0] * huber_loss(abs_td_error)).mean()
+                if prioritized_replay:
+                    loss = (extra[-2] * huber_loss(abs_td_error)).mean()
                 else:
                     loss = huber_loss(abs_td_error).mean()
             else:
@@ -249,7 +250,7 @@ def run_dqn(env, config, global_start_time):
                 nn.utils.clip_grad_norm_(qnet.parameters(), grad_norm)
             optimizer.step()
             if prioritized_replay:
-                buffer.update_priorities(extra[1], priorities)
+                buffer.update_priorities(extra[-1], priorities)
 
         # update target net and log
         if n_iter % target_network_update_freq == 0:
@@ -266,19 +267,24 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-            result = test(env, qnet, max_episode_length, device, ob_scale)
-            result = [datetime.now(), n_iter] + result
+            trials = 100
+            results_list = []
+            for i in range(trials): 
+                result = test(env, qnet, max_episode_length, device, ob_scale)
+                results_list.append(result)
+            result_avg = [np.mean(results_list[:][i]) for i in range(len(results_list[0]))]
+            result = [datetime.now(), n_iter] + result_avg
             run_data.append(result)
 
             # Saving results to CSV file
             results.write_dataframe(run_data=run_data)
-
+            
+    logging.shutdown()
 
 def test(env, qnet, number_timesteps, device, ob_scale):
     """ Perform one test run """
     total_col = 0
     total_lost = 0
-    total_reward = 0
 
     o = env.reset()
 
@@ -309,14 +315,11 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
 
-            # accumulate reward
-            total_reward += r
-
             if env.state.target_state[0] < 10:
-                total_col = 1
+                total_col += 1
 
             if env.state.target_state[0] > 150:
-                total_lost = 1
+                total_lost += 1
 
             # Save results to output arrays
             all_target_states[n] = env.state.target_state
@@ -335,6 +338,7 @@ def test(env, qnet, number_timesteps, device, ob_scale):
     return [all_target_states, all_sensor_states, all_actions, 
             all_obs, all_reward, all_col, all_loss, all_r_err, 
             all_theta_err, all_heading_err, all_centroid_err, all_rmse]
+
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,

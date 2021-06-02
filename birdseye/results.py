@@ -1,6 +1,7 @@
 # results.py
 
 import pandas as pd
+import numpy as np 
 from datetime import datetime
 
 from .utils import read_header_log
@@ -13,7 +14,14 @@ def get_config(method_name, run_name):
 
 def get_data(method_name, run_name):
     data = pd.read_csv('{}/{}/{}_data.csv'.format(RUN_DIR, method_name, run_name))
+    append_metric_avgs(data, ['r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
     return data
+
+def append_metric_avgs(df, metrics): 
+
+    for m in metrics: 
+        if ('avg_{}'.format(m) not in df) and ('average_{}'.format(m) not in df):
+            df['avg_{}'.format(m)] = np.mean(list(df[m]), axis=1) 
 
 def get_valid_runs(method_name):
     files = os.listdir('{}/{}/'.format(RUN_DIR, method_name))

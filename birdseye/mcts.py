@@ -21,7 +21,7 @@ mcts_defaults = {
     'simulations' : 500,
     'plotting' : False,
     'trials' : 100,
-    'iterations' : 2000
+    'iterations' : 500
 }
 
 
@@ -96,7 +96,6 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         mcts_coll += np.sum(result[2])
         mcts_loss += np.sum(result[3])
         run_data.append([datetime.now(), run_time] + result[1:])
-
         print(".")
         print("\n==============================")
         print("Runs: {}".format(i))
@@ -108,6 +107,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
 
         # Saving results to CSV file
         results.write_dataframe(run_data=run_data)
+
 
 
 def mcts(args=None, env=None):

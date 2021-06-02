@@ -177,7 +177,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     total_reward = 0
     total_col = 0
     total_loss = 0
-
+    
     # Save values for all iterations and episodes
     all_target_states = [None]*num_iters
     all_sensor_states = [None]*num_iters
@@ -191,6 +191,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     all_heading_err = np.zeros(num_iters)
     all_centroid_err = np.zeros(num_iters)
     all_rmse = np.zeros(num_iters)
+
 
     # 500 time steps with an action to be selected at each
     plots = []
@@ -221,10 +222,11 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
         reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
+        reward_log.append(reward)
         env.state.target_state = next_state
 
         # pfrnn
-        #env.pfrnn.train_iter(env.pfrnn.prep_data(observation, env.get_absolute_target(), env.actions.action_to_index(action)))
+        #env.pfrnn.update(observation, env.get_absolute_target(), env.actions.action_to_index(action))
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
@@ -232,16 +234,19 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # error metrics 
         r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
+
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
 
         # accumulate reward
         total_reward += reward
         
         if env.state.target_state[0] < 10:
-            total_col = 1
+            total_col += 1
+        collision_log.append(total_col)
 
         if env.state.target_state[0] > 150:
-            total_loss = 1
+            total_loss += 1
+        lost_log.append(total_loss)
 
         if plotting:
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
@@ -265,4 +270,3 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     return [plots, all_target_states, all_sensor_states, all_actions, 
             all_obs, all_reward, all_col, all_loss, all_r_err, 
             all_theta_err, all_heading_err, all_centroid_err, all_rmse]
-    
