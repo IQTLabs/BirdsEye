@@ -92,10 +92,10 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         #global mcts_loss, mcts_coll, num_particles, DEPTH
         result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
         run_time = datetime.now()-run_start_time
-        run_times.append(run_time)
-        mcts_coll += np.sum(result[2])
-        mcts_loss += np.sum(result[3])
         run_data.append([datetime.now(), run_time] + result[1:])
+
+        mcts_coll = result[6][-1]/iterations
+        mcts_loss = result[7][-1]/iterations
         print(".")
         print("\n==============================")
         print("Runs: {}".format(i))

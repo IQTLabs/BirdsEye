@@ -37,7 +37,7 @@ class Results(object):
         self.global_start_time = global_start_time
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
         self.col_names =['time', 'run_time', 'target_state', 'sensor_state', 
-                         'action', 'observation', 'reward', 'col', 'loss',
+                         'action', 'observation', 'reward', 'collisions', 'lost',
                          'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse']
 
     # Save dataframe to CSV file

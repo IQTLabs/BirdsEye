@@ -172,9 +172,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     action = None
     observation = None
 
-    # run simulation
 
-    total_reward = 0
     total_col = 0
     total_loss = 0
     
@@ -222,7 +220,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
         reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
-        reward_log.append(reward)
         env.state.target_state = next_state
 
         # pfrnn
@@ -237,16 +234,12 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
 
-        # accumulate reward
-        total_reward += reward
         
         if env.state.target_state[0] < 10:
             total_col += 1
-        collision_log.append(total_col)
 
         if env.state.target_state[0] > 150:
             total_loss += 1
-        lost_log.append(total_loss)
 
         if plotting:
             build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
