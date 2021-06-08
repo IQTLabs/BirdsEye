@@ -199,7 +199,6 @@ def run_dqn(env, config, global_start_time):
         os.makedirs(save_path)
 
     start_ts = time.time()
-    run_data = []
 
     for n_iter in range(1, number_timesteps + 1):
         if prioritized_replay:
@@ -272,16 +271,18 @@ def run_dqn(env, config, global_start_time):
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
             trials = 40
-            results_list = []
+            run_data = []
             for i in range(trials):
+                run_start_time = datetime.now()
                 print('test trial {}/{}'.format(i, trials))
                 result = test(env, qnet, max_episode_length, device, ob_scale)
-                results_list.append(result)
+                run_time = datetime.now()-run_start_time
                 if results.plotting: 
                     results.save_gif(n_iter, i)
-            result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
-            result = [datetime.now(), n_iter] + result_avg
-            run_data.append(result)
+                run_data.append([datetime.now(), run_time] + result)
+            #result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
+            #result = [datetime.now(), n_iter] + result_avg
+            #run_data.append(result)
 
             # Saving results to CSV file
             results.write_dataframe(run_data=run_data)
