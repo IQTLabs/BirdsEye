@@ -45,6 +45,8 @@ def filter_runs(method_name, runs, config_filter=None):
         match = True
         config = get_config(method_name, r)['Methods']
         for k,v in config_filter.items():
+            if v is None: 
+                continue
             if k == 'target_speed':
                 v = float(v)
                 if ((config.get(k) is None) and (v != 1.)) or (float(config.get(k)) != v):

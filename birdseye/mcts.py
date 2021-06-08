@@ -90,7 +90,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     for i in range(1, num_runs+1):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
-        result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
+        result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax, results=results)
         run_time = datetime.now()-run_start_time
         run_data.append([datetime.now(), run_time] + result[1:])
 
@@ -107,6 +107,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
 
         # Saving results to CSV file
         results.write_dataframe(run_data=run_data)
+        results.save_gif(i)
 
 
 
