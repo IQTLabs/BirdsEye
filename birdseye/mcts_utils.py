@@ -146,7 +146,7 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 # Trial
 ##################################################################
 lambda_arg = 0.95
-def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=None, ax=None):
+def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=None, ax=None, results=None):
 
     # Initialize true state and belief state (particle filter);
     # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
@@ -194,9 +194,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     # 500 time steps with an action to be selected at each
     plots = []
 
-    log_file = open('employee_file2.csv', mode='w')
-    fieldnames = ['time', 'dept', 'birth_month']
-    log_writer = csv.DictWriter(log_file, fieldnames=fieldnames)
     for time_step in range(num_iters):
 
         #if time_step % 100 == 0
@@ -233,7 +230,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
 
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
-
         
         if env.state.target_state[0] < 10:
             total_col += 1
@@ -241,8 +237,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         if env.state.target_state[0] > 150:
             total_loss += 1
 
-        if plotting:
-            build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
+        if plotting and results is not None:
+            results.build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
 
         # Save results to output arrays
         all_target_states[time_step] = env.state.target_state
