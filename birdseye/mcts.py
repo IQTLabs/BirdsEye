@@ -71,7 +71,8 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     # Results instance for saving results to file
     results = Results(method_name='mcts',
                         global_start_time=global_start_time,
-                        num_iters=num_runs)
+                        num_iters=num_runs,
+                        plotting=plotting)
 
     #cumulative collisions, losses, and number of trials
     #total reward, and best average tracking
@@ -107,7 +108,8 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
 
         # Saving results to CSV file
         results.write_dataframe(run_data=run_data)
-        results.save_gif(i)
+        if results.plotting: 
+            results.save_gif(i)
 
 
 

@@ -34,10 +34,11 @@ class Results(object):
     Results class for saving run results
     to file with common format.
     '''
-    def __init__(self, method_name='', global_start_time='', num_iters=0):
+    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False):
         self.num_iters = num_iters
         self.method_name = method_name
         self.global_start_time = global_start_time
+        self.plotting = plotting
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
         self.gif_dir = '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)
 
@@ -57,11 +58,12 @@ class Results(object):
         df.to_csv(self.namefile)
 
 
-    def save_gif(self, run): 
+    def save_gif(self, run, sub_run=None): 
+        filename = run if sub_run is None else '{}_{}'.format(run, sub_run)
         # Build GIF
-        with imageio.get_writer('{}/gif/{}.gif'.format(self.gif_dir, run), mode='I') as writer:
-            for filename in os.listdir(self.gif_dir+'/png/'):
-                image = imageio.imread(self.gif_dir+'/png/'+filename)
+        with imageio.get_writer('{}/gif/{}.gif'.format(self.gif_dir, filename), mode='I') as writer:
+            for png_filename in os.listdir(self.gif_dir+'/png/'):
+                image = imageio.imread(self.gif_dir+'/png/'+png_filename)
                 writer.append_data(image)
 
     ##################################################################

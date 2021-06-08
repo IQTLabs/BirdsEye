@@ -61,7 +61,8 @@ dqn_defaults = {
     'save_interval' : 1000,
     'save_path' : 'checkpoints',
     'log_path' : 'rl_log',
-    'use_gpu' : True
+    'use_gpu' : True, 
+    'plotting': False
 }
 
 
@@ -155,11 +156,13 @@ def run_dqn(env, config, global_start_time):
     min_value = config.min_value
     max_value = config.max_value
     max_episode_length = config.max_episode_length
+    plotting = config.plotting
 
     # Results instance for saving results to file
     results = Results(method_name='dqn',
                         global_start_time=global_start_time,
-                        num_iters=number_timesteps)
+                        num_iters=number_timesteps, 
+                        plotting=plotting)
 
     # Setup logging
     logger = init_logger(log_path)
@@ -274,15 +277,18 @@ def run_dqn(env, config, global_start_time):
                 print('test trial {}/{}'.format(i, trials))
                 result = test(env, qnet, max_episode_length, device, ob_scale)
                 results_list.append(result)
+                if results.plotting: 
+                    results.save_gif(n_iter, i)
             result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
             result = [datetime.now(), n_iter] + result_avg
             run_data.append(result)
 
             # Saving results to CSV file
             results.write_dataframe(run_data=run_data)
+            
     logging.shutdown()
 
-def test(env, qnet, number_timesteps, device, ob_scale):
+def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     """ Perform one test run """
     total_col = 0
     total_lost = 0
@@ -335,6 +341,10 @@ def test(env, qnet, number_timesteps, device, ob_scale):
             all_reward[n] = r
             all_col[n] = total_col
             all_loss[n] = total_lost
+
+            if results is not None and results.plotting:
+                results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
+
 
     return [all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
