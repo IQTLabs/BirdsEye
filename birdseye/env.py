@@ -108,6 +108,7 @@ class RFEnv(object):
         info = {'episode':{}}
         info['episode']['l'] = self.iters
         info['episode']['r'] = reward
+        info['observation'] = observation
 
         return (env_obs, reward, 0, info)
 
