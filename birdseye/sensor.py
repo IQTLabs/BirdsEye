@@ -48,7 +48,7 @@ class SignalStrength(Sensor):
     # sample state from observation 
     def gen_state(self, obs):
         r_dist = np.sqrt(1/obs)    
-        return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
+        return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
@@ -109,7 +109,7 @@ class Drone(Sensor):
         if bearing < 0:
             bearing += 360
 
-        return [random.randint(25,100), bearing, random.randint(0,11)*30, 1]
+        return [random.randint(10,150), bearing, random.randint(0,11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
