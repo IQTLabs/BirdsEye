@@ -29,7 +29,7 @@ class State(object):
 class RFState(State):
     """RF State
     """
-    def __init__(self, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, reward=None):
+    def __init__(self, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None):
 
         # Transition probability
         self.prob = prob
@@ -39,6 +39,8 @@ class RFState(State):
         # Target movement pattern
         self.target_movement = target_movement if target_movement is not None else 'random'
         self.target_move_iter = 0 
+        # Target start distance
+        self.target_start = int(target_start) if target_start is not None else 75
         # Setup an initial random state
         self.target_state = self.init_target_state()
         # Setup an initial sensor state 
@@ -60,7 +62,9 @@ class RFState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        #return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        return np.array([random.randint(self.target_start-25,self.target_start+25), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        
    
     def init_sensor_state(self): 
         # state is [range, bearing, relative course, own speed]
