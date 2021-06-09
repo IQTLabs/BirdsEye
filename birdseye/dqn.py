@@ -275,7 +275,7 @@ def run_dqn(env, config, global_start_time):
             for i in range(trials):
                 run_start_time = datetime.now()
                 print('test trial {}/{}'.format(i, trials))
-                result = test(env, qnet, max_episode_length, device, ob_scale)
+                result = test(env, qnet, max_episode_length, device, ob_scale, results)
                 run_time = datetime.now()-run_start_time
                 if results.plotting: 
                     results.save_gif(n_iter, i)

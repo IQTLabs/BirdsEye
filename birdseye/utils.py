@@ -174,11 +174,11 @@ class Results(object):
 
         
         r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target, abs_particles)
-        print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
-            r_error, theta_error, heading_error, centroid_distance_error, rmse))
+        #print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
+        #    r_error, theta_error, heading_error, centroid_distance_error, rmse))
         
         plt.savefig('{}/png/{}.png'.format(self.gif_dir, time_step))
-        plt.show()
+        #plt.show()
 
 
 
