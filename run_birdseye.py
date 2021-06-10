@@ -9,44 +9,42 @@ from birdseye.method_utils import get_method, AVAIL_METHODS
 
 def batch_run():
 
-    config = configparser.ConfigParser()
 
     # Setup requested method objects
-    for method_name in ['dqn','mcts']:
-        for sensor_config in ['drone', 'signalstrength']: 
-            for reward in ['range_reward', 'entropy_collision_reward']: 
-                for target_start in ['75','150']: 
-                    for target_speed in ['0', '1', '2']:
+    for method_name in ['mcts']:
+        for sensor_config in ['drone', 'signalstrength']:
+            for reward in ['range_reward', 'entropy_collision_reward']:
+                for target_start in ['125']:
+                    for target_speed in ['1']:
                         print('===========================')
                         print('Batch Run: ')
                         print('method = {}'.format(method_name))
                         print('sensor_config = {}'.format(sensor_config))
                         print('reward = {}'.format(reward))
                         print('target_speed = {}'.format(target_speed))
+                        print('target_start = {}'.format(target_start))
                         print('===========================')
                         run_method = get_method(method_name)
                         action_config = 'simpleactions'
-                        #sensor_config = 'drone'
                         state_config = 'rfstate'
                         actions = get_action(action_config)
                         sensor = get_sensor(sensor_config)
                         state = get_state(state_config)
-                        #reward = 'entropy_collision_reward'
 
                         # Setup environment
                         env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_movement=None, target_start=target_start, reward=reward))
 
+                        config = configparser.ConfigParser()
                         config.read(['configs/{}.yaml'.format(method_name)])
                         config.set('Methods', 'action', action_config)
                         config.set('Methods', 'sensor', sensor_config)
                         config.set('Methods', 'state', state_config)
                         config.set('Methods', 'target_speed', target_speed)
+                        config.set('Methods', 'target_start', target_start)
                         config.set('Methods', 'reward', reward)
-
 
                         # Run the requested algorithm
                         run_method(args=config, env=env)
-
 
 def run_birdseye(args=None, env=None):
     # Grab Methods information from config file
