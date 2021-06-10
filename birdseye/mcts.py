@@ -108,7 +108,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
 
         # Saving results to CSV file
         results.write_dataframe(run_data=run_data)
-        if results.plotting: 
+        if results.plotting:
             results.save_gif(i)
 
 
@@ -123,7 +123,7 @@ def mcts(args=None, env=None):
         defaults = dict(config.items('Defaults'))
         # Fix for boolean args
         defaults['plotting'] = config.getboolean('Defaults', 'plotting')
-    
+
     parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
@@ -136,7 +136,7 @@ def mcts(args=None, env=None):
     parser.add_argument('--trials', type=int, help='Number of runs')
     parser.add_argument('--iterations', type=int, help='Number of iterations')
     args,_ = parser.parse_known_args()
-    
+
     if not env:
         # Setup environment
         actions = SimpleActions()

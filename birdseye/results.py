@@ -20,8 +20,8 @@ def starting_position_plots(reward, sensor):
 
 
     fig = plt.figure(figsize=(20,6))
-    fig.suptitle('Sensor: {}, Reward: {}'.format(sensor, reward))
-
+    fig.suptitle('Sensor: {}, Reward: {}'.format(sensor, reward), fontsize=28)
+    plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
     ax1 = plt.subplot(1,3,1)
     ax2 = plt.subplot(1,3,2)
     ax3 = plt.subplot(1,3,3)
@@ -42,36 +42,37 @@ def starting_position_plots(reward, sensor):
         #print(r,'\n')
         #print(config,'\n')
         data = get_data('dqn', r)
-        plot_data = data['centroid_err'].iloc[-1]
-        if type(plot_data) != np.float64:
-            plot_data = [float(xx) for xx in re.split(', |\s+', plot_data.strip('[]\n'))]
-            ax2.plot( plot_data, ':', label='dqn spd = {}'.format(float(config['Methods']['target_speed'])))
-            ax3.plot( plot_data, ':', label='dqn spd = {}'.format(float(config['Methods']['target_speed'])))
+        
+        plot_data = list(data['centroid_err'].apply(lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+        y = np.mean(list(plot_data), axis=0)
+        ax2.plot( y, ':', label='dqn')
+        ax3.plot( y, ':', label='dqn')
+        
 
+    ax1.set_xlabel('time step', fontsize=16)
+    ax1.set_ylabel('centroid distance', fontsize=16)
+    ax1.set_title('MCTS', fontsize=20)
+    ax1.legend(fontsize=16)
 
-    ax1.set_xlabel('time step')
-    ax1.set_ylabel('centroid distance')
-    ax1.set_title('MCTS')
-    ax1.legend()
+    ax2.set_xlabel('time step', fontsize=16)
+    ax2.set_ylabel('centroid distance', fontsize=16)
+    ax2.set_title('DQN', fontsize=20)
+    ax2.legend(fontsize=16)
 
-    ax2.set_xlabel('time step')
-    ax2.set_ylabel('centroid distance')
-    ax2.set_title('DQN')
-    ax2.legend()
-
-    ax3.set_xlabel('time step')
-    ax3.set_ylabel('centroid distance')
-    ax3.set_title('MCTS vs DQN')
-    ax3.legend()
-
+    ax3.set_xlabel('time step', fontsize=16)
+    ax3.set_ylabel('centroid distance', fontsize=16)
+    ax3.set_title('MCTS vs DQN', fontsize=20)
+    ax3.legend(fontsize=16)
+    plt.subplots_adjust(
+                    hspace=0.4)
 
     plt.show()
 
-def single_plot(config):
+def single_plot(config, variance_bars=False):
     mcts_runs = get_valid_runs('mcts')
     dqn_runs = get_valid_runs('dqn')
-    mcts_config_filter = {'datetime_start': '2021-05-11T02:40:29'}
-    dqn_config_filter = {'datetime_start': '2021-05-27T22:55:22'}
+    mcts_config_filter = {}
+    dqn_config_filter = {}
     mcts_config_filter.update(config)
     dqn_config_filter.update(config)
 
@@ -81,35 +82,53 @@ def single_plot(config):
     reward = config.get('reward', 'all')
 
     fig = plt.figure(figsize=(20,8))
-    fig.suptitle('Sensor: {}, Reward: {}'.format(sensor, reward))
+    fig.suptitle('Sensor: {}, Reward: {}'.format(sensor, reward), fontsize=32)
 
     ax1 = plt.subplot(1,1,1)
 
     for r in filtered_mcts_runs:
         config = get_config('mcts', r)
         data = get_data('mcts', r)
-        #print(r,'\n')
+        print(r,'\n')
+
         plot_data = list(data['centroid_err'].apply(lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
-        ax1.plot( np.mean(list(plot_data), axis=0), '-', label='mcts, {}, {}'.format(config['Methods']['sensor'], config['Methods']['reward']))
+        y = np.mean(list(plot_data), axis=0)
+        
+        ax1.plot(y, '-', label='mcts, {}, {}'.format(config['Methods']['sensor'], config['Methods']['reward']))
+        if variance_bars: 
+            y_std = np.std(list(plot_data), axis=0)
+            ax1.fill_between(np.arange(len(y)), y-y_std, y+y_std, alpha=0.5)
 
 
 
     for r in filtered_dqn_runs:
         config = get_config('dqn', r)
-        #print(r,'\n')
+        print(r,'\n')
         #print(config,'\n')
         data = get_data('dqn', r)
-        plot_data = data['centroid_err'].iloc[-1]
-        if type(plot_data) != np.float64:
-            plot_data = [float(xx) for xx in re.split(', |\s+', plot_data.strip('[]\n'))]
-            ax1.plot( plot_data, ':', label='dqn, {}, {}'.format(config['Methods']['sensor'], config['Methods']['reward']))
+        plot_data = list(data['centroid_err'].apply(lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+        y = np.mean(list(plot_data), axis=0)
+        ax1.plot( y, ':', label='dqn, {}, {}'.format(config['Methods']['sensor'], config['Methods']['reward']))
+        
+        if variance_bars: 
+            y_std = np.std(list(plot_data), axis=0)
+            ax1.fill_between(np.arange(len(y)), y-y_std, y+y_std, alpha=0.5)
+
+        
+        #plot_data = data['centroid_err'].iloc[-1]
+        #if type(plot_data) != np.float64:
+        #    plot_data = [float(xx) for xx in re.split(', |\s+', plot_data.strip('[]\n'))]
+        #    y = plot_data
+        #    #y_std = np.std(y)
+        #    ax1.plot( y, ':', label='dqn, {}, {}'.format(config['Methods']['sensor'], config['Methods']['reward']))
 
 
 
-    ax1.set_xlabel('time step')
-    ax1.set_ylabel('centroid distance')
-    ax1.set_title('centroid distance during single episode')
-    ax1.legend()
+    ax1.set_xlabel('time step', fontsize=16)
+    ax1.set_ylabel('centroid distance', fontsize=16)
+    ax1.set_title('centroid distance during single episode', fontsize=24)
+    ax1.tick_params(axis='both', which='both', labelsize=14)
+    ax1.legend(fontsize=20)
 
 
     plt.show()
@@ -164,7 +183,7 @@ def filter_runs(method_name, runs, config_filter=None):
                         match = False
                         break
                 else:
-                    if config.get(k) != v:
+                    if config.get(k) is None or float(config.get(k)) != float(v):
                         match = False
                         break
             elif k == 'datetime_start':

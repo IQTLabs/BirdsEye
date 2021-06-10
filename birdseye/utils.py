@@ -39,6 +39,11 @@ class Results(object):
         self.method_name = method_name
         self.global_start_time = global_start_time
         self.plotting = plotting
+        if type(self.plotting) != bool:
+            if self.plotting == 'true' or self.plotting == 'True':
+                self.plotting = True
+            else:
+                self.plotting = False
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
         self.gif_dir = '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)
 
@@ -72,7 +77,6 @@ class Results(object):
 
     def build_plots(self, xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particles=None, time_step=None, fig=None, ax=None):
 
-        clear_output(wait=True)
         fig = plt.figure(figsize=(30, 6))
         plt.tight_layout()
         # Put space between plots
@@ -177,7 +181,10 @@ class Results(object):
         #print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         #    r_error, theta_error, heading_error, centroid_distance_error, rmse))
 
-        plt.savefig('{}/png/{}.png'.format(self.gif_dir, time_step))
+        png_filename = '{}/png/{}.png'.format(self.gif_dir, time_step)
+        print('saving plots in {}'.format(png_filename))
+        plt.savefig(png_filename)
+        plt.close(fig)
         #plt.show()
 
 
