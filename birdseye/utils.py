@@ -39,12 +39,17 @@ class Results(object):
         self.method_name = method_name
         self.global_start_time = global_start_time
         self.plotting = plotting
+        if type(self.plotting) != bool:
+            if self.plotting == 'true' or self.plotting == 'True':
+                self.plotting = True
+            else:
+                self.plotting = False
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
         self.gif_dir = '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)
 
         Path(self.gif_dir+'/png/').mkdir(parents=True, exist_ok=True)
         Path(self.gif_dir+'/gif/').mkdir(parents=True, exist_ok=True)
-        self.col_names =['time', 'run_time', 'target_state', 'sensor_state', 
+        self.col_names =['time', 'run_time', 'target_state', 'sensor_state',
                          'action', 'observation', 'reward', 'collisions', 'lost',
                          'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse']
 
@@ -58,7 +63,7 @@ class Results(object):
         df.to_csv(self.namefile)
 
 
-    def save_gif(self, run, sub_run=None): 
+    def save_gif(self, run, sub_run=None):
         filename = run if sub_run is None else '{}_{}'.format(run, sub_run)
         # Build GIF
         with imageio.get_writer('{}/gif/{}.gif'.format(self.gif_dir, filename), mode='I') as writer:
@@ -72,7 +77,6 @@ class Results(object):
 
     def build_plots(self, xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particles=None, time_step=None, fig=None, ax=None):
 
-        clear_output(wait=True)
         fig = plt.figure(figsize=(30, 6))
         plt.tight_layout()
         # Put space between plots
@@ -152,7 +156,7 @@ class Results(object):
 
             # Cartesian (absolute)
             ax = fig.add_subplot(1, 5, 5)
-            
+
             xedges = np.arange(-100, 103, 3)
             yedges = np.arange(-100, 103, 3)
             heatmap, xedges, yedges = np.histogram2d(particles_x, particles_y, bins=(xedges, yedges))
@@ -172,12 +176,15 @@ class Results(object):
             ax.set_ylim(-100,100)
             ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)
 
-        
+
         r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target, abs_particles)
         #print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         #    r_error, theta_error, heading_error, centroid_distance_error, rmse))
-        
-        plt.savefig('{}/png/{}.png'.format(self.gif_dir, time_step))
+
+        png_filename = '{}/png/{}.png'.format(self.gif_dir, time_step)
+        print('saving plots in {}'.format(png_filename))
+        plt.savefig(png_filename)
+        plt.close(fig)
         #plt.show()
 
 
@@ -290,7 +297,7 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
 
         # Cartesian (absolute)
         ax = fig.add_subplot(1, 5, 5)
-        
+
         xedges = np.arange(-100, 103, 3)
         yedges = np.arange(-100, 103, 3)
         heatmap, xedges, yedges = np.histogram2d(particles_x, particles_y, bins=(xedges, yedges))
@@ -315,7 +322,7 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         r_error, theta_error, heading_error, centroid_distance_error, rmse))
 
-def particles_mean_belief(particles): 
+def particles_mean_belief(particles):
     particles_r = particles[:,0]
     particles_theta = np.radians(particles[:,1])
     particles_x, particles_y = pol2cart(particles_r, particles_theta)
@@ -326,7 +333,7 @@ def particles_mean_belief(particles):
 
     # centroid of particles r,theta
     mean_r, mean_theta = cart2pol(mean_x, mean_y)
-    
+
     particles_heading = particles[:,2]
     particles_heading_rad = np.radians(particles_heading)
     mean_heading_rad = np.arctan2(np.mean(np.sin(particles_heading_rad)), np.mean(np.cos(particles_heading_rad)))
