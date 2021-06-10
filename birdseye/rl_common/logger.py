@@ -37,3 +37,10 @@ def init_logger(log_dir):
     logger.addHandler(log_handler)
 
     return logger
+
+def close_logger(logger): 
+    handlers = logger.handlers[:]
+    for handler in handlers:
+        handler.close()
+        logger.removeHandler(handler)
+

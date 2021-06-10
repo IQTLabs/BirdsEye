@@ -66,7 +66,7 @@ class Results(object):
     def save_gif(self, run, sub_run=None):
         filename = run if sub_run is None else '{}_{}'.format(run, sub_run)
         # Build GIF
-        with imageio.get_writer('{}/gif/{}.gif'.format(self.gif_dir, filename), mode='I') as writer:
+        with imageio.get_writer('{}/gif/{}.gif'.format(self.gif_dir, filename), mode='I', fps=5) as writer:
             for png_filename in os.listdir(self.gif_dir+'/png/'):
                 image = imageio.imread(self.gif_dir+'/png/'+png_filename)
                 writer.append_data(image)

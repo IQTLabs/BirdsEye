@@ -24,7 +24,7 @@ from torch.optim import Adam
 
 from .rl_common.util import scale_ob
 from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
-from .rl_common.logger import init_logger
+from .rl_common.logger import init_logger, close_logger
 from .rl_common.models import CNN, MLP, RFPFQnet
 
 from .actions import *
@@ -287,7 +287,7 @@ def run_dqn(env, config, global_start_time):
             # Saving results to CSV file
             results.write_dataframe(run_data=run_data)
             
-    logging.shutdown()
+    close_logger(logger)
 
 def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     """ Perform one test run """
