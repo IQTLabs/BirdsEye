@@ -36,19 +36,20 @@ class SignalStrength(Sensor):
         expected_r = state[0]
         obs_r = np.sqrt(1/obs[0][0])
         # Gaussian weighting function
-        numer_fact = np.power(expected_r - obs_r, 2.) 
+        numer_fact = np.power(expected_r - obs_r, 2.)
         denom_fact = 2 * np.power(self.std_dev, 2.)
         weight = np.exp( - numer_fact / denom_fact)
         return weight
-    
+
     # samples observation given state
     def observation(self, state):
         return 1/ ((np.random.normal(state[0], self.std_dev)) ** 2)
 
-    # sample state from observation 
+    # sample state from observation
     def gen_state(self, obs):
-        r_dist = np.sqrt(1/obs)    
-        return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
+        r_dist = np.sqrt(1/obs)
+        #return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
+        return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
