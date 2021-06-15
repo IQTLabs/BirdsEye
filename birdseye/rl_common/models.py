@@ -9,19 +9,22 @@ from torch.optim import Adam
 
 from birdseye.rl_common.util import Flatten
 
-class SmallRFPFQnet(nn.Module): 
-    def __init__(self, map_dim, state_dim, policy_dim, atom_num, dueling): 
+class SmallRFPFQnet(nn.Module):
+    def __init__(self, map_dim, state_dim, policy_dim, atom_num, dueling):
         super().__init__()
         self.atom_num = atom_num
         self.map_dim = map_dim
         self.state_dim = state_dim
         c, h, w = map_dim
-        cnn_out_dim = 64 * ((h - 21) // 8) * ((w - 21) // 8)
+        #cnn_out_dim = 32 * ((h - 21) // 8) * ((w - 21) // 8)
+        cnn_out_dim = 32 * 22 * 22
         self.map_feature = nn.Sequential(
-            nn.Conv2d(c, 32, 8, 4),
+            nn.Conv2d(c, 32, 5),
             nn.ReLU(True),
-            nn.Conv2d(32, 32, 4, 2),
+            nn.MaxPool2d(2, 2),
+            nn.Conv2d(32, 32, 5),
             nn.ReLU(True),
+            nn.MaxPool2d(2, 2),
             Flatten(),
             nn.Linear(cnn_out_dim, 50),
             nn.ReLU(True),
@@ -29,14 +32,14 @@ class SmallRFPFQnet(nn.Module):
 
         self.state_feature = nn.Sequential(
             nn.Linear(state_dim, 64),
-            nn.ReLU(True), 
+            nn.ReLU(True),
             nn.Linear(64, 50),
             nn.ReLU(True),
         )
 
         self.joint_feature = nn.Sequential(
-            nn.Linear(100, 50), 
-            nn.ReLU(True), 
+            nn.Linear(100, 50),
+            nn.ReLU(True),
         )
 
         self.q = nn.Sequential(
@@ -52,7 +55,7 @@ class SmallRFPFQnet(nn.Module):
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-    
+
     def forward(self, x):
         state = x[:,:self.state_dim]
         pf_map = x[:,self.state_dim:].view(x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
@@ -76,8 +79,8 @@ class SmallRFPFQnet(nn.Module):
             logprobs = log_softmax(qvalue, -1)
             return logprobs
 
-class RFPFQnet(nn.Module): 
-    def __init__(self, map_dim, state_dim, policy_dim, atom_num, dueling): 
+class RFPFQnet(nn.Module):
+    def __init__(self, map_dim, state_dim, policy_dim, atom_num, dueling):
         super().__init__()
         self.atom_num = atom_num
         self.map_dim = map_dim
@@ -98,7 +101,7 @@ class RFPFQnet(nn.Module):
 
         self.state_feature = nn.Sequential(
             nn.Linear(state_dim, 64),
-            nn.ReLU(True), 
+            nn.ReLU(True),
             nn.Linear(64, 128),
             nn.ReLU(True),
             nn.Linear(128, 100),
@@ -106,8 +109,8 @@ class RFPFQnet(nn.Module):
         )
 
         self.joint_feature = nn.Sequential(
-            nn.Linear(200, 100), 
-            nn.ReLU(True), 
+            nn.Linear(200, 100),
+            nn.ReLU(True),
         )
 
         self.q = nn.Sequential(
@@ -123,7 +126,7 @@ class RFPFQnet(nn.Module):
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
                 nn.init.xavier_uniform_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-    
+
     def forward(self, x):
         state = x[:,:self.state_dim]
         pf_map = x[:,self.state_dim:].view(x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
@@ -147,7 +150,7 @@ class RFPFQnet(nn.Module):
             logprobs = log_softmax(qvalue, -1)
             return logprobs
 
-        
+
 
 class CNN(nn.Module):
     def __init__(self, in_shape, out_dim, atom_num, dueling):

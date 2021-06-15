@@ -5,7 +5,8 @@ sensor : drone
 state : rfstate 
 target_speed: 1.0
 target_start: 100
-resample_proportion: 0.05
+resample_proportion: 0.1
+model: small
 #target_speed_range: [0,1,2,3,4]
 #reward: entropy_collision_reward
 

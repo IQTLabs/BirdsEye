@@ -25,7 +25,7 @@ from torch.optim import Adam
 from .rl_common.util import scale_ob
 from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 from .rl_common.logger import init_logger, close_logger
-from .rl_common.models import CNN, MLP, RFPFQnet
+from .rl_common.models import CNN, MLP, RFPFQnet, SmallRFPFQnet
 
 from .actions import *
 from .sensor import *
@@ -61,7 +61,7 @@ dqn_defaults = {
     'save_interval' : 1000,
     'save_path' : 'checkpoints',
     'log_path' : 'rl_log',
-    'use_gpu' : True, 
+    'use_gpu' : True,
     'plotting': False
 }
 
@@ -161,20 +161,20 @@ def run_dqn(env, config, global_start_time):
     # Results instance for saving results to file
     results = Results(method_name='dqn',
                         global_start_time=global_start_time,
-                        num_iters=number_timesteps, 
+                        num_iters=number_timesteps,
                         plotting=plotting)
 
     # Setup logging
     logger = init_logger(log_path)
 
     # Access requested device
-    device = torch.device('cuda:1' if (use_gpu and torch.cuda.is_available()) else 'cpu')
+    device = torch.device('cuda' if (use_gpu and torch.cuda.is_available()) else 'cpu')
 
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
     in_dim = (1, 100, 100)
     #network = CNN(in_dim, policy_dim, atom_num, dueling)
-    network = RFPFQnet(in_dim, 4, policy_dim, atom_num, dueling)
+    network = SmallRFPFQnet(in_dim, 4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
@@ -277,7 +277,7 @@ def run_dqn(env, config, global_start_time):
                 print('test trial {}/{}'.format(i, trials))
                 result = test(env, qnet, max_episode_length, device, ob_scale, results)
                 run_time = datetime.now()-run_start_time
-                if results.plotting: 
+                if results.plotting:
                     results.save_gif(n_iter, i)
                 run_data.append([datetime.now(), run_time] + result)
             #result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
@@ -286,7 +286,7 @@ def run_dqn(env, config, global_start_time):
 
             # Saving results to CSV file
             results.write_dataframe(run_data=run_data)
-            
+
     close_logger(logger)
 
 def test(env, qnet, number_timesteps, device, ob_scale, results=None):
