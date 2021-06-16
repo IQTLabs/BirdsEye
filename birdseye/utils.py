@@ -366,8 +366,6 @@ def tracking_error(target, particles):
 
     # centroid euclidean distance error x,y
     centroid_distance_error = np.sqrt((mean_x - target_x)**2 + (mean_y - target_y)**2)
-    print(mean_x)
-    print(mean_y)
 
     mae = np.mean(np.sqrt((particles_x-target_x)**2 + (particles_y - target_y)**2))
 
