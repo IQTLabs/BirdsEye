@@ -309,6 +309,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     all_heading_err = np.zeros(number_timesteps)
     all_centroid_err = np.zeros(number_timesteps)
     all_rmse = np.zeros(number_timesteps)
+    all_mae = np.zeros(number_timesteps)
 
     for n in range(number_timesteps):
         with torch.no_grad():
@@ -321,7 +322,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             o, r, done, info = env.step(a)
 
             # error metrics
-            r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
+            r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
             if env.state.target_state[0] < 10:
                 total_col += 1
@@ -339,6 +340,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             all_heading_err[n] = heading_error
             all_centroid_err[n] = centroid_distance_error
             all_rmse[n] = rmse
+            all_mae[n] = mae
             all_reward[n] = r
             all_col[n] = total_col
             all_loss[n] = total_lost
@@ -349,7 +351,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
 
     return [all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
-            all_theta_err, all_heading_err, all_centroid_err, all_rmse]
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae]
 
 
 def _generate(device, env, qnet, ob_scale,

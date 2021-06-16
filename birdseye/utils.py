@@ -51,7 +51,7 @@ class Results(object):
         Path(self.gif_dir+'/gif/').mkdir(parents=True, exist_ok=True)
         self.col_names =['time', 'run_time', 'target_state', 'sensor_state',
                          'action', 'observation', 'reward', 'collisions', 'lost',
-                         'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse']
+                         'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse','mae']
 
     # Save dataframe to CSV file
     def write_dataframe(self, run_data):
@@ -120,8 +120,8 @@ class Results(object):
         cart  = np.array(list(map(pol2cart, belief[:,0], np.radians(belief[:,1]))))
         x = cart[:,0]
         y = cart[:,1]
-        xedges = np.arange(-100, 103, 3)
-        yedges = np.arange(-100, 103, 3)
+        xedges = np.arange(-150, 153, 3)
+        yedges = np.arange(-150, 153, 3)
         heatmap, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
         heatmap = gaussian_filter(heatmap, sigma=5)
         #heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
@@ -177,7 +177,7 @@ class Results(object):
             ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)
 
 
-        r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target, abs_particles)
+        r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(abs_target, abs_particles)
         #print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         #    r_error, theta_error, heading_error, centroid_distance_error, rmse))
 
@@ -261,8 +261,8 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     cart  = np.array(list(map(pol2cart, belief[:,0], np.radians(belief[:,1]))))
     x = cart[:,0]
     y = cart[:,1]
-    xedges = np.arange(-100, 103, 3)
-    yedges = np.arange(-100, 103, 3)
+    xedges = np.arange(-150, 153, 3)
+    yedges = np.arange(-150, 153, 3)
     heatmap, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
     heatmap = gaussian_filter(heatmap, sigma=5)
     #heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
@@ -270,8 +270,8 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
 
     im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='coolwarm')
     plt.colorbar(im)
-    ax.set_xlim(-200,200)
-    ax.set_ylim(-200,200)
+    ax.set_xlim(-150,150)
+    ax.set_ylim(-150,150)
     ax.set_title('Particle heatmap (relative to sensor)')
 
     # Particle/Sensor Plot (absolute)
@@ -298,10 +298,10 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
         # Cartesian (absolute)
         ax = fig.add_subplot(1, 5, 5)
 
-        xedges = np.arange(-100, 103, 3)
-        yedges = np.arange(-100, 103, 3)
+        xedges = np.arange(-150, 153, 3)
+        yedges = np.arange(-150, 153, 3)
         heatmap, xedges, yedges = np.histogram2d(particles_x, particles_y, bins=(xedges, yedges))
-        heatmap = gaussian_filter(heatmap, sigma=2)
+        heatmap = gaussian_filter(heatmap, sigma=5)
         #heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
 
@@ -318,9 +318,9 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
         ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)
 
     plt.show()
-    r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(abs_target, abs_particles)
-    print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
-        r_error, theta_error, heading_error, centroid_distance_error, rmse))
+    r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(abs_target, abs_particles)
+    print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}, mae = {:.0f}'.format(
+        r_error, theta_error, heading_error, centroid_distance_error, rmse, mae))
 
 def particles_mean_belief(particles):
     particles_r = particles[:,0]
@@ -354,18 +354,25 @@ def tracking_error(target, particles):
     particles_x, particles_y, mean_x, mean_y, mean_r, mean_theta, mean_heading, mean_spd = particles_mean_belief(particles)
 
     ## Error Measures
-    r_error = target_r - mean_r
-    theta_error = np.degrees(target_theta - mean_theta) # final error in degrees
+    #r_error = target_r - mean_r
+    r_error = np.mean(target_r - particles[:,0])
+    #theta_error = np.degrees(target_theta - mean_theta) # final error in degrees
+    theta_error = np.mean(np.degrees(target_theta-np.radians(particles[:,1])))
     if theta_error > 360:
         theta_error = theta_error % 360
-    heading_diff = np.abs(target_heading - mean_heading) % 360
+    #heading_diff = np.abs(target_heading - mean_heading) % 360
+    heading_diff = np.abs(np.mean(target_heading - particles[:,2])) % 360 
     heading_error = heading_diff if heading_diff <= 180 else 360-heading_diff
 
     # centroid euclidean distance error x,y
     centroid_distance_error = np.sqrt((mean_x - target_x)**2 + (mean_y - target_y)**2)
+    print(mean_x)
+    print(mean_y)
+
+    mae = np.mean(np.sqrt((particles_x-target_x)**2 + (particles_y - target_y)**2))
 
     # root mean square error
     rmse = np.sqrt(np.mean((particles_x - target_x)**2 + (particles_y - target_y)**2))
 
-    return r_error, theta_error, heading_error, centroid_distance_error, rmse
+    return r_error, theta_error, heading_error, centroid_distance_error, rmse, mae
 

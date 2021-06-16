@@ -29,7 +29,7 @@ class RFEnv(object):
         """
         return np.array([list(self.state.update_state(p, control)) for p in particles])
 
-    def reset(self, num_particles=500):
+    def reset(self, num_particles=1000):
         """Reset initial state and particle filter
 
         Parameters
@@ -49,12 +49,12 @@ class RFEnv(object):
 
         # Setup particle filter
         self.pf = ParticleFilter(
-                        prior_fn=lambda n: np.array([self.sensor.near_state(self.state.target_state) for i in range(n)]),
+                        prior_fn=lambda n: np.array([self.state.random_state() for i in range(n)]),
                         observe_fn=lambda states, **kwargs: np.array([np.array(self.sensor.observation(x)) for x in states]),
                         n_particles=num_particles,
                         dynamics_fn=self.dynamics,
                         noise_fn=lambda x, **kwargs: x,
-                        resample_proportion=0.1,
+                        resample_proportion=0.05,
                         #noise_fn=lambda x:
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
                         weight_fn=lambda hyp, o, xp=None,**kwargs: [self.sensor.weight(None, o, state=x) for x in xp],

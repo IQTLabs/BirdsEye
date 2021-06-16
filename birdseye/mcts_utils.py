@@ -189,6 +189,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     all_heading_err = np.zeros(num_iters)
     all_centroid_err = np.zeros(num_iters)
     all_rmse = np.zeros(num_iters)
+    all_mae = np.zeros(num_iters)
 
 
     # 500 time steps with an action to be selected at each
@@ -227,7 +228,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         belief = env.pf.particles
 
         # error metrics
-        r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
+        r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
 
@@ -236,6 +237,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         if env.state.target_state[0] > 150:
             total_loss += 1
+
+        #build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, None, None)
 
         if results is not None and results.plotting:
             results.build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
@@ -250,6 +253,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         all_heading_err[time_step] = heading_error
         all_centroid_err[time_step] = centroid_distance_error
         all_rmse[time_step] = rmse
+        all_mae[time_step] = mae
         all_reward[time_step] = reward
         all_col[time_step] = total_col
         all_loss[time_step] = total_loss
@@ -258,4 +262,4 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
     return [plots, all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
-            all_theta_err, all_heading_err, all_centroid_err, all_rmse]
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae]
