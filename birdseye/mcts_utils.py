@@ -2,6 +2,7 @@
 
 
 # Imports
+from tqdm import tqdm
 import random
 import csv
 import numpy as np
@@ -202,7 +203,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     # 500 time steps with an action to be selected at each
     plots = []
 
-    for time_step in range(num_iters):
+    for time_step in tqdm(range(num_iters)):
 
         #if time_step % 100 == 0
         #    @show time_step
