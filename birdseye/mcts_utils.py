@@ -71,7 +71,7 @@ def rollout_random(env, state, depth):
 ##################################################################
 # Simulate
 ##################################################################
-def simulate(env, Q, N, state, history, depth, c):
+def simulate(env, Q, N, state, history, depth, c, belief):
 
     if depth == 0:
         return (Q, N, 0)
@@ -99,13 +99,18 @@ def simulate(env, Q, N, state, history, depth, c):
     # take action; get new state, observation, and reward
     state_prime = env.state.update_state(state, action)
     observation = env.sensor.observation(state_prime)
-    reward = env.state.reward_func(state=state_prime, action_idx=search_action_index, particles=env.pf.particles)
+
+    env.pf.particles = belief
+    env.pf.update(np.array(observation), xp=belief, control=action)
+    belief = env.pf.particles
+
+    reward = env.state.reward_func(state=state_prime, action_idx=search_action_index, particles=belief)
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
     new_history.append(search_action_index)
     new_history.append(observation)
-    (Q, N, successor_reward) = simulate(env, Q, N, state_prime, new_history, depth-1, c)
+    (Q, N, successor_reward) = simulate(env, Q, N, state_prime, new_history, depth-1, c, belief)
     q = reward + lambda_arg * successor_reward
 
     # update counts and values
@@ -127,16 +132,18 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 
     # number of iterations
     counter = 0
+
+    original_particles = np.copy(env.pf.particles)
     while counter < iterations:
 
         # draw state randomly based on belief state (pick a random particle)
         state = random.choice(belief)
 
         # simulate
-        simulate(env, Q, N, state.astype(float), history, depth, c)
+        simulate(env, Q, N, state.astype(float), history, depth, c, np.copy(original_particles))
 
         counter += 1
-
+    env.pf.particles = original_particles
     best_action_index = arg_max_action(env.actions, Q, N, history)
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
@@ -217,8 +224,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         env.state.update_sensor(action)
         observation = env.sensor.observation(next_state)
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
-        reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
-        env.state.target_state = next_state
 
         # pfrnn
         #env.pfrnn.update(observation, env.get_absolute_target(), env.actions.action_to_index(action))
@@ -226,6 +231,9 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
         belief = env.pf.particles
+
+        reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
+        env.state.target_state = next_state
 
         # error metrics
         r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)

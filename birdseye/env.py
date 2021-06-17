@@ -116,7 +116,9 @@ class RFEnv(object):
         pf_r = self.pf.particles[:,0]
         pf_theta = np.radians(self.pf.particles[:,1])
         pf_x, pf_y = pol2cart(pf_r, pf_theta)
-        b = np.histogram2d(pf_x, pf_y)
+        xedges = np.arange(-150, 153, 3)
+        yedges = np.arange(-150, 153, 3)
+        b = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
         b /= np.sum(b)
         b += 0.0000001
 
