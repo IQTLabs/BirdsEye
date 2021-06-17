@@ -101,9 +101,10 @@ def simulate(env, Q, N, state, history, depth, c, belief):
     state_prime = env.state.update_state(state, action)
     observation = env.sensor.observation(state_prime)
 
-    env.pf.particles = belief
-    env.pf.update(np.array(observation), xp=belief, control=action)
-    belief = env.pf.particles
+    if env.state.belief_mdp: 
+        env.pf.particles = belief
+        env.pf.update(np.array(observation), xp=belief, control=action)
+        belief = env.pf.particles
 
     reward = env.state.reward_func(state=state_prime, action_idx=search_action_index, particles=belief)
 

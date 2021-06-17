@@ -51,6 +51,10 @@ class RFState(State):
                               'entropy_collision_reward': self.entropy_collision_reward,
                 }
         self.reward_func = self.AVAIL_REWARDS[reward]
+        if self.reward == 'range_reward': 
+            self.belief_mdp = False
+        elif self.reward == 'entropy_collision_reward': 
+            self.belief_mdp = True
     
 
     def init_target_state(self):
