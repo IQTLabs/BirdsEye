@@ -137,7 +137,9 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 
     original_particles = np.copy(env.pf.particles)
     original_n_particles = env.pf.n_particles
+    original_weights = env.pf.weights 
     env.pf.n_particles = 200
+    env.pf.weights = np.ones(env.pf.n_particles) / env.pf.n_particles
     while counter < iterations:
 
         # draw state randomly based on belief state (pick a random particle)
@@ -149,6 +151,7 @@ def select_action(env, Q, N, belief, depth, c, iterations):
         counter += 1
     env.pf.n_particles = original_n_particles
     env.pf.particles = original_particles
+    env.pf.weights = original_weights
     best_action_index = arg_max_action(env.actions, Q, N, history)
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
