@@ -78,7 +78,7 @@ class RFState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        return np.array([random.randint(10,200), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
 
 
     def init_sensor_state(self):
