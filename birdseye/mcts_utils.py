@@ -227,7 +227,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         # select an action
         inference_start_time = datetime.now()
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, simulations)
-        inference_time = str(datetime.now() - inference_start_time)
+        inference_time = (datetime.now() - inference_start_time).total_seconds()
         # take action; get next true state, obs, and reward
         next_state = env.state.update_state(env.state.target_state, action, target_update=True)
         #next_state = env.state.update_state(env.state.target_state, action, target_control=env.state.circular_control(time_step, size=5))
