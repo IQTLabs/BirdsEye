@@ -319,7 +319,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             inference_start_time = datetime.now()
             q = qnet(ob)
             a = q.argmax(1).cpu().numpy()[0]
-            inference_time = datetime.now() - inference_start_time
+            inference_time = str(datetime.now() - inference_start_time)
 
             # take action in env
             o, r, done, info = env.step(a)
