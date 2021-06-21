@@ -2,9 +2,10 @@
 
 
 # Imports
-from tqdm import tqdm
 import random
 import csv
+from datetime import datetime
+from tqdm import tqdm
 import numpy as np
 from .utils import pol2cart, build_plots, tracking_error
 from pfilter import ParticleFilter, systematic_resample
@@ -205,6 +206,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     all_centroid_err = np.zeros(num_iters)
     all_rmse = np.zeros(num_iters)
     all_mae = np.zeros(num_iters)
+    all_inference_times = np.zeros(num_iters)
 
 
     # 500 time steps with an action to be selected at each
@@ -223,8 +225,9 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
             N = {}
 
         # select an action
+        inference_start_time = datetime.now()
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, simulations)
-
+        inference_time = datetime.now() - inference_start_time
         # take action; get next true state, obs, and reward
         next_state = env.state.update_state(env.state.target_state, action, target_update=True)
         #next_state = env.state.update_state(env.state.target_state, action, target_control=env.state.circular_control(time_step, size=5))
@@ -273,9 +276,10 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         all_reward[time_step] = reward
         all_col[time_step] = total_col
         all_loss[time_step] = total_loss
+        all_inference_times[time_step] = inference_time
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
     return [plots, all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
-            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae]
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae, all_inference_times]

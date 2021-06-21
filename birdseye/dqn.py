@@ -310,13 +310,16 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     all_centroid_err = np.zeros(number_timesteps)
     all_rmse = np.zeros(number_timesteps)
     all_mae = np.zeros(number_timesteps)
+    all_inference_times = np.zeros(number_timesteps)
 
     for n in range(number_timesteps):
         with torch.no_grad():
             ob = scale_ob(np.expand_dims(o, 0), device, ob_scale)
+            
+            inference_start_time = datetime.now()
             q = qnet(ob)
-
             a = q.argmax(1).cpu().numpy()[0]
+            inference_time = datetime.now() - inference_start_time
 
             # take action in env
             o, r, done, info = env.step(a)
@@ -344,6 +347,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             all_reward[n] = r
             all_col[n] = total_col
             all_loss[n] = total_lost
+            all_inference_times[n] = inference_time
 
             if results is not None and results.plotting:
                 results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
@@ -351,7 +355,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
 
     return [all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
-            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae]
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae, all_inference_times]
 
 
 def _generate(device, env, qnet, ob_scale,

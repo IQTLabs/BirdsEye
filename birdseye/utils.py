@@ -51,7 +51,7 @@ class Results(object):
         Path(self.gif_dir+'/gif/').mkdir(parents=True, exist_ok=True)
         self.col_names =['time', 'run_time', 'target_state', 'sensor_state',
                          'action', 'observation', 'reward', 'collisions', 'lost',
-                         'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse','mae']
+                         'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse','mae','inference_times']
 
     # Save dataframe to CSV file
     def write_dataframe(self, run_data):
@@ -234,7 +234,8 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
 
     ax.plot(plot_theta, plot_r, 'ro')
     ax.plot(plot_x_theta, plot_x_r, 'bo')
-    ax.set_ylim(-150,150)
+    #ax.set_ylim(-150,150)
+    ax.set_ylim(0, 200)
     ax.set_title('iteration {}'.format(time_step), fontsize=16)
 
 
@@ -243,7 +244,9 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
 
     # Create grid values first via histogram.
     nbins = 10
-    counts, xbins, ybins = np.histogram2d(plot_theta, plot_r, bins=nbins)
+    xedges = np.arange(0, 2*np.pi, 2*np.pi/20)
+    yedges = np.arange(0, 200, 200/20)
+    counts, xbins, ybins = np.histogram2d(plot_theta, plot_r, bins=(xedges,yedges))
 
     # Make a meshgrid for theta, r values
     tm, rm = np.meshgrid(xbins[:-1], ybins[:-1])
@@ -252,7 +255,9 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
     ax.contourf(tm, rm, counts)
     # True position
     ax.plot(plot_x_theta, plot_x_r, 'bo')
-    ax.set_ylim(-150,150)
+    #ax.set_ylim(-150,150)
+    ax.set_ylim(0, 200)
+    #ax.set_xlim(0, 2*np.pi)
     ax.set_title('Interpolated Belief'.format(time_step), fontsize=16)
 
     # Heatmap Plot (Cartesian)
@@ -270,8 +275,9 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
 
     im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='coolwarm')
     plt.colorbar(im)
-    ax.set_xlim(-150,150)
-    ax.set_ylim(-150,150)
+    ax.set_xlim(-200,200)
+    ax.set_ylim(-200,200)
+
     ax.set_title('Particle heatmap (relative to sensor)')
 
     # Particle/Sensor Plot (absolute)
@@ -304,6 +310,7 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
         heatmap = gaussian_filter(heatmap, sigma=5)
         #heatmap, xedges, yedges = np.histogram2d(x, y, bins=50)
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        
 
         im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='coolwarm')
         plt.colorbar(im)
@@ -313,8 +320,8 @@ def build_plots(xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particle
         ax.plot(sensor_x, sensor_y, 'gp', label='sensor', markersize=12)
         ax.plot(target_x, target_y, 'mX', label='target', markersize=12)
         ax.legend()
-        ax.set_xlim(-100,100)
-        ax.set_ylim(-100,100)
+        ax.set_xlim(-200,200)
+        ax.set_ylim(-200,200)
         ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)
 
     plt.show()
