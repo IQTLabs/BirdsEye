@@ -69,7 +69,7 @@ class SimpleActions(Actions):
     """
     def __init__(self):
         self.del_theta = [-30, 0, 30]
-        self.del_r = [1, 2]
+        self.del_r = [3,4]
         simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=False)
 

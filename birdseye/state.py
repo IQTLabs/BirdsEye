@@ -78,7 +78,7 @@ class RFState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        return np.array([random.randint(10,200), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
 
 
     def init_sensor_state(self):
@@ -135,8 +135,8 @@ class RFState(State):
         yedges = np.arange(-150, 153, 3)
         b,_,_ = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
 
-        b /= np.sum(b)
         b += 0.0000001
+        b /= np.sum(b)
         H = -1. * np.sum([b * np.log(b)])
         collision_rate = np.mean(particles[:,0] < delta)
         cost = H + collision_weight * collision_rate

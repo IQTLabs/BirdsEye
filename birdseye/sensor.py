@@ -38,7 +38,7 @@ class SignalStrength(Sensor):
         # Gaussian weighting function
         numer_fact = np.power(expected_r - obs_r, 2.)
         denom_fact = 2 * np.power(self.std_dev, 2.)
-        weight = np.exp( - numer_fact / denom_fact)
+        weight = np.exp( - numer_fact / denom_fact) + 0.000000001
         return weight
 
     # samples observation given state

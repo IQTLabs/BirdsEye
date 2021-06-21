@@ -136,16 +136,22 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     counter = 0
 
     original_particles = np.copy(env.pf.particles)
+    original_n_particles = env.pf.n_particles
+    original_weights = env.pf.weights 
+    env.pf.n_particles = 200
+    env.pf.weights = np.ones(env.pf.n_particles) / env.pf.n_particles
     while counter < iterations:
 
         # draw state randomly based on belief state (pick a random particle)
         state = random.choice(belief)
 
         # simulate
-        simulate(env, Q, N, state.astype(float), history, depth, c, np.copy(original_particles))
+        simulate(env, Q, N, state.astype(float), history, depth, c, np.copy(original_particles)[random.sample(range(len(original_particles)), 200)])
 
         counter += 1
+    env.pf.n_particles = original_n_particles
     env.pf.particles = original_particles
+    env.pf.weights = original_weights
     best_action_index = arg_max_action(env.actions, Q, N, history)
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
@@ -248,7 +254,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         if env.state.target_state[0] > 150:
             total_loss += 1
 
-        #build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, None, None)
+       # build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, None, None)
 
         if results is not None and results.plotting:
             results.build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
