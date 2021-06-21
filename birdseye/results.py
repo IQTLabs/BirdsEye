@@ -68,7 +68,7 @@ def starting_position_plots(reward, sensor):
 
     plt.show()
 
-def single_plot(config, variance_bars=False):
+def single_plot(config, metric='centroid_err', variance_bars=False, verbose=False):
     mcts_runs = get_valid_runs('mcts')
     dqn_runs = get_valid_runs('dqn')
     mcts_config_filter = {}
@@ -89,9 +89,13 @@ def single_plot(config, variance_bars=False):
     for r in filtered_mcts_runs:
         config = get_config('mcts', r)
         data = get_data('mcts', r)
-        print(r,'\n')
+        
+        if verbose: 
+            print(r,'\n')
+            print(config)
+            print('=======================')
 
-        plot_data = list(data['centroid_err'].apply(lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+        plot_data = list(data[metric].apply(lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
         y = np.mean(list(plot_data), axis=0)
         
         ax1.plot(y, '-', label='mcts, {}, {}'.format(config['Methods']['sensor'], config['Methods']['reward']))
@@ -103,10 +107,13 @@ def single_plot(config, variance_bars=False):
 
     for r in filtered_dqn_runs:
         config = get_config('dqn', r)
-        print(r,'\n')
+        if verbose: 
+            print(r,'\n')
+            print(config)
+            print('=======================')
         #print(config,'\n')
         data = get_data('dqn', r)
-        plot_data = list(data['centroid_err'].apply(lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+        plot_data = list(data[metric].apply(lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
         y = np.mean(list(plot_data), axis=0)
         ax1.plot( y, ':', label='dqn, {}, {}'.format(config['Methods']['sensor'], config['Methods']['reward']))
         
@@ -124,9 +131,10 @@ def single_plot(config, variance_bars=False):
 
 
 
+    ax1.set_ylim(0, 300)
     ax1.set_xlabel('time step', fontsize=16)
-    ax1.set_ylabel('centroid distance', fontsize=16)
-    ax1.set_title('centroid distance during single episode', fontsize=24)
+    ax1.set_ylabel('{}'.format(metric), fontsize=16)
+    ax1.set_title('{} during single episode'.format(metric), fontsize=24)
     ax1.tick_params(axis='both', which='both', labelsize=14)
     ax1.legend(fontsize=20)
 
