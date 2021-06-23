@@ -278,7 +278,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         all_col[time_step] = total_col
         all_loss[time_step] = total_loss
         all_inference_times[time_step] = inference_time
-        all_pf_cov[time_step] = env.pf.cov_state
+        all_pf_cov[time_step] = list(env.pf.cov_state.flatten())
 
         # TODO: flags for collision, lost track, end of simulation lost track
 

@@ -349,7 +349,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             all_col[n] = total_col
             all_loss[n] = total_lost
             all_inference_times[n] = inference_time
-            all_pf_cov[n] = env.pf.cov_state
+            all_pf_cov[n] = list(env.pf.cov_state.flatten())
 
             if results is not None and results.plotting:
                 results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
