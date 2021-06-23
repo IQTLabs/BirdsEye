@@ -21,7 +21,7 @@ batch_size : 64
 train_freq : 4
 # was 4 
 learning_starts : 100
-target_network_update_freq : 500
+target_network_update_freq : 600
 # was 100
 buffer_size : 10000
 prioritized_replay : True
@@ -29,12 +29,12 @@ prioritized_replay_alpha : 0.6
 prioritized_replay_beta0 : 0.4
 min_value : -10
 max_value : 10
-max_episode_length : 500
+max_episode_length : 150
 atom_num : 1
 ob_scale : 1
 gamma : 0.99
 grad_norm : 10.0
-save_interval : 10000
+save_interval : 100000
 #10000
 save_path : checkpoints
 log_path : rl_log

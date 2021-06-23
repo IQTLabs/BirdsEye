@@ -270,7 +270,7 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-            trials = 40
+            trials = 500
             run_data = []
             for i in range(trials):
                 run_start_time = datetime.now()
@@ -315,7 +315,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     for n in range(number_timesteps):
         with torch.no_grad():
             ob = scale_ob(np.expand_dims(o, 0), device, ob_scale)
-            
+
             inference_start_time = datetime.now()
             q = qnet(ob)
             a = q.argmax(1).cpu().numpy()[0]

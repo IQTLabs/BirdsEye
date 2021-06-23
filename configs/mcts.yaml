@@ -5,7 +5,7 @@ sensor : drone
 state : rfstate 
 target_speed: 1.0
 target_start: 100
-resample_proportion: 0.05
+resample_proportion: 0.005
 #target_speed_range: [0,1,2,3,4]
 
 [Defaults]
@@ -13,7 +13,7 @@ lambda_arg : 0.8
 collision : -2.
 loss : -2.
 depth : 10
-simulations : 500
+simulations : 200
 plotting : False
-trials : 100
-iterations : 500
+trials : 50
+iterations : 150

@@ -29,7 +29,7 @@ class RFEnv(object):
         """
         return np.array([list(self.state.update_state(p, control)) for p in particles])
 
-    def reset(self, num_particles=4000):
+    def reset(self, num_particles=2000):
         """Reset initial state and particle filter
 
         Parameters
