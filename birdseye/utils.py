@@ -51,7 +51,7 @@ class Results(object):
         Path(self.gif_dir+'/gif/').mkdir(parents=True, exist_ok=True)
         self.col_names =['time', 'run_time', 'target_state', 'sensor_state',
                          'action', 'observation', 'reward', 'collisions', 'lost',
-                         'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse','mae','inference_times']
+                         'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse','mae','inference_times', 'pf_cov']
 
     # Save dataframe to CSV file
     def write_dataframe(self, run_data):

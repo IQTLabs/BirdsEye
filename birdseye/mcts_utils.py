@@ -207,6 +207,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     all_rmse = np.zeros(num_iters)
     all_mae = np.zeros(num_iters)
     all_inference_times = np.zeros(num_iters)
+    all_pf_cov = [None]*num_iters
 
 
     # 500 time steps with an action to be selected at each
@@ -277,9 +278,10 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         all_col[time_step] = total_col
         all_loss[time_step] = total_loss
         all_inference_times[time_step] = inference_time
+        all_pf_cov[time_step] = env.pf.cov_state
 
         # TODO: flags for collision, lost track, end of simulation lost track
 
     return [plots, all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
-            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae, all_inference_times]
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae, all_inference_times, all_pf_cov]

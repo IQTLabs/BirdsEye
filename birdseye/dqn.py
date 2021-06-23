@@ -311,6 +311,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     all_rmse = np.zeros(number_timesteps)
     all_mae = np.zeros(number_timesteps)
     all_inference_times = np.zeros(number_timesteps)
+    all_pf_cov = [None]*number_timesteps
 
     for n in range(number_timesteps):
         with torch.no_grad():
@@ -348,6 +349,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             all_col[n] = total_col
             all_loss[n] = total_lost
             all_inference_times[n] = inference_time
+            all_pf_cov[n] = env.pf.cov_state
 
             if results is not None and results.plotting:
                 results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
@@ -355,7 +357,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
 
     return [all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
-            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae, all_inference_times]
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae, all_inference_times, all_pf_cov]
 
 
 def _generate(device, env, qnet, ob_scale,
