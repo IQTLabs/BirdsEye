@@ -15,5 +15,5 @@ loss : -2.
 depth : 10
 simulations : 200
 plotting : False
-trials : 50
+trials : 500
 iterations : 150
