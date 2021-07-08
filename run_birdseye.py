@@ -11,10 +11,10 @@ def batch_run():
 
 
     # Setup requested method objects
-    for method_name in ['dqn']:
-        for sensor_config in ['signalstrength','drone']:
+    for method_name in ['mcts']:
+        for sensor_config in ['drone']:
             for reward in ['range_reward', 'entropy_collision_reward' ]:
-                for target_start in ['80']:
+                for target_start in ['78']:
                     for target_speed in ['1']:
                         print('===========================')
                         print('Batch Run: ')
