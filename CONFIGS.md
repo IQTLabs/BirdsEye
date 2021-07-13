@@ -108,7 +108,7 @@ plotting : bool
     Flag to plot or not
 ```
 
-## Example MCTS config file 
+## Example [MCTS config file](configs/mcts.yaml)
 ``` yaml
 [Methods]
 method : mcts
@@ -131,7 +131,7 @@ trials : 500
 iterations : 150
 ```
 
-## Example DQN config file 
+## Example [DQN config file](configs/dqn.yaml) 
 ``` yaml
 [Methods]
 method : dqn
