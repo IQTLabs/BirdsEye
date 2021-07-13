@@ -19,8 +19,8 @@ optional arguments:
                         Specify a configuration file
   -b, --batch           Perform batch run
 ```
-### Custom Configurations 
-See [CONFIGS.md](CONFIGS.md)
+### Configurations 
+See [Configurations Documentation](CONFIGS.md) for more information. 
 
 
 ## Examples
