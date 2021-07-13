@@ -1,10 +1,11 @@
 # Configurations Documentation 
 
-
 1. [Parameter Definitions](#methods-parameters)
 2. [Example MCTS config](#example-mcts-config-file)
 3. [Example DQN config](#example-dqn-config-file)
+
 ___
+
 
 All configuration files (.yaml) must contain `[Methods]` and `[Defaults]` sections.
 ``` yaml

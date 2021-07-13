@@ -1,6 +1,7 @@
 # BirdsEye
 ### Localizing Radio Frequency Targets Using Reinforcement Learning
 
+![particles](data/particles.png)
 ## Installation 
 
 ```
@@ -33,3 +34,10 @@ $ python run_birdseye.py -c configs/mcts.yaml
 $ python run_birdseye.py -c configs/dqn.yaml 
 ```
 
+___
+
+
+![DQN](data/dqn_arch.png)
+> Deep Q-Network architecture
+
+    
