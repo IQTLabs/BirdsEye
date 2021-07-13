@@ -51,6 +51,7 @@ def run_birdseye(args=None, env=None):
     config = configparser.ConfigParser()
     config.read([args.config])
     config_dict = dict(config.items('Methods'))
+    config_dict = {k:v.strip("\"'") for k, v in config_dict.items()}
     method_name = config_dict['method']
     action_name = config_dict['action']
     sensor_name = config_dict['sensor']
@@ -77,18 +78,15 @@ def run_birdseye(args=None, env=None):
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('-b', '--batch',
-                             action='store_true',
-                             help='Specify batch run option')
-
-    args,remaining_args = arg_parser.parse_known_args()
-
-    if not args.batch:
-        arg_parser.add_argument('-c', '--config',
+    arg_parser.add_argument('-c', '--config',
                              help='Specify a configuration file',
                              required=True,
                              metavar='FILE')
-        args, remaining_args = arg_parser.parse_known_args(remaining_args, namespace=args)
+    arg_parser.add_argument('-b', '--batch',
+                             action='store_true',
+                             help='Perform batch run')
+
+    args,remaining_args = arg_parser.parse_known_args()
 
     if args.batch:
         batch_run()

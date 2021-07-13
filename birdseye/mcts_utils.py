@@ -7,7 +7,7 @@ import csv
 from datetime import datetime
 from tqdm import tqdm
 import numpy as np
-from .utils import pol2cart, build_plots, tracking_error
+from .utils import pol2cart, tracking_error
 from pfilter import ParticleFilter, systematic_resample
 
 ##################################################################
