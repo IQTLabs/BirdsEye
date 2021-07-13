@@ -88,13 +88,25 @@ class pfrnn(object):
         self.args = parse_args(arg_string="")
         self.model = Localizer(self.args)
         self.optimizer = get_optim(self.args, self.model)
+        self.particles = None 
 
-    def train_iter(self, data): 
+    def update(self, observation, absolute_pos, action_index): 
         # env_map: [batch, *occupancy array (2D)]
         # obs: sensor observation [batch, sequence, *array] 
         # pos: target position [batch, sequence, x, y, theta (radians)]
         # action: [batch, sequence, *one hot vector]
-        env_map, obs, pos, action = data
+
+        env_map = torch.tensor(np.zeros((self.args.map_size,self.args.map_size))).view(1,1,self.args.map_size, self.args.map_size).float()
+
+        obs = torch.tensor(observation).view(1,1,-1).float()
+
+        x, y = pol2cart(absolute_pos[0], absolute_pos[1])
+        pos = torch.tensor([x, y, np.radians(absolute_pos[2])]).view(1,1,-1).float()
+
+        action = torch.tensor(np.zeros(self.args.act_size)).float()
+        action[action_index] = 1
+        action = action.view(1,1,-1)
+
 
         if torch.cuda.is_available() and self.args.gpu:
             env_map = env_map.to('cuda')
@@ -110,6 +122,8 @@ class pfrnn(object):
         if self.args.clip > 0:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.clip)
         self.optimizer.step()
+
+        return particle_pred
 
     def prep_data(self, observation, absolute_pos, action_index ):
         env_map = torch.tensor(np.zeros((self.args.map_size,self.args.map_size))).view(1,1,self.args.map_size, self.args.map_size).float()

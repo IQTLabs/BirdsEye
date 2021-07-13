@@ -10,7 +10,7 @@ from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import write_header_log
+from .utils import write_header_log, Results
 
 # Default MCTS inputs
 mcts_defaults = {
@@ -21,7 +21,7 @@ mcts_defaults = {
     'simulations' : 500,
     'plotting' : False,
     'trials' : 100,
-    'iterations' : 2000
+    'iterations' : 500
 }
 
 
@@ -57,7 +57,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     ax : object
         Axis object
     """
-    if config is None: 
+    if config is None:
         config = mcts_defaults
     simulations = config.simulations
     DEPTH = config.depth
@@ -67,6 +67,12 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     COLLISION_REWARD = config.collision
     LOSS_REWARD = config.loss
     plotting = config.plotting
+
+    # Results instance for saving results to file
+    results = Results(method_name='mcts',
+                        global_start_time=global_start_time,
+                        num_iters=num_runs,
+                        plotting=plotting)
 
     #cumulative collisions, losses, and number of trials
     #total reward, and best average tracking
@@ -82,16 +88,15 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     mcts_loss = 0
     mcts_coll = 0
     run_times = []
-    for i  in range(1, num_runs+1):
+    for i in range(1, num_runs+1):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
-        result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax)
+        result = mcts_trial(env, iterations, DEPTH, 20, plotting, simulations, fig=fig, ax=ax, results=results)
         run_time = datetime.now()-run_start_time
-        run_times.append(run_time)
-        mcts_coll += result[2]
-        mcts_loss += result[3]
-        run_data.append([datetime.now(), run_time]+result[1:])
-       
+        run_data.append([datetime.now(), run_time] + result[1:])
+
+        mcts_coll = result[6][-1]/iterations
+        mcts_loss = result[7][-1]/iterations
         print(".")
         print("\n==============================")
         print("Runs: {}".format(i))
@@ -100,33 +105,26 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         print("Collision Rate: {}".format(mcts_coll/i))
         print("Loss Rate: {}".format(mcts_loss/i))
         print("==============================")
-        
 
-        namefile = '{}/mcts/{}_data.csv'.format(RUN_DIR, global_start_time)
-        df = pd.DataFrame(run_data, columns=['time','run_time','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
-        df.to_csv(namefile)
+        # Saving results to CSV file
+        results.write_dataframe(run_data=run_data)
+        if results.plotting:
+            results.save_gif(i)
+
 
 
 def mcts(args=None, env=None):
-    # Configuration file parser
-    conf_parser = argparse.ArgumentParser(add_help=False)
-    conf_parser.add_argument('-c', '--config',
-                             help='Specify a configuration file',
-                             metavar='FILE')
-    args, remaining_argv = conf_parser.parse_known_args()
-
     # Grab mcts specific defaults
     defaults = mcts_defaults
 
-    if args.config:
+    if args:
         config = configparser.ConfigParser(defaults)
-        config.read([args.config])
+        config.read_dict({section: dict(args[section]) for section in args.sections()})
         defaults = dict(config.items('Defaults'))
         # Fix for boolean args
         defaults['plotting'] = config.getboolean('Defaults', 'plotting')
-    
+
     parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
-                                     parents=[conf_parser],
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
     parser.add_argument('--lambda_arg', type=float, help='Lambda value')
@@ -137,8 +135,8 @@ def mcts(args=None, env=None):
     parser.add_argument('--plotting', type=bool, help='Flag to plot or not')
     parser.add_argument('--trials', type=int, help='Number of runs')
     parser.add_argument('--iterations', type=int, help='Number of iterations')
-    args = parser.parse_args(remaining_argv)
-    
+    args,_ = parser.parse_known_args()
+
     if not env:
         # Setup environment
         actions = SimpleActions()

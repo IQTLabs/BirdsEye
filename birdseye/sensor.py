@@ -1,5 +1,5 @@
 import random
-import numpy as np 
+import numpy as np
 
 class Sensor(object):
     """Common base class for sensor & assoc methods
@@ -24,11 +24,41 @@ class Sensor(object):
         """
         pass
 
+class SignalStrength(Sensor):
+    """
+    Uses signal strength as observation
+    """
+    def __init__(self):
+        self.num_avail_obs = 1
+        self.std_dev = 10
 
-class Drone(Sensor): 
+    def weight(self, hyp, obs, state):
+        expected_r = state[0]
+        obs_r = np.sqrt(1/obs[0][0])
+        # Gaussian weighting function
+        numer_fact = np.power(expected_r - obs_r, 2.)
+        denom_fact = 2 * np.power(self.std_dev, 2.)
+        weight = np.exp( - numer_fact / denom_fact) + 0.000000001
+        return weight
+
+    # samples observation given state
+    def observation(self, state):
+        return 1/ ((np.random.normal(state[0], self.std_dev)) ** 2)
+
+    # sample state from observation
+    def gen_state(self, obs):
+        r_dist = np.sqrt(1/obs)
+        #return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
+        return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
+
+    def near_state(self, state):
+        return np.array(self.gen_state(self.observation(state)))
+
+
+class Drone(Sensor):
     """Drone sensor
     """
-    def __init__(self): 
+    def __init__(self):
         self.num_avail_obs = 2
 
     # importance weight of state given observation
@@ -36,11 +66,11 @@ class Drone(Sensor):
 
         # Get acceptance value for state value
         obs_weight = self.acceptance(state)
-        
-        # Convolve acceptance with observation weight 
-        if obs == 1: 
+
+        # Convolve acceptance with observation weight
+        if obs == 1:
             obs_weight *= self.obs1_prob(state)
-        elif obs == 0: 
+        elif obs == 0:
             obs_weight *= 1-self.obs1_prob(state)
         else:
             raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
@@ -59,35 +89,35 @@ class Drone(Sensor):
         obsers = [0, 1]
         return random.choices(obsers, weights)[0]
 
-    # probability of observation 1 
-    def obs1_prob(self, state): 
+    # probability of observation 1
+    def obs1_prob(self, state):
         rel_bearing = state[1]
-        if -60 <= rel_bearing <= 60: 
+        if -60 <= rel_bearing <= 60:
             return 0.9
-        elif 120 <= rel_bearing <= 240: 
+        elif 120 <= rel_bearing <= 240:
             return 0.1
-        else: 
-            return 0.5 
-            
-    # sample state from observation 
-    def gen_state(self, obs): 
-        
-        if obs == 1: 
-            bearing = random.randint(-60,60)
-        elif obs == 0: 
-            bearing = random.randint(120, 240)
-        
-        if bearing < 0: 
-            bearing += 360
-            
-        return [random.randint(25,100), bearing, random.randint(0,11)*30, 1]
+        else:
+            return 0.5
 
-    def near_state(self, state): 
+    # sample state from observation
+    def gen_state(self, obs):
+
+        if obs == 1:
+            bearing = random.randint(-60,60)
+        elif obs == 0:
+            bearing = random.randint(120, 240)
+
+        if bearing < 0:
+            bearing += 360
+
+        return [random.randint(10,150), bearing, random.randint(0,11)*30, 1]
+
+    def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
 
 
-class Bearing(Sensor): 
-    def __init__(self, sensor_range = 150): 
+class Bearing(Sensor):
+    def __init__(self, sensor_range = 150):
         self.sensor_range = sensor_range
         self.num_avail_obs = 4
 
@@ -97,7 +127,7 @@ class Bearing(Sensor):
         # Get acceptance value for state value
         obs_weight = self.acceptance(state)
 
-        # Convolve acceptance with observation weight 
+        # Convolve acceptance with observation weight
         if obs == 0:
             obs_weight *= self.obs0(state)
         elif obs == 1:
@@ -121,21 +151,21 @@ class Bearing(Sensor):
         obsers = [0, 1, 2, 3]
         return random.choices(obsers, weights)[0]
 
-    # sample state from observation 
-    def gen_state(self, obs): 
-        
-        if obs == 0: 
+    # sample state from observation
+    def gen_state(self, obs):
+
+        if obs == 0:
             bearing = random.randint(-60,60)
-        elif obs == 1: 
+        elif obs == 1:
             bearing = random.choice([random.randint(60,90), random.randint(270, 300)])
-        elif obs == 2: 
+        elif obs == 2:
             bearing = random.choice([random.randint(90,120), random.randint(240,270)])
-        elif obs == 3: 
+        elif obs == 3:
             bearing = random.randint(120, 240)
-        
-        if bearing < 0: 
+
+        if bearing < 0:
             bearing += 360
-            
+
         return [random.randint(25,100), bearing, random.randint(0,11)*30, 1]
 
     def obs1(self, state):
@@ -199,6 +229,7 @@ class Bearing(Sensor):
 
 AVAIL_SENSORS = {'drone' : Drone,
                  'bearing' : Bearing,
+                 'signalstrength': SignalStrength
                 }
 
 def get_sensor(sensor_name=''):

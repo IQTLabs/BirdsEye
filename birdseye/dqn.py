@@ -3,6 +3,7 @@ These functions are adapted from github.com/Officium/RL-Experiments
 
 """
 from datetime import datetime
+import logging
 import configparser
 import argparse
 import math
@@ -23,15 +24,15 @@ from torch.optim import Adam
 
 from .rl_common.util import scale_ob
 from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
-from .rl_common.logger import init_logger
-from .rl_common.models import CNN, MLP
+from .rl_common.logger import init_logger, close_logger
+from .rl_common.models import CNN, MLP, RFPFQnet, SmallRFPFQnet
 
 from .actions import *
 from .sensor import *
 from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import tracking_error, write_header_log
+from .utils import tracking_error, write_header_log, Results
 
 
 # Default DQN inputs
@@ -60,7 +61,8 @@ dqn_defaults = {
     'save_interval' : 1000,
     'save_path' : 'checkpoints',
     'log_path' : 'rl_log',
-    'use_gpu' : True
+    'use_gpu' : True,
+    'plotting': False
 }
 
 
@@ -154,6 +156,13 @@ def run_dqn(env, config, global_start_time):
     min_value = config.min_value
     max_value = config.max_value
     max_episode_length = config.max_episode_length
+    plotting = config.plotting
+
+    # Results instance for saving results to file
+    results = Results(method_name='dqn',
+                        global_start_time=global_start_time,
+                        num_iters=number_timesteps,
+                        plotting=plotting)
 
     # Setup logging
     logger = init_logger(log_path)
@@ -164,7 +173,8 @@ def run_dqn(env, config, global_start_time):
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
     in_dim = (1, 100, 100)
-    network = CNN(in_dim, policy_dim, atom_num, dueling)
+    #network = CNN(in_dim, policy_dim, atom_num, dueling)
+    network = SmallRFPFQnet(in_dim, 4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
@@ -189,7 +199,6 @@ def run_dqn(env, config, global_start_time):
         os.makedirs(save_path)
 
     start_ts = time.time()
-    run_data = []
 
     for n_iter in range(1, number_timesteps + 1):
         if prioritized_replay:
@@ -215,8 +224,8 @@ def run_dqn(env, config, global_start_time):
                 b_q = qnet(b_o).gather(1, b_a)
                 abs_td_error = (b_q - (b_r + gamma * b_q_)).abs()
                 priorities = abs_td_error.detach().cpu().clamp(1e-6).numpy()
-                if extra:
-                    loss = (extra[0] * huber_loss(abs_td_error)).mean()
+                if prioritized_replay:
+                    loss = (extra[-2] * huber_loss(abs_td_error)).mean()
                 else:
                     loss = huber_loss(abs_td_error).mean()
             else:
@@ -244,7 +253,7 @@ def run_dqn(env, config, global_start_time):
                 nn.utils.clip_grad_norm_(qnet.parameters(), grad_norm)
             optimizer.step()
             if prioritized_replay:
-                buffer.update_priorities(extra[1], priorities)
+                buffer.update_priorities(extra[-1], priorities)
 
         # update target net and log
         if n_iter % target_network_update_freq == 0:
@@ -258,61 +267,98 @@ def run_dqn(env, config, global_start_time):
             if n_iter > learning_starts and n_iter % train_freq == 0:
                 logger.info('vloss: {:.6f}'.format(loss.item()))
 
-            result = test(env, qnet, max_episode_length, device, ob_scale)
-            result = [datetime.now(), n_iter] + result
-            run_data.append(result)
-
-            filename = '{}/dqn/{}_data.csv'.format(RUN_DIR, global_start_time)
-            df = pd.DataFrame(run_data, columns=['time','n_iter','total_reward','total_col','total_lost', 'avg_r_err', 'avg_theta_err', 'avg_heading_err', 'avg_centroid_err', 'average_rmse'])
-            df.to_csv(filename)
-
-
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
+            trials = 500
+            run_data = []
+            for i in range(trials):
+                run_start_time = datetime.now()
+                print('test trial {}/{}'.format(i, trials))
+                result = test(env, qnet, max_episode_length, device, ob_scale, results)
+                run_time = datetime.now()-run_start_time
+                if results.plotting:
+                    results.save_gif(n_iter, i)
+                run_data.append([datetime.now(), run_time] + result)
+            #result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
+            #result = [datetime.now(), n_iter] + result_avg
+            #run_data.append(result)
 
-def test(env, qnet, number_timesteps, device, ob_scale):
+            # Saving results to CSV file
+            results.write_dataframe(run_data=run_data)
+
+    close_logger(logger)
+
+def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     """ Perform one test run """
-    total_reward = 0
     total_col = 0
     total_lost = 0
-    avg_r_err = 0
-    avg_theta_err = 0
-    avg_heading_err = 0
-    avg_centroid_err = 0
-    average_rmse = 0
 
     o = env.reset()
+
+    # Save values for all iterations and episodes
+    all_target_states = [None]*number_timesteps
+    all_sensor_states = [None]*number_timesteps
+    all_actions = [None]*number_timesteps
+    all_obs = [None]*number_timesteps
+    all_reward = np.zeros(number_timesteps)
+    all_col = np.zeros(number_timesteps)
+    all_loss = np.zeros(number_timesteps)
+    all_r_err = np.zeros(number_timesteps)
+    all_theta_err = np.zeros(number_timesteps)
+    all_heading_err = np.zeros(number_timesteps)
+    all_centroid_err = np.zeros(number_timesteps)
+    all_rmse = np.zeros(number_timesteps)
+    all_mae = np.zeros(number_timesteps)
+    all_inference_times = np.zeros(number_timesteps)
+    all_pf_cov = [None]*number_timesteps
 
     for n in range(number_timesteps):
         with torch.no_grad():
             ob = scale_ob(np.expand_dims(o, 0), device, ob_scale)
-            q = qnet(ob)
 
+            inference_start_time = datetime.now()
+            q = qnet(ob)
             a = q.argmax(1).cpu().numpy()[0]
+            inference_time = (datetime.now() - inference_start_time).total_seconds()
 
             # take action in env
             o, r, done, info = env.step(a)
 
             # error metrics
-            r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.state.target_state, env.pf.particles)
-            avg_r_err += r_error
-            avg_theta_err += theta_error
-            avg_heading_err += heading_error
-            avg_centroid_err += centroid_distance_error
-            average_rmse += rmse
-            #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
-
-            # accumulate reward
-            total_reward += r
+            r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
             if env.state.target_state[0] < 10:
-                total_col = 1
+                total_col += 1
 
             if env.state.target_state[0] > 150:
-                total_lost = 1
+                total_lost += 1
 
-    return [total_reward, total_col, total_lost, avg_r_err, avg_theta_err, avg_heading_err, avg_centroid_err, average_rmse]
+            # Save results to output arrays
+            all_target_states[n] = env.state.target_state
+            all_sensor_states[n] = env.state.sensor_state
+            all_actions[n] = a
+            all_obs[n] = info['observation']
+            all_r_err[n] = r_error
+            all_theta_err[n] = theta_error
+            all_heading_err[n] = heading_error
+            all_centroid_err[n] = centroid_distance_error
+            all_rmse[n] = rmse
+            all_mae[n] = mae
+            all_reward[n] = r
+            all_col[n] = total_col
+            all_loss[n] = total_lost
+            all_inference_times[n] = inference_time
+            all_pf_cov[n] = list(env.pf.cov_state.flatten())
+
+            if results is not None and results.plotting:
+                results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
+
+
+    return [all_target_states, all_sensor_states, all_actions,
+            all_obs, all_reward, all_col, all_loss, all_r_err,
+            all_theta_err, all_heading_err, all_centroid_err, all_rmse, all_mae, all_inference_times, all_pf_cov]
+
 
 def _generate(device, env, qnet, ob_scale,
               number_timesteps, param_noise,
@@ -389,18 +435,11 @@ def huber_loss(abs_td_error):
 
 
 def dqn(args=None, env=None):
-    # Configuration file parser
-    conf_parser = argparse.ArgumentParser(add_help=False)
-    conf_parser.add_argument('-c', '--config',
-                             help='Specify a configuration file',
-                             metavar='FILE')
-    args, remaining_argv = conf_parser.parse_known_args()
-
     defaults = dqn_defaults
 
-    if args.config:
+    if args:
         config = configparser.ConfigParser(defaults)
-        config.read([args.config])
+        config.read_dict({section: dict(args[section]) for section in args.sections()})
         defaults = dict(config.items('Defaults'))
         # Fix for boolean args
         defaults['param_noise'] = config.getboolean('Defaults', 'param_noise')
@@ -410,7 +449,6 @@ def dqn(args=None, env=None):
         defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
 
     parser = argparse.ArgumentParser(description='DQN',
-                                     parents=[conf_parser],
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
     parser.add_argument('--number_timesteps', type=int, help='Number of timesteps')
@@ -440,7 +478,7 @@ def dqn(args=None, env=None):
     parser.add_argument('--save_path', type=str, help='Path for saving')
     parser.add_argument('--log_path', type=str, help='Path for logging output')
     parser.add_argument('--use_gpu', type=bool, help='Flag for using GPU device')
-    args = parser.parse_args(remaining_argv)
+    args,_ = parser.parse_known_args()
 
     if not env:
         # Setup environment
