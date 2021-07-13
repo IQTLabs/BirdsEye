@@ -56,6 +56,7 @@ plotting : bool
 
 ## DQN specific `[Defualts]` parameters 
 ``` yaml
+[Defaults]
 log_path : string
     Path for logging output
 use_gpu : bool
