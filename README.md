@@ -1,7 +1,7 @@
 # BirdsEye
 ### Localizing Radio Frequency Targets Using Reinforcement Learning
 
-![particles](data/particles.png)
+![particles](data/example.gif)
 ## Installation 
 
 ```

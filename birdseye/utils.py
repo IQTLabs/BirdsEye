@@ -71,7 +71,7 @@ class Results(object):
         filename = run if sub_run is None else '{}_{}'.format(run, sub_run)
         # Build GIF
         with imageio.get_writer('{}/gif/{}.gif'.format(self.gif_dir, filename), mode='I', fps=5) as writer:
-            for png_filename in os.listdir(self.gif_dir+'/png/'):
+            for png_filename in sorted(os.listdir(self.gif_dir+'/png/'), key = lambda x: (len (x), x)):
                 image = imageio.imread(self.gif_dir+'/png/'+png_filename)
                 writer.append_data(image)
 
