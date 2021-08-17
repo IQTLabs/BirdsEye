@@ -25,7 +25,7 @@ optional arguments:
 A Docker file has also been provided for ease of use. To run with Docker, execute the following commands:
 ```
 > docker build -t birds_eye .
-> docker run -it --ipc=host --gpus all birds_eye -c {config.yaml}
+> docker run -it --gpus all birds_eye -c {config.yaml}
 ```
 In order to streamline this process a `Makefile` has been provided as a shorthand. 
 ```
