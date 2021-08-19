@@ -22,6 +22,8 @@ optional arguments:
 ```
 
 ### To run using a Docker container
+First install Docker with GPU support. [Instructions here.](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+
 A Docker file has also been provided for ease of use. To run with Docker, execute the following commands:
 ```
 > docker build -t birds_eye .
