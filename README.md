@@ -1,5 +1,5 @@
 # BirdsEye
-## Introduction
+
 ### Localizing Radio Frequency Targets Using Reinforcement Learning
 The BirdsEye project demonstrates the simulated
 tracking of radio frequency (RF) signals via
@@ -26,7 +26,9 @@ the return on localization rewards. The DQN method is a reinforcement learning a
 which can adapt to large decision spaces using neural networks, with major public
 successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-studies/alphago-the-story-so-far).
 
+### Visualization Example
 ![particles](data/example.gif)
+
 
 ## Usage
 
@@ -67,4 +69,4 @@ ___
 ![DQN](data/dqn_arch.png)
 > Deep Q-Network architecture
 
-    
+   
