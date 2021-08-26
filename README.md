@@ -41,7 +41,7 @@ pip install -r requirements.txt
 
 
 ## Usage
-### To run on commandline
+### To run on command line
 ```
 $ python run_birdseye.py -h 
 usage: run_birdseye.py [-h] -c FILE [-b]
