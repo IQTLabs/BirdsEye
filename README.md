@@ -32,15 +32,11 @@ successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-stud
 
 
 ## Usage
-
 ### Installation 
-
 ```
 pip install -r requirements.txt
 ```
 
-
-## Usage
 ### To run on command line
 ```
 $ python run_birdseye.py -h 
