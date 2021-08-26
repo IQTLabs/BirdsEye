@@ -1,14 +1,44 @@
 # BirdsEye
+
 ### Localizing Radio Frequency Targets Using Reinforcement Learning
+The BirdsEye project demonstrates the simulated
+tracking of radio frequency (RF) signals via
+reinforcement learning (RL) techniques implemented
+on low-fidelity sensors. 
+This permits the in-situ observation-training RL paradigm without the need
+for significant compute hardware such as graphical
+processing units (GPU).
+Instead, these methods can
+be run on low-cost, commercial, off-the-shelf
+technology, providing capabilities to applications in
+which covert or concealed sensors are paramount in
+deployment, or where more sensitive sensors do not
+function or cannot be installed due to the nature of
+the environment.
 
-This repository provides code for simulating the tracking of mobile radio frequency targets using a mobile sensor. The target state estimation is performed using a particle filter and the sensor's movement is controlled through various machine learning methods. We have included code for training and evaluating Monte Carlo Tree Search and Deep Q-Network models. Tracking visualization, localization error and belief uncertainty metrics are also reported. 
+### Methods
+BirdsEye has implemented two statistical methods which drive how the sensor adaptively
+tracks an observed target signal: Monte Carlo Tree Search (MCTS) and Deep Q-Learning
+(DQN). While each method has advantages over the other, neither requires heavy
+compute resources such as a GPU. The MCTS method performs a stochastic search and
+selection of the actions available to the sensor, identifying the decision which maximizes
+the return on localization rewards. The DQN method is a reinforcement learning algorithm
+which can adapt to large decision spaces using neural networks, with major public
+successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-studies/alphago-the-story-so-far).
 
+
+### Visualization Example
 ![particles](data/example.gif)
-## Installation 
+
+
+## Usage
+
+### Installation 
 
 ```
 pip install -r requirements.txt
 ```
+
 
 ## Usage
 ### To run on commandline
@@ -60,6 +90,7 @@ ___
 ![DQN](data/dqn_arch.png)
 > Deep Q-Network architecture
 
+
 ## Description
 All code for training and evaluation in simulation is contained in the [birdseye](birdseye) directory.  
 The [birdseye](birdseye) directory contains some important base classes which can be extended to offer customizability to a specific use case. We provide a few subclasses to get started. 
@@ -75,3 +106,4 @@ The State class includes methods for updating the state variables of the environ
 
 ### [RFEnv](birdseye/env.py)
 The RFEnv class is a Gym-like class for controlling the entire pipeline of the simulation. 
+
