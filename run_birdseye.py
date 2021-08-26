@@ -75,18 +75,20 @@ def run_birdseye(args=None, env=None):
     # Run the requested algorithm
     run_method(args=config, env=env)
 
-
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('-c', '--config',
+    arg_parser.add_argument('-b', '--batch',
+                             action='store_true',
+                             help='Specify batch run option')
+
+    args,remaining_args = arg_parser.parse_known_args()
+
+    if not args.batch:
+        arg_parser.add_argument('-c', '--config',
                              help='Specify a configuration file',
                              required=True,
                              metavar='FILE')
-    arg_parser.add_argument('-b', '--batch',
-                             action='store_true',
-                             help='Perform batch run')
-
-    args,remaining_args = arg_parser.parse_known_args()
+        args, remaining_args = arg_parser.parse_known_args(remaining_args, namespace=args)
 
     if args.batch:
         batch_run()
