@@ -241,7 +241,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         #print('true_state = {}, next_state = {}, action = {}, observation = {}'.format(env.state.target_state, next_state, action, observation))
 
         # pfrnn
-        #env.pfrnn.update(observation, env.get_absolute_target(), env.actions.action_to_index(action))
+        particle_pred = env.pfrnn.update(observation, env.get_absolute_target(), env.actions.action_to_index(action))
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)

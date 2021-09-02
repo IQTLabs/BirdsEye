@@ -117,17 +117,23 @@ class Localizer(nn.Module):
             return hidden.detach()
 
     def forward(self, map_in, obs_in, act_in):
-        emb_map = self.encode(map_in)
-        batch_size = emb_map.size(0)
-        emb_map = emb_map.view(batch_size, -1)
-        emb_map = torch.relu(self.map_embedding(emb_map))
-        obs_map = torch.relu(self.map2obs(emb_map))
-        act_map = torch.relu(self.map2act(emb_map))
+        #emb_map = self.encode(map_in)
+        #print(map_in.shape)
+        #batch_size = emb_map.size(0)
+        batch_size = map_in.size(0)
+        #print(emb_map.shape)
+        #emb_map = emb_map.view(batch_size, -1)
+        #emb_map = torch.relu(self.map_embedding(emb_map))
+        #obs_map = torch.relu(self.map2obs(emb_map))
+        #act_map = torch.relu(self.map2act(emb_map))
+
         emb_obs = torch.relu(self.obs_embedding(obs_in))
         emb_act = torch.relu(self.act_embedding(act_in))
 
-        obs_input = emb_obs * obs_map.unsqueeze(1)
-        act_input = emb_act * act_map.unsqueeze(1)
+        #obs_input = emb_obs * obs_map.unsqueeze(1)
+        #act_input = emb_act * act_map.unsqueeze(1)
+        obs_input = emb_obs
+        act_input = emb_act
 
         embedding = torch.cat((obs_input, act_input), dim=2)
 

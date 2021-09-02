@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt 
 from birdseye.pfrnn.model import Localizer
-from birdseye.utils import pol2cart
+from birdseye.utils import pol2cart, cart2pol
 
 def parse_args(arg_string=None):
 
@@ -31,10 +31,10 @@ def parse_args(arg_string=None):
 
     parser.add_argument('--dropout', type=float,
                         default=0.5, help='dropout rate')
-    parser.add_argument('--optim', type=str, default='RMSProp',
+    parser.add_argument('--optim', type=str, default='Adam',
                         help='type of optim')
     parser.add_argument('--num_particles', type=int,
-                        default=30, help='num of particles')
+                        default=500, help='num of particles')
     parser.add_argument('--sl', type=int, default=100, help='sequence length')
     parser.add_argument('--num_trajs', type=int, default=10000,
                         help='number of trajs')
@@ -101,7 +101,14 @@ class pfrnn(object):
         obs = torch.tensor(observation).view(1,1,-1).float()
 
         x, y = pol2cart(absolute_pos[0], absolute_pos[1])
-        pos = torch.tensor([x, y, np.radians(absolute_pos[2])]).view(1,1,-1).float()
+        heading = absolute_pos[2] % 360 
+        if heading < 0: 
+            heading += 360
+        # normalize position 
+        heading_norm = heading / 360
+        x_norm = (x+300) / 600
+        y_norm = (y+300) / 600
+        pos = torch.tensor([x_norm, y_norm, heading_norm]).view(1,1,-1).float()
 
         action = torch.tensor(np.zeros(self.args.act_size)).float()
         action[action_index] = 1
@@ -117,12 +124,19 @@ class pfrnn(object):
         self.model.zero_grad()
         loss, log_loss, particle_pred = self.model.step(
             env_map, obs, action, pos, self.args)
-        self.plot_particles(particle_pred.detach().numpy())
+
+       # self.plot_particles(particle_pred.detach().numpy())
         loss.backward()
         if self.args.clip > 0:
             torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args.clip)
         self.optimizer.step()
 
+        particle_pred = torch.squeeze(particle_pred).detach().numpy()
+        particle_pred[:,0] = (particle_pred[:,0] * 600) - 300
+        particle_pred[:,1] = (particle_pred[:,1] * 600) - 300
+        particle_pred[:,0], particle_pred[:,1] = cart2pol(particle_pred[:,0], particle_pred[:,1])
+        particle_pred[:,2] = particle_pred[:,2] * 360
+        particle_pred = np.concatenate((particle_pred, np.ones((particle_pred.shape[0],1))), axis=1)
         return particle_pred
 
     def prep_data(self, observation, absolute_pos, action_index ):
