@@ -14,7 +14,7 @@ def panel_dual_axis(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
     # set strings 
     reward_str = {'range_reward':'State Dependent Reward', 'entropy_collision_reward':'Belief Dependent Reward'}
     sensor_str = {'drone':'Bearings Sensor','signalstrength':'Signal Strength Sensor'}
-    metric_str = {'centroid_err':'Centroid Distance', 'r_err': r'$\delta_{r}$', 'theta_err':r'$\delta_{\theta}$'}
+    metric_str = {'centroid_err':'Centroid Distance (m)', 'r_err': r'$\delta_{r}$ (m)', 'theta_err':r'$\delta_{\theta}$ (degrees)'}
     #metric_s = metric_str.get(metric, metric)
     
     # get configs and run data 
@@ -383,8 +383,8 @@ def single_plot_combined_cov(ax1, config, mcts=True, dqn=True, metric='centroid_
     
     #ax1.set_ylim(0, y_lim)
     ax1.set_xlabel('Time Step', fontsize=16)
-    ax1.set_ylabel(r'$\sigma_{r}$', fontsize=24)
-    ax2.set_ylabel(r'$\sigma_{\theta}$', fontsize=24)
+    ax1.set_ylabel(r'$\sigma_{r}$ (m)', fontsize=24)
+    ax2.set_ylabel(r'$\sigma_{\theta}$ (degrees)', fontsize=24)
     ax1.tick_params(axis='both', which='both', labelsize=14)
     ax2.tick_params(axis='both', which='both', labelsize=14)
     
@@ -396,7 +396,7 @@ def single_plot_combined_cov(ax1, config, mcts=True, dqn=True, metric='centroid_
 def single_plot_combined(ax1, config, metric='centroid_err', variance_bars=False, verbose=False, limit=1, y_lim=125):
     reward_str = {'range_reward':'State Dependent Reward', 'entropy_collision_reward':'Belief Dependent Reward'}
     sensor_str = {'drone':'Bearings Sensor','signalstrength':'Signal Strength Sensor'}
-    metric_str = {'centroid_err':'Centroid Distance'}
+    metric_str = {'centroid_err':'Centroid Distance (m)'}
     metric_s = metric_str.get(metric, metric)
     
     mcts_runs = get_valid_runs('mcts')
@@ -507,7 +507,7 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
     
     reward_str = {'range_reward':'State Dependent Reward', 'entropy_collision_reward':'Belief Dependent Reward'}
     sensor_str = {'drone':'Bearings Sensor','signalstrength':'Signal Strength Sensor'}
-    metric_str = {'centroid_err':'Centroid Distance'}
+    metric_str = {'centroid_err':'Centroid Distance (m)'}
     metric_s = metric_str.get(metric, metric)
     
     mcts_runs = get_valid_runs('mcts')
