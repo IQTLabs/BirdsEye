@@ -1,3 +1,5 @@
+.vscode/
+checkpoints/
 
 # Don't save any run output
 runs*
