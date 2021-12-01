@@ -31,14 +31,20 @@ which can adapt to large decision spaces using neural networks, with major publi
 successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-studies/alphago-the-story-so-far).
 
 
-### Visualization Example
-![particles](data/example.gif)
+| ![particles](data/example.gif)|
+|:--:| 
+| *State estimation and motion planning* |
+
+| ![DQN](data/arch2.png) |
+|:--:| 
+| *Deep Q-Network architecture for motion planning* |
 
 ## Contents
 1. [Usage](#1-usage)
 2. [Configurations](#2-configurations)
 3. [Examples](#3-examples)
-4. [Descriptions](#4-descriptions)
+4. [Results](#4-results)
+5. [Descriptions](#5-descriptions)
 
 ## 1. Usage
 ### Installation 
@@ -90,15 +96,14 @@ $ python run_birdseye.py -c configs/mcts.yaml
 $ python run_birdseye.py -c configs/dqn.yaml 
 ```
 
-___
+## 4. Results
+The results of the experiments will be stored in the `./runs` directory.   
+Log files are created which store the configurations for each experiment along with metrics and state information per time step.   
+For a detailed guide and visualizations please see [results user guide notebook](results_guide.ipynb).
 
 
-| ![DQN](data/arch2.png) |
-|:--:| 
-| *Deep Q-Network architecture for motion planning* |
 
-
-## 4. Descriptions
+## 5. Descriptions
 All code for training and evaluation in simulation is contained in the [birdseye](birdseye) directory.  
 The [birdseye](birdseye) directory contains some important base classes which can be extended to offer customizability to a specific use case. We provide a few subclasses to get started. 
 
