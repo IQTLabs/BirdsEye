@@ -16,6 +16,11 @@ deployment, or where more sensitive sensors do not
 function or cannot be installed due to the nature of
 the environment.
 
+This repository is the official implementation of the work published [here](https://doi.org/10.1109/ROSE52750.2021.9611756): 
+```
+L. Tindall, Z. Hampel-Arias, J. Goldfrank, E. Mair and T. Q. Nguven, "Localizing Radio Frequency Targets Using Reinforcement Learning," 2021 IEEE International Symposium on Robotic and Sensors Environments (ROSE), 2021, pp. 1-7, doi: 10.1109/ROSE52750.2021.9611756.
+```
+
 ### Methods
 BirdsEye has implemented two statistical methods which drive how the sensor adaptively
 tracks an observed target signal: Monte Carlo Tree Search (MCTS) and Deep Q-Learning
