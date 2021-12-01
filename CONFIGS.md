@@ -1,13 +1,17 @@
 # Configurations Documentation 
 
-1. [Parameter Definitions](#methods-parameters)
-2. [Example MCTS config](#example-mcts-config-file)
-3. [Example DQN config](#example-dqn-config-file)
+1. [Experiment Parameter Definitions](#1-experiment-parameters)
+2. [MCTS Parameters](#2-mcts-specific-defaults-parameters)
+3. [DQN Parameters](#3-dqn-specific-defaults-parameters)
+4. [Example MCTS config](#example-mcts-config-file)
+5. [Example DQN config](#example-dqn-config-file)
 
 ___
 
 
-All configuration files (.yaml) must contain `[Methods]` and `[Defaults]` sections.
+All configuration files (.yaml) must contain `[Methods]` and `[Defaults]` sections.  
+The `[Methods]` section contains general experiment settings.   
+The `[Defaults]` section contains settings specific to the motion planning method. 
 ``` yaml
 [Methods]
 ...
@@ -15,7 +19,7 @@ All configuration files (.yaml) must contain `[Methods]` and `[Defaults]` sectio
 [Defaults]
 ...
 ```
-## `[Methods]` Parameters 
+## 1. Experiment Parameters 
 ``` yaml
 [Methods]
 method : string
@@ -34,7 +38,7 @@ action : simpleactions
 state : rfstate 
 ```
 
-## MCTS specific `[Defaults]` Parameters 
+## 2. MCTS specific `[Defaults]` Parameters 
 ``` yaml
 [Defaults]
 simulations : int
@@ -55,7 +59,7 @@ plotting : bool
     Flag to plot or not
 ```
 
-## DQN specific `[Defualts]` parameters 
+## 3. DQN specific `[Defualts]` parameters 
 ``` yaml
 [Defaults]
 log_path : string
@@ -110,7 +114,7 @@ plotting : bool
     Flag to plot or not
 ```
 
-## Example [MCTS config file](configs/mcts.yaml)
+## 4. Example [MCTS config file](configs/mcts.yaml)
 ``` yaml
 [Methods]
 method : mcts
@@ -133,7 +137,7 @@ trials : 500
 iterations : 150
 ```
 
-## Example [DQN config file](configs/dqn.yaml) 
+## 5. Example [DQN config file](configs/dqn.yaml) 
 ``` yaml
 [Methods]
 method : dqn
