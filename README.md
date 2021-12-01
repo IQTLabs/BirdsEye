@@ -16,6 +16,10 @@ deployment, or where more sensitive sensors do not
 function or cannot be installed due to the nature of
 the environment.
 
+This repository is the official implementation of the work published [here](https://doi.org/10.1109/ROSE52750.2021.9611756): 
+> L. Tindall, Z. Hampel-Arias, J. Goldfrank, E. Mair and T. Q. Nguven, "Localizing Radio Frequency Targets Using Reinforcement Learning," 2021 IEEE International Symposium on Robotic and Sensors Environments (ROSE), 2021, pp. 1-7, doi: 10.1109/ROSE52750.2021.9611756.
+
+
 ### Methods
 BirdsEye has implemented two statistical methods which drive how the sensor adaptively
 tracks an observed target signal: Monte Carlo Tree Search (MCTS) and Deep Q-Learning
@@ -26,12 +30,26 @@ the return on localization rewards. The DQN method is a reinforcement learning a
 which can adapt to large decision spaces using neural networks, with major public
 successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-studies/alphago-the-story-so-far).
 
+<p align="center">
+  <img src="data/example.gif" /> <br>
+  <em align = "center"><b>Fig. 1: State estimation and motion planning</b></em>
+</p>
 
-### Visualization Example
-![particles](data/example.gif)
+___
 
+<p align="center">
+  <img src="data/arch2.png" />   
+  <em align = "center"><b>Fig. 2: Deep Q-Network architecture for motion planning</b></em>
+</p>
 
-## Usage
+## Contents
+1. [Usage](#1-usage)
+2. [Configurations](#2-configurations)
+3. [Examples](#3-examples)
+4. [Results](#4-results)
+5. [Descriptions](#5-descriptions)
+
+## 1. Usage
 ### Installation 
 ```
 pip install -r requirements.txt
@@ -66,11 +84,12 @@ In order to streamline this process a `Makefile` has been provided as a shorthan
 Accepted make values are: `run_mcts, run_dqn, run_batch, build`
 
 
-### Configurations 
-See [Configurations Documentation](CONFIGS.md) for more information. 
+## 2. Configurations 
+Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.  
+See [Configurations Documentation](docs/CONFIGS.md) for more information. 
 
 
-## Examples
+## 3. Examples
 ### Run with Monte Carlo Tree Search policy
 ```
 $ python run_birdseye.py -c configs/mcts.yaml 
@@ -80,14 +99,14 @@ $ python run_birdseye.py -c configs/mcts.yaml
 $ python run_birdseye.py -c configs/dqn.yaml 
 ```
 
-___
+## 4. Results
+The results of the experiments will be stored in the `./runs` directory.   
+Log files are created which store the configurations for each experiment along with metrics and state information per time step.   
+For a detailed guide and visualizations please see [results user guide notebook](results_guide.ipynb).
 
 
-![DQN](data/dqn_arch.png)
-> Deep Q-Network architecture
 
-
-## Description
+## 5. Descriptions
 All code for training and evaluation in simulation is contained in the [birdseye](birdseye) directory.  
 The [birdseye](birdseye) directory contains some important base classes which can be extended to offer customizability to a specific use case. We provide a few subclasses to get started. 
 
