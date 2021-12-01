@@ -30,8 +30,13 @@ successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-stud
 ### Visualization Example
 ![particles](data/example.gif)
 
+## Contents
+1. [Usage](#1-usage)
+2. [Configurations](#2-configurations)
+3. [Examples](#3-examples)
+4. [Descriptions](#4-descriptions)
 
-## Usage
+## 1. Usage
 ### Installation 
 ```
 pip install -r requirements.txt
@@ -66,11 +71,12 @@ In order to streamline this process a `Makefile` has been provided as a shorthan
 Accepted make values are: `run_mcts, run_dqn, run_batch, build`
 
 
-### Configurations 
+## 2. Configurations 
+Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.  
 See [Configurations Documentation](CONFIGS.md) for more information. 
 
 
-## Examples
+## 3. Examples
 ### Run with Monte Carlo Tree Search policy
 ```
 $ python run_birdseye.py -c configs/mcts.yaml 
@@ -87,7 +93,7 @@ ___
 > Deep Q-Network architecture
 
 
-## Description
+## 4. Descriptions
 All code for training and evaluation in simulation is contained in the [birdseye](birdseye) directory.  
 The [birdseye](birdseye) directory contains some important base classes which can be extended to offer customizability to a specific use case. We provide a few subclasses to get started. 
 

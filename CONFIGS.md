@@ -3,8 +3,8 @@
 1. [Experiment Parameter Definitions](#1-experiment-parameters)
 2. [MCTS Parameters](#2-mcts-specific-defaults-parameters)
 3. [DQN Parameters](#3-dqn-specific-defaults-parameters)
-4. [Example MCTS config](#example-mcts-config-file)
-5. [Example DQN config](#example-dqn-config-file)
+4. [Example MCTS config](#4-example-mcts-config-file)
+5. [Example DQN config](#5-example-dqn-config-file)
 
 ___
 
@@ -59,7 +59,7 @@ plotting : bool
     Flag to plot or not
 ```
 
-## 3. DQN specific `[Defualts]` parameters 
+## 3. DQN specific `[Defaults]` parameters 
 ``` yaml
 [Defaults]
 log_path : string
