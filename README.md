@@ -77,7 +77,7 @@ Accepted make values are: `run_mcts, run_dqn, run_batch, build`
 
 ## 2. Configurations 
 Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.  
-See [Configurations Documentation](CONFIGS.md) for more information. 
+See [Configurations Documentation](docs/CONFIGS.md) for more information. 
 
 
 ## 3. Examples
