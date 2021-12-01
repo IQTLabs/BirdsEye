@@ -89,8 +89,9 @@ $ python run_birdseye.py -c configs/dqn.yaml
 ___
 
 
-![DQN](data/dqn_arch.png)
-> Deep Q-Network architecture
+| ![DQN](data/arch2.png) |
+|:--:| 
+| *Deep Q-Network architecture for motion planning* |
 
 
 ## 4. Descriptions
