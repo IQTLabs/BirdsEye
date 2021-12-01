@@ -30,15 +30,17 @@ the return on localization rewards. The DQN method is a reinforcement learning a
 which can adapt to large decision spaces using neural networks, with major public
 successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-studies/alphago-the-story-so-far).
 
-<figure align="center">
-  <img src="data/example.gif" />   
-  <figcaption align = "center"><b>State estimation and motion planning</b></figcaption>
-</figure>
+<p align="center">
+  <img src="data/example.gif" /> <br>
+  <em align = "center"><b>Fig. 1: State estimation and motion planning</b></em>
+</p>
 
-<figure align="center">
+___
+
+<p align="center">
   <img src="data/arch2.png" />   
-  <figcaption align = "center"><b>Deep Q-Network architecture for motion planning</b></figcaption>
-</figure>
+  <em align = "center"><b>Fig. 2: Deep Q-Network architecture for motion planning</b></em>
+</p>
 
 ## Contents
 1. [Usage](#1-usage)
