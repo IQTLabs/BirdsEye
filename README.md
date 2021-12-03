@@ -102,7 +102,7 @@ $ python run_birdseye.py -c configs/dqn.yaml
 ## 4. Results
 The results of the experiments will be stored in the `./runs` directory.   
 Log files are created which store the configurations for each experiment along with metrics and state information per time step.   
-For a detailed guide and visualizations please see [results user guide notebook](results_guide.ipynb).
+For a detailed guide and visualizations please see results user guide notebook: [results_guide.ipynb](results_guide.ipynb).
 
 <p align="center">
   <img src="data/results_example.png" />   
