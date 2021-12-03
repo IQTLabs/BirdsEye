@@ -109,6 +109,12 @@ For a detailed guide and visualizations please see [results user guide notebook]
   <em align = "center"><b>Fig. 3: Localization results (distance between mean belief and actual target location)</b></em>
 </p>
 
+<p align="center">
+  <img src="data/speedup.png" />   
+  <em align = "center"><b>Fig. 4: Inference times and speed comparison</b></em>
+</p>
+
+
 
 ## 5. Descriptions
 All code for training and evaluation in simulation is contained in the [birdseye](birdseye) directory.  
