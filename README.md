@@ -5,13 +5,13 @@ The BirdsEye project demonstrates the simulated
 tracking of radio frequency (RF) signals via
 reinforcement learning (RL) techniques implemented
 on low-fidelity sensors. 
-This permits the in-situ observation-training RL paradigm without the need
+This permits training and inference without the need
 for significant compute hardware such as graphical
 processing units (GPU).
 Instead, these methods can
-be run on low-cost, commercial, off-the-shelf
+be run on low-cost, commercial-off-the-shelf
 technology, providing capabilities to applications in
-which covert or concealed sensors are paramount in
+which low-cost sensors are paramount in
 deployment, or where more sensitive sensors do not
 function or cannot be installed due to the nature of
 the environment.
