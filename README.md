@@ -104,6 +104,10 @@ The results of the experiments will be stored in the `./runs` directory.
 Log files are created which store the configurations for each experiment along with metrics and state information per time step.   
 For a detailed guide and visualizations please see [results user guide notebook](results_guide.ipynb).
 
+<p align="center">
+  <img src="data/results_example.png" />   
+  <em align = "center"><b>Fig. 3: Localization results (distance between mean belief and actual target location)</b></em>
+</p>
 
 
 ## 5. Descriptions
