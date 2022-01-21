@@ -6,4 +6,4 @@ tqdm==4.61.1
 pandas==1.2.1
 imageio==2.9.0
 torch==1.7.1
-ipython==7.26.0
+ipython==7.31.1
