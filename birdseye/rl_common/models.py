@@ -10,8 +10,9 @@ from torch.optim import Adam
 from birdseye.rl_common.util import Flatten
 
 class SmallRFPFQnet(nn.Module):
-    def __init__(self, map_dim, state_dim, policy_dim, atom_num, dueling):
+    def __init__(self, n_targets, map_dim, state_dim, policy_dim, atom_num, dueling):
         super().__init__()
+        self.n_targets = n_targets
         self.atom_num = atom_num
         self.map_dim = map_dim
         self.state_dim = state_dim
@@ -31,7 +32,7 @@ class SmallRFPFQnet(nn.Module):
         )
 
         self.state_feature = nn.Sequential(
-            nn.Linear(state_dim, 64),
+            nn.Linear(n_targets*state_dim, 64),
             nn.ReLU(True),
             nn.Linear(64, 50),
             nn.ReLU(True),
@@ -57,8 +58,9 @@ class SmallRFPFQnet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        state = x[:,:self.state_dim]
-        pf_map = x[:,self.state_dim:].view(x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
+        mean_belief_state_idxs = int(self.n_targets * self.state_dim)
+        state = x[:,:mean_belief_state_idxs]
+        pf_map = x[:,mean_belief_state_idxs:].view(x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
         assert state.size(0) == pf_map.size(0)
         batch_size = state.size(0)
         map_latent = self.map_feature(pf_map)

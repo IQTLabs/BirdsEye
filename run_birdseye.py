@@ -4,7 +4,7 @@ import configparser
 from birdseye.actions import get_action, AVAIL_ACTIONS
 from birdseye.sensor import get_sensor, AVAIL_SENSORS
 from birdseye.state import get_state, AVAIL_STATES
-from birdseye.env import RFEnv
+from birdseye.env import RFEnv, RFMultiEnv
 from birdseye.method_utils import get_method, AVAIL_METHODS
 
 def batch_run():
@@ -46,12 +46,17 @@ def batch_run():
                         # Run the requested algorithm
                         run_method(args=config, env=env)
 
+AVAIL_ENVS = {
+                'RFEnv' : RFEnv,
+                'RFMultiEnv' : RFMultiEnv
+            }
 def run_birdseye(args=None, env=None):
     # Grab Methods information from config file
     config = configparser.ConfigParser()
     config.read([args.config])
     config_dict = dict(config.items('Methods'))
     config_dict = {k:v.strip("\"'") for k, v in config_dict.items()}
+    env_name = config_dict['env']
     method_name = config_dict['method']
     action_name = config_dict['action']
     sensor_name = config_dict['sensor']
@@ -65,12 +70,13 @@ def run_birdseye(args=None, env=None):
 
     # Setup requested method objects
     run_method = get_method(method_name)
+    env_class = AVAIL_ENVS[env_name]
     actions = get_action(action_name)
     sensor = get_sensor(sensor_name)
     state = get_state(state_name)
 
     # Setup environment
-    env = RFEnv(sensor(), actions(), state(target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement, target_start=target_start, reward=reward))
+    env = env_class(sensor(), actions(), state(target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement, target_start=target_start, reward=reward))
 
     # Run the requested algorithm
     run_method(args=config, env=env)

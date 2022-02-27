@@ -67,6 +67,7 @@ dqn_defaults = {
 
 
 def run_dqn(env, config, global_start_time):
+    np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)     
     """Function to run DQN
 
     Publications:
@@ -172,9 +173,10 @@ def run_dqn(env, config, global_start_time):
 
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
-    in_dim = (1, 100, 100)
-    #network = CNN(in_dim, policy_dim, atom_num, dueling)
-    network = SmallRFPFQnet(in_dim, 4, policy_dim, atom_num, dueling)
+    map_dim = (env.state.n_targets, 100, 100) # TODO: modify to match multi target 
+    #network = CNN(map_dim, policy_dim, atom_num, dueling)
+    #  SmallRFPFQnet(n_targets, map_dim, state_dim, policy_dim, atom_num, dueling)
+    network = SmallRFPFQnet(env.state.n_targets, map_dim, 4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
@@ -270,7 +272,7 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-            trials = 500
+            trials = 500 #500
             run_data = []
             for i in range(trials):
                 run_start_time = datetime.now()
@@ -304,12 +306,12 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     all_reward = np.zeros(number_timesteps)
     all_col = np.zeros(number_timesteps)
     all_loss = np.zeros(number_timesteps)
-    all_r_err = np.zeros(number_timesteps)
-    all_theta_err = np.zeros(number_timesteps)
-    all_heading_err = np.zeros(number_timesteps)
-    all_centroid_err = np.zeros(number_timesteps)
-    all_rmse = np.zeros(number_timesteps)
-    all_mae = np.zeros(number_timesteps)
+    all_r_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_theta_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_heading_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_centroid_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_rmse = np.zeros((number_timesteps, env.state.n_targets))
+    all_mae = np.zeros((number_timesteps, env.state.n_targets))
     all_inference_times = np.zeros(number_timesteps)
     all_pf_cov = [None]*number_timesteps
 
@@ -328,11 +330,12 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
-            if env.state.target_state[0] < 10:
-                total_col += 1
+            for target_state in env.state.target_state: 
+                if target_state[0] < 10:
+                    total_col += 1
 
-            if env.state.target_state[0] > 150:
-                total_lost += 1
+                if target_state[0] > 150:
+                    total_lost += 1
 
             # Save results to output arrays
             all_target_states[n] = env.state.target_state
@@ -352,7 +355,8 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             all_pf_cov[n] = list(env.pf.cov_state.flatten())
 
             if results is not None and results.plotting:
-                results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
+                #results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
+                results.build_multitarget_plots(env, time_step, fig, ax, centroid_distance_error)
 
 
     return [all_target_states, all_sensor_states, all_actions,
