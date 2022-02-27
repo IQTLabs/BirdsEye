@@ -67,7 +67,6 @@ dqn_defaults = {
 
 
 def run_dqn(env, config, global_start_time):
-    np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)     
     """Function to run DQN
 
     Publications:
