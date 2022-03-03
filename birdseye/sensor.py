@@ -45,7 +45,7 @@ def get_directivity(radiation_pattern, theta):
     return radiation_pattern[int(theta*180/np.pi) % len(radiation_pattern)]
 
 
-def rssi(distance, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9): 
+def rssi(distance, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9, fading_sigma=None): 
     """
     Calculate the received signal strength at a receiver in dB
     """
@@ -57,6 +57,10 @@ def rssi(distance, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
                -20*np.log10(distance) + 
                -20*np.log10(f)
     )
+    # fading 
+    if fading_sigma: 
+        power_rx -= np.random.normal(0, fading_sigma)
+
     return power_rx 
 
 def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9): 
@@ -76,9 +80,10 @@ class DoubleRSSI(Sensor):
     """
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
-    def __init__(self):
+    def __init__(self, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern()
         self.std_dev = 10
+        self.fading_sigma = fading_sigma
 
     def weight(self, hyp, obs):
         expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
@@ -102,8 +107,8 @@ class DoubleRSSI(Sensor):
                 theta_back = theta_front + np.pi
                 directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
                 directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
-                power_front += dB_to_power(rssi(distance, directivity_rx_front))
-                power_back += dB_to_power(rssi(distance, directivity_rx_back))
+                power_front += dB_to_power(rssi(distance, directivity_rx_front, fading_sigma=self.fading_sigma))
+                power_back += dB_to_power(rssi(distance, directivity_rx_back, fading_sigma=self.fading_sigma))
             rssi_front = power_to_dB(power_front)
             rssi_back = power_to_dB(power_back)
             return [rssi_front, rssi_back]

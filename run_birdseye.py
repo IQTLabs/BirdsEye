@@ -66,6 +66,7 @@ def run_birdseye(args=None, env=None):
     target_movement = config_dict.get('target_movement')
     target_start = config_dict.get('target_start')
     reward = config_dict.get('reward')
+    fading_sigma = config_dict.get('fading_sigma')
     print({section: dict(config[section]) for section in config.sections()})
 
     # Setup requested method objects
@@ -76,7 +77,7 @@ def run_birdseye(args=None, env=None):
     state = get_state(state_name)
 
     # Setup environment
-    env = env_class(sensor(), actions(), state(target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement, target_start=target_start, reward=reward))
+    env = env_class(sensor(fading_sigma=fading_sigma), actions(), state(target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement, target_start=target_start, reward=reward))
 
     # Run the requested algorithm
     run_method(args=config, env=env)
