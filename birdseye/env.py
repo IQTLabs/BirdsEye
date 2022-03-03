@@ -3,6 +3,7 @@ import random
 from .utils import pol2cart, particles_mean_belief
 from birdseye.pfrnn.pfrnn import pfrnn
 from pfilter import ParticleFilter, systematic_resample
+from scipy.ndimage.filters import gaussian_filter
 
 class RFMultiEnv(object):
 
@@ -169,15 +170,20 @@ class RFMultiEnv(object):
         """
         # Transformation of belief to cartesian coords
         heatmaps = []
+        min_map = -200
+        max_map = 200
+        xedges = np.arange(min_map, max_map, (max_map - min_map)/200)
+        yedges = np.arange(min_map, max_map, (max_map - min_map)/200)
         for t in range(self.state.n_targets): 
             cart  = np.array(list(map(pol2cart, belief[:,t,0], np.radians(belief[:,t,1]))))
             x = cart[:,0]
             y = cart[:,1]
 
             # Build two-dim histogram distribution
-            xedges = np.arange(-150, 153, 3)
-            yedges = np.arange(-150, 153, 3)
+            #xedges = np.arange(-150, 153, 3)
+            #yedges = np.arange(-150, 153, 3)
             h, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
+            h = gaussian_filter(h, sigma=16)
             heatmaps.append(h)
         heatmaps = np.array(heatmaps)
         return heatmaps
