@@ -172,8 +172,9 @@ class RFMultiEnv(object):
         heatmaps = []
         min_map = -200
         max_map = 200
-        xedges = np.arange(min_map, max_map, (max_map - min_map)/200)
-        yedges = np.arange(min_map, max_map, (max_map - min_map)/200)
+        cell_size = (max_map - min_map)/200
+        xedges = np.arange(min_map, max_map+cell_size, cell_size)
+        yedges = np.arange(min_map, max_map+cell_size, cell_size)
         for t in range(self.state.n_targets): 
             cart  = np.array(list(map(pol2cart, belief[:,t,0], np.radians(belief[:,t,1]))))
             x = cart[:,0]
