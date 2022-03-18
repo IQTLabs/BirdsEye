@@ -26,54 +26,54 @@ class Sensor(object):
         """
         pass
 
-def get_radiation_pattern(pattern_filename='radiation_pattern_yagi_5.csv'): 
+def get_radiation_pattern(pattern_filename='radiation_pattern_yagi_5.csv'):
     radiation_pattern = []
     with open(pattern_filename, newline='') as csvfile:
         reader = csv.reader(csvfile, delimiter='\n')
-        for row in reader: 
+        for row in reader:
             radiation_pattern.append(float(row[0]))
-            
+
     def shift(seq, n):
         return seq[n:]+seq[:n]
-    
-    radiation_pattern = shift(radiation_pattern, 90)
-    
-    return radiation_pattern
-        
 
-def get_directivity(radiation_pattern, theta): 
+    radiation_pattern = shift(radiation_pattern, 90)
+
+    return radiation_pattern
+
+
+def get_directivity(radiation_pattern, theta):
     return radiation_pattern[int(theta*180/np.pi) % len(radiation_pattern)]
 
 
-def rssi(distance, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9, fading_sigma=None): 
+def rssi(distance, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9, fading_sigma=None):
     """
     Calculate the received signal strength at a receiver in dB
     """
     power_rx = (
-               power_tx + 
-               directivity_rx + 
-               directivity_tx + 
-               (20*np.log10(speed_of_light/(4*np.pi))) + 
-               -20*np.log10(distance) + 
+               power_tx +
+               directivity_rx +
+               directivity_tx +
+               (20*np.log10(speed_of_light/(4*np.pi))) +
+               -20*np.log10(distance) +
                -20*np.log10(f)
     )
-    # fading 
-    if fading_sigma: 
+    # fading
+    if fading_sigma:
         power_rx -= np.random.normal(0, fading_sigma)
 
-    return power_rx 
+    return power_rx
 
-def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9): 
+def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
     """
-    Calculate distance between receiver and transmitter based on RSSI. 
+    Calculate distance between receiver and transmitter based on RSSI.
     """
     distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi - (20*np.log10(f)) + (20*np.log10(speed_of_ligt/(4*np.pi))))/20)
-    return distance 
+    return distance
 
-def dB_to_power(dB): 
+def dB_to_power(dB):
     return 10**(dB/10)
 
-def power_to_dB(power): 
+def power_to_dB(power):
     return 10*np.log10(power)
 
 class DoubleRSSI(Sensor):
@@ -84,6 +84,8 @@ class DoubleRSSI(Sensor):
         self.radiation_pattern = get_radiation_pattern()
         self.std_dev = 10
         self.fading_sigma = fading_sigma
+        if self.fading_sigma:
+            self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
         expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
@@ -93,15 +95,15 @@ class DoubleRSSI(Sensor):
         denominator = 2 * np.power(self.std_dev, 2.)
         weight = np.exp( - numerator / denominator) #+ 0.000000001
         likelihood = np.prod(weight, axis=1)
-        return likelihood 
+        return likelihood
 
     # samples observation given state
     def observation(self, state):
         # Calculate observation for multiple targets
-        if len(state) > 1: #state.n_targets > 1: 
-            power_front = 0 
-            power_back = 0 
-            for ts in state: # target_state, particle_state 
+        if len(state) > 1: #state.n_targets > 1:
+            power_front = 0
+            power_back = 0
+            for ts in state: # target_state, particle_state
                 distance = ts[0]
                 theta_front = ts[1] * np.pi / 180.0
                 theta_back = theta_front + np.pi
@@ -113,7 +115,7 @@ class DoubleRSSI(Sensor):
             rssi_back = power_to_dB(power_back)
             return [rssi_front, rssi_back]
 
-        # else single target 
+        # else single target
         else:
             # TODO: implement this
             return None
@@ -333,7 +335,7 @@ class Bearing(Sensor):
 
 AVAIL_SENSORS = {'drone' : Drone,
                  'bearing' : Bearing,
-                 'signalstrength': SignalStrength, 
+                 'signalstrength': SignalStrength,
                  'doublerssi': DoubleRSSI
                 }
 
