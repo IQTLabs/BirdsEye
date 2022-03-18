@@ -56,7 +56,7 @@ class RFMultiEnv(object):
 
         # Setup particle filter
         self.pf = ParticleFilter(
-                        prior_fn=lambda n: np.array([np.array(self.state.init_target_state()).reshape(-1) for i in range(n)]),
+                        prior_fn=lambda n: np.array([np.array(self.state.init_particle_state()).reshape(-1) for i in range(n)]),
                         observe_fn=lambda states, **kwargs: np.array([self.sensor.observation([x[4*t:4*(t+1)] for t in range(self.state.n_targets)]) for x in states]),
                         n_particles=num_particles,
                         dynamics_fn=self.dynamics,
@@ -171,9 +171,10 @@ class RFMultiEnv(object):
         """
         # Transformation of belief to cartesian coords
         heatmaps = []
-        min_map = -200
-        max_map = 200
-        cell_size = (max_map - min_map)/200
+        map_width = 600
+        min_map = -1*int(map_width/2)
+        max_map = int(map_width/2)
+        cell_size = 2#(max_map - min_map)/max_map
         xedges = np.arange(min_map, max_map+cell_size, cell_size)
         yedges = np.arange(min_map, max_map+cell_size, cell_size)
         for t in range(self.state.n_targets):
@@ -185,7 +186,7 @@ class RFMultiEnv(object):
             #xedges = np.arange(-150, 153, 3)
             #yedges = np.arange(-150, 153, 3)
             h, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
-            h = gaussian_filter(h, sigma=16)
+            h = gaussian_filter(h, sigma=8)
             heatmaps.append(h)
         heatmaps = np.array(heatmaps)
         return heatmaps

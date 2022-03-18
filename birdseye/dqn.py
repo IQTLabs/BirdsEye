@@ -172,7 +172,7 @@ def run_dqn(env, config, global_start_time):
 
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
-    map_dim = (env.state.n_targets, 200, 200) # TODO: modify to match multi target 
+    map_dim = (env.state.n_targets, 300, 300) # TODO: modify to match multi target 
     #network = CNN(map_dim, policy_dim, atom_num, dueling)
     #  SmallRFPFQnet(n_targets, map_dim, state_dim, policy_dim, atom_num, dueling)
     network = SmallRFPFQnet(env.state.n_targets, map_dim, 4, policy_dim, atom_num, dueling)

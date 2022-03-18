@@ -81,6 +81,29 @@ class RFMultiState(State):
         #return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
         return [self.random_state() for _ in range(self.n_targets)]
 
+    def init_particle_state(self):
+        """Function to initialize a random particle state
+
+        Returns
+        -------
+        array_like
+            Randomly generated state variable array
+        """
+        # state is [range, bearing, relative course, own speed]
+        #return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        return [self.random_particle_state() for _ in range(self.n_targets)]
+
+    def random_particle_state(self):
+        """Function to initialize a random state
+
+        Returns
+        -------
+        array_like
+            Randomly generated state variable array
+        """
+        # state is [range, bearing, relative course, own speed]
+        return np.array([random.randint(10,200), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+
     def random_state(self):
         """Function to initialize a random state
 

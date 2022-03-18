@@ -219,19 +219,37 @@ class Results(object):
         #####
         # Plot 3: Heatmap Plot (Cartesian)
         ax = fig.add_subplot(1, 5, 3)
-        min_map = -200
-        max_map = 200
+        map_width = 600
+        min_map = -1*int(map_width/2)
+        max_map = int(map_width/2)
+        cell_size = int((max_map - min_map)/max_map)
+        cell_size = 2
+        xedges = np.arange(min_map, max_map+cell_size, cell_size)
+        yedges = np.arange(min_map, max_map+cell_size, cell_size)
+
+        all_particles_x, all_particles_y = [],[]
+
         for t in range(env.state.n_targets):
             cart  = np.array(list(map(pol2cart, belief[:,t,0], np.radians(belief[:,t,1]))))
             x = cart[:,0]
             y = cart[:,1]
-            xedges = np.arange(min_map, max_map,(max_map - min_map)/100)
-            yedges = np.arange(min_map, max_map,(max_map - min_map)/100)
-            heatmap, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
-            heatmap = gaussian_filter(heatmap, sigma=16)
-            extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-            im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='jet')
-            plt.colorbar(im)
+            all_particles_x.extend(x)
+            all_particles_y.extend(y)
+
+            #xedges = np.arange(min_map, max_map,cell_size)
+            #yedges = np.arange(min_map, max_map,cell_size)
+            #heatmap, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
+            #heatmap = gaussian_filter(heatmap, sigma=16)
+            #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+            #im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='jet')
+            #plt.colorbar(im)
+
+        heatmap, xedges, yedges = np.histogram2d(all_particles_x, all_particles_y, bins=(xedges, yedges))
+        heatmap = gaussian_filter(heatmap, sigma=8)
+        extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+        im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='jet', interpolation='nearest')
+        plt.colorbar(im)
+
         ax.set_xlim(min_map, max_map)
         ax.set_ylim(min_map, max_map)
         ax.set_title('Particle heatmap (relative to sensor)')
@@ -288,8 +306,8 @@ class Results(object):
 
         # Plot 5: Absolute Cartesian coordinates
         ax = fig.add_subplot(1, 5, 5)
-        xedges = np.arange(min_map, max_map, (max_map - min_map)/200)
-        yedges = np.arange(min_map, max_map, (max_map - min_map)/200)
+        xedges = np.arange(min_map, max_map, cell_size)
+        yedges = np.arange(min_map, max_map, cell_size)
         heatmap_combined = None
         all_particles_x, all_particles_y = [],[]
         for t in range(env.state.n_targets):
