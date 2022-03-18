@@ -18,7 +18,7 @@ class SmallRFPFQnet(nn.Module):
         self.state_dim = state_dim
         c, h, w = map_dim
         #cnn_out_dim = 32 * ((h - 21) // 8) * ((w - 21) // 8)
-        cnn_out_dim = 32 * 22 * 22
+        cnn_out_dim = 32 * 47 * 47
         self.map_feature = nn.Sequential(
             nn.Conv2d(c, 32, 5),
             nn.ReLU(True),

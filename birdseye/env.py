@@ -1,6 +1,6 @@
 import numpy as np
 import random
-from .utils import pol2cart, particles_mean_belief
+from .utils import pol2cart, particles_mean_belief, particle_swap
 from birdseye.pfrnn.pfrnn import pfrnn
 from pfilter import ParticleFilter, systematic_resample
 from scipy.ndimage.filters import gaussian_filter
@@ -28,11 +28,11 @@ class RFMultiEnv(object):
             Updated particle state information
         """
         updated_particles = []
-        for p in particles: 
+        for p in particles:
             new_p = []
-            for t in range(self.state.n_targets): 
+            for t in range(self.state.n_targets):
                 new_p += self.state.update_state(p[4*t:4*(t+1)], control)
-            #new_p = np.array([self.state.update_state(target_state, control) for target_state in p]) 
+            #new_p = np.array([self.state.update_state(target_state, control) for target_state in p])
             updated_particles.append(new_p)
         return np.array(updated_particles)
 
@@ -104,6 +104,7 @@ class RFMultiEnv(object):
         observation = self.sensor.observation(next_state)
         # Update particle filter
         self.pf.update(np.array(observation), xp=self.pf.particles, control=action)
+        particle_swap(self)
         # Calculate reward based on updated state & action
         reward = self.state.reward_func(state=next_state, action_idx=action_idx, particles=self.pf.particles)
         #reward = -1. * self.get_distance_error()
@@ -147,7 +148,7 @@ class RFMultiEnv(object):
         belief = self.pf.particles.reshape(len(self.pf.particles), self.state.n_targets, 4)
         pf_map = self.particle_heatmap_obs(belief).reshape(-1) # flattened pf map [2 x 100 x 100] -> [20000]
         mean_belief = []
-        for t in range(self.state.n_targets): 
+        for t in range(self.state.n_targets):
             _,_,_,_, mean_r, mean_theta, mean_heading, mean_spd = particles_mean_belief(belief[:,t,:])
             mean_belief.extend([mean_r, mean_theta, mean_heading, mean_spd])
         mean_belief = np.array(mean_belief) # flattened mean belief [2 x 4] -> [8]
@@ -175,7 +176,7 @@ class RFMultiEnv(object):
         cell_size = (max_map - min_map)/200
         xedges = np.arange(min_map, max_map+cell_size, cell_size)
         yedges = np.arange(min_map, max_map+cell_size, cell_size)
-        for t in range(self.state.n_targets): 
+        for t in range(self.state.n_targets):
             cart  = np.array(list(map(pol2cart, belief[:,t,0], np.radians(belief[:,t,1]))))
             x = cart[:,0]
             y = cart[:,1]

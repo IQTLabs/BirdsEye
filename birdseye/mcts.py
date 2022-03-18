@@ -100,7 +100,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         print(".")
         print("\n==============================")
         print("Runs: {}".format(i))
-        print("NUM PARTICLES: {}".format(simulations))
+        print("SIMULATIONS: {}".format(simulations))
         print("MCTS Depth {} Results".format(DEPTH))
         print("Collision Rate: {}".format(mcts_coll/i))
         print("Loss Rate: {}".format(mcts_loss/i))

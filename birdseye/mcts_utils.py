@@ -106,7 +106,7 @@ def simulate(env, Q, N, state, history, depth, c, belief):
     state_prime = np.array([env.state.update_state(s, action) for s in state])
     observation = env.sensor.observation(state_prime)
 
-    if env.state.belief_mdp: 
+    if env.state.belief_mdp:
         env.pf.particles = belief
         env.pf.update(np.array(observation), xp=belief, control=action)
         belief = env.pf.particles
@@ -142,7 +142,7 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 
     original_particles = np.copy(env.pf.particles)
     original_n_particles = env.pf.n_particles
-    original_weights = env.pf.weights 
+    original_weights = env.pf.weights
     env.pf.n_particles = 200
     env.pf.weights = np.ones(env.pf.n_particles) / env.pf.n_particles
     while counter < iterations:
@@ -251,7 +251,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
-        print(env.pf.particles.shape)
+        #print(env.pf.particles.shape)
         particle_swap(env)
         belief = env.pf.particles
 
@@ -263,7 +263,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
 
-        for target_state in env.state.target_state: 
+        for target_state in env.state.target_state:
             if target_state[0] < 10:
                 total_col += 1
 
