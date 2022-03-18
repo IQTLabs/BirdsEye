@@ -61,7 +61,7 @@ class RFMultiEnv(object):
                         n_particles=num_particles,
                         dynamics_fn=self.dynamics,
                         noise_fn=lambda x, **kwargs: x,
-                        resample_proportion=0.005,
+                        resample_proportion= 0.01, #0.005,
                         #noise_fn=lambda x:
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
                         weight_fn=lambda hyp, o, xp=None,**kwargs: self.sensor.weight(hyp, o), #[self.sensor.weight(None, o, state=x) for x in xp],
