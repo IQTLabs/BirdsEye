@@ -1,5 +1,6 @@
 import random
 import numpy as np
+from scipy.ndimage.filters import gaussian_filter
 from .utils import pol2cart
 
 
