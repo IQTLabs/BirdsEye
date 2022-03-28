@@ -819,6 +819,11 @@ def filter_runs(method_name, config_filter=None):
                 if float(config.get(k,0.0)) != v: 
                     match = False
                     break
+            elif k == 'particle_resample':
+                v = float(v)
+                if float(config.get(k,0.005)) != v: 
+                    match = False
+                    break
             elif config.get(k) != v:
                 match = False
                 break

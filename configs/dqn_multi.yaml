@@ -4,13 +4,17 @@ method : dqn
 action : simpleactions
 sensor : doublerssi
 state : rfmultistate 
-fading_sigma: 4.0
+fading_sigma: 2.0
 #reward: range_reward
 reward: entropy_collision_reward
+particle_resample: 0.01
+particle_min: 10
+particle_max: 200
+
 
 target_speed: 1.0
 target_start: 100
-resample_proportion: 0.1
+#resample_proportion: 0.1
 model: small
 #target_speed_range: [0,1,2,3,4]
 
