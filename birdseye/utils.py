@@ -169,7 +169,7 @@ class Results(object):
         fig = plt.figure(figsize=(30, 6), dpi=256)
         plt.tight_layout()
         # Put space between plots
-        plt.subplots_adjust(wspace=0.2, hspace=0.2)
+        plt.subplots_adjust(wspace=0.7, hspace=0.2)
 
         #####
         # Plot 1: Particle Plot (Polar)
@@ -281,6 +281,7 @@ class Results(object):
 
         # Plot 4: Absolute Polar coordinates
         ax = fig.add_subplot(1, 5, 4, polar=True)
+        color_array = [['salmon','darkred', 'red'],['lightskyblue','darkblue','blue']]
         for t in range(env.state.n_targets):
             particles_x, particles_y = pol2cart(abs_particles[:,t,0], np.radians(abs_particles[:,t,1]))
             centroid_x = np.mean(particles_x)
@@ -293,14 +294,17 @@ class Results(object):
                 target_theta.append(np.radians(self.abs_target_hist[10*(i+1)-1][t][1]))
             target_x, target_y = pol2cart(target_r, target_theta)
 
-            ax.plot(np.radians(abs_particles[:,t,1]), abs_particles[:,t,0], 'o', markeredgecolor='black', label='particles', alpha=0.5, zorder=1)
-            ax.plot(centroid_theta, centroid_r, '*', label='centroid', markersize=12, zorder=2)
-            ax.plot(sensor_theta[4], sensor_r[4], 'bp', label='sensor', markersize=12, zorder=3)
-            ax.plot(target_theta[4], target_r[4], 'X', label='target', markersize=12, zorder=4)
-            for i in range(4):
-                ax.plot(sensor_theta[i], sensor_r[i], 'bp', markersize=6, alpha=0.75, zorder=3)
-                ax.plot(target_theta[i], target_r[i], 'X', markersize=6, alpha=0.75, zorder=4)
-        ax.legend()
+            ax.plot(np.radians(abs_particles[:,t,1]), abs_particles[:,t,0], 'o', color=color_array[t][0], markersize=4, markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
+            ax.plot(centroid_theta, centroid_r, '*', color=color_array[t][1],markeredgecolor='white', label='centroid', markersize=12, zorder=2)
+            
+            ax.plot(target_theta[4], target_r[4], 'X', color=color_array[t][2], markeredgecolor='white',label='target', markersize=12, zorder=4)
+            #for i in range(4): 
+            #    ax.plot(target_theta[i], target_r[i], 'X', markersize=6, alpha=0.75, zorder=4)
+        ax.plot(sensor_theta[4], sensor_r[4], 'p', color='limegreen',markeredgecolor='black', label='sensor', markersize=12, zorder=3)
+        #for i in range(4):
+        #    ax.plot(sensor_theta[i], sensor_r[i], 'bp', markersize=6, alpha=0.75, zorder=3)
+        #ax.legend()
+        ax.legend(loc='center left', bbox_to_anchor=(1.05,0.5), fancybox=True, shadow=True,)
         ax.set_ylim(0,300)
         ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
 
@@ -342,11 +346,13 @@ class Results(object):
             #ax.plot(sensor_x, sensor_y, 'gp', label='sensor', markersize=12)
             #ax.plot(target_x, target_y, 'mX', label='target', markersize=12)
             ax.plot(centroid_x, centroid_y, '*', label='centroid', markersize=12)
-            ax.plot(sensor_x[4], sensor_y[4], 'p', label='sensor', markersize=12)
+            
             ax.plot(target_x[4], target_y[4], 'X', label='target', markersize=12)
-            for i in range(4):
-                ax.plot(sensor_x[i], sensor_y[i], 'p', markersize=6, alpha=0.55)
-                ax.plot(target_x[i], target_y[i], 'X', markersize=6, alpha=0.55)
+            #for i in range(4): 
+            #    ax.plot(target_x[i], target_y[i], 'X', markersize=6, alpha=0.55)
+        ax.plot(sensor_x[4], sensor_y[4], 'p', label='sensor', markersize=12)
+        #for i in range(4):
+        #    ax.plot(sensor_x[i], sensor_y[i], 'p', markersize=6, alpha=0.55)
 
         heatmap, xedges, yedges = np.histogram2d(all_particles_x, all_particles_y, bins=(xedges, yedges))
         heatmap = gaussian_filter(heatmap, sigma=8)
@@ -354,7 +360,8 @@ class Results(object):
         im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='jet', interpolation='nearest')
         plt.colorbar(im)
 
-        ax.legend()
+        #ax.legend()
+        ax.legend(loc='center left', bbox_to_anchor=(1.2,0.5), fancybox=True, shadow=True,)
         ax.set_xlim(min_map, max_map)
         ax.set_ylim(min_map, max_map)
         ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)

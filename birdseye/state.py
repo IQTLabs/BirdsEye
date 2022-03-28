@@ -166,15 +166,22 @@ class RFMultiState(State):
 
     def entropy_collision_reward(self, state, action_idx=None, particles=None, delta=10, collision_weight=1):
 
+        map_width = 600
+        min_map = -1*int(map_width/2)
+        max_map = int(map_width/2)
+        cell_size = int((max_map - min_map)/max_map)
+        cell_size = 2
+        xedges = np.arange(min_map, max_map+cell_size, cell_size)
+        yedges = np.arange(min_map, max_map+cell_size, cell_size)
+
         H = 0
         for t in range(self.n_targets): 
                 
             pf_r = particles[:,4*t]
             pf_theta = np.radians(particles[:,(4*t)+1])
             pf_x, pf_y = pol2cart(pf_r, pf_theta)
-            xedges = np.arange(-150, 153, 3)
-            yedges = np.arange(-150, 153, 3)
             b,_,_ = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
+            b = gaussian_filter(b, sigma=8)
             b += 0.0000001
             b /= np.sum(b)
             H += -1. * np.sum([b * np.log(b)])
