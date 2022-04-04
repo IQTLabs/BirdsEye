@@ -24,13 +24,13 @@ baseline_defaults = {
 def static(env): 
     return (0,0)
 
-def random(env): 
+def random_policy(env): 
     random_action_index = random.choice(env.actions.get_action_list())
     return env.actions.index_to_action(random_action_index)
 
 baseline_policy = {
     'static': static, 
-    'random': random
+    'random': random_policy
 }
 
 def baseline_trial(env, policy, num_timesteps, plotting=False, results=None):
