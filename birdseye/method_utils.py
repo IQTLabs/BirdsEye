@@ -2,10 +2,12 @@
 import sys
 from .mcts import mcts
 from .dqn import dqn
+from .baseline import baseline
 
 
 AVAIL_METHODS = {'mcts' : mcts,
-                 'dqn' : dqn}
+                 'dqn' : dqn, 
+                 'baseline' : baseline}
 
 def get_method(method_name=''):
     """Convenience function for retrieving BirdsEye methods
