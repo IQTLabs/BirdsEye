@@ -76,6 +76,56 @@ def dB_to_power(dB):
 def power_to_dB(power):
     return 10*np.log10(power)
 
+class DoubleRSSILofi(Sensor):
+    """
+    Uses RSSI comparison from two opposite facing Yagi/directional antennas
+    """
+    def __init__(self, fading_sigma=None):
+        self.radiation_pattern = get_radiation_pattern()
+        self.std_dev = 10
+        self.fading_sigma = fading_sigma
+        if self.fading_sigma:
+            self.fading_sigma = float(self.fading_sigma)
+
+    def weight(self, hyp, obs):
+        
+        expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        expected_front_greater = expected_rssi[:,0] > expected_rssi[:,1]
+        observed_rssi = obs[0]
+        observed_front_greater = observed_rssi[0] > observed_rssi[1]
+
+        match = 0.9 * (observed_front_greater == expected_front_greater) 
+        no_match = 0.1 * (observed_front_greater != expected_front_greater)
+        likelihood = match+no_match
+        
+        return likelihood
+
+    # samples observation given state
+    def observation(self, state):
+        # Calculate observation for multiple targets
+        if len(state) > 1: #state.n_targets > 1:
+            power_front = 0
+            power_back = 0
+            for ts in state: # target_state, particle_state
+                distance = ts[0]
+                theta_front = ts[1] * np.pi / 180.0
+                theta_back = theta_front + np.pi
+                directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
+                directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
+                power_front += dB_to_power(rssi(distance, directivity_rx_front, fading_sigma=self.fading_sigma))
+                power_back += dB_to_power(rssi(distance, directivity_rx_back, fading_sigma=self.fading_sigma))
+            rssi_front = power_to_dB(power_front)
+            rssi_back = power_to_dB(power_back)
+            return [rssi_front, rssi_back]
+
+        # else single target
+        else:
+            # TODO: implement this
+            return None
+            #return 1/ ((np.random.normal(state[0], self.std_dev)) ** 2)
+
+
+
 class DoubleRSSI(Sensor):
     """
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
@@ -336,7 +386,8 @@ class Bearing(Sensor):
 AVAIL_SENSORS = {'drone' : Drone,
                  'bearing' : Bearing,
                  'signalstrength': SignalStrength,
-                 'doublerssi': DoubleRSSI
+                 'doublerssi': DoubleRSSI,
+                 'doublerssilofi': DoubleRSSILofi
                 }
 
 def get_sensor(sensor_name=''):
