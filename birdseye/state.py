@@ -147,8 +147,6 @@ class RFMultiState(State):
         min_state_range = np.min(state_ranges)
 
         if action_idx is not None: # returns reward as a function of range, action, and action penalty
-            if (1 < action_idx < 4):
-                #action_penalty = 0
             if action_idx not in [2,3]: 
                 reward_val += action_penalty
 
