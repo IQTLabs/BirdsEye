@@ -329,12 +329,16 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
-            for target_state in env.state.target_state: 
-                if target_state[0] < 10:
-                    total_col += 1
+            for t in range(env.state.n_targets):
+                total_col = np.mean(env.pf.particles[:,4*t] < 15)
+                total_loss = np.mean(env.pf.particles[:,4*t] > 150)
 
-                if target_state[0] > 150:
-                    total_lost += 1
+            # for target_state in env.state.target_state: 
+            #     if target_state[0] < 15:
+            #         total_col += 1
+
+            #     if target_state[0] > 150:
+            #         total_lost += 1
 
             # Save results to output arrays
             all_target_states[n] = env.state.target_state

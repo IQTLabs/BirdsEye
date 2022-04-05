@@ -148,24 +148,27 @@ class RFMultiState(State):
 
         if action_idx is not None: # returns reward as a function of range, action, and action penalty
             if (1 < action_idx < 4):
-                action_penalty = 0
+                #action_penalty = 0
+            if action_idx not in [2,3]: 
+                reward_val += action_penalty
+
 
             if min_state_range >= 150:
-                reward_val = -2 + action_penalty # reward to not lose track of contact
-            elif min_state_range <= 10:
-                reward_val = -20 + action_penalty # collision avoidance
+                reward_val = -2 # reward to not lose track of contact
+            elif min_state_range <= 15:
+                reward_val = -20 # collision avoidance
             else:
-                reward_val = 0.1 + action_penalty # being in "sweet spot" maximizes reward
+                reward_val = 0.1 # being in "sweet spot" maximizes reward
         else: # returns reward as a function of range only
             if min_state_range >= 150:
                 reward_val = -2 # reward to not lose track of contact
-            elif min_state_range <= 10:
+            elif min_state_range <= 15:
                 reward_val = -200 # collision avoidance
             else:
                 reward_val = 0.1
         return reward_val
 
-    def entropy_collision_reward(self, state, action_idx=None, particles=None, delta=10, collision_weight=1):
+    def entropy_collision_reward(self, state, action_idx=None, particles=None, delta=15, collision_weight=1):
 
         map_width = 600
         min_map = -1*int(map_width/2)
