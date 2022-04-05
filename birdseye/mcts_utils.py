@@ -262,9 +262,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
-        for t in range(env.state.n_targets):
-            total_col = np.mean(env.pf.particles[:,4*t] < 15)
-            total_loss = np.mean(env.pf.particles[:,4*t] > 150)
+        total_col = np.mean([np.mean(env.pf.particles[:,4*t] < 15) for t in range(env.state.n_targets)])
+        total_loss = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
 
         # for target_state in env.state.target_state:
         #     if target_state[0] < 15:
