@@ -10,7 +10,8 @@ target_speed: 1.0
 target_start: 100
 #resample_proportion: 0.005
 fading_sigma: 8.0
-reward: range_reward
+reward: heuristic_reward
+#reward: range_reward
 particle_resample: 0.01
 particle_min: 10
 particle_max: 200

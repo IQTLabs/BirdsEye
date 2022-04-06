@@ -123,7 +123,7 @@ class RFMultiState(State):
         return np.array([0,0,0,0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
-    def heuristic_reward(self, state, action_idx=None, particles=None, action_penalty=-.05, delta=20):
+    def heuristic_reward(self, state, action_idx=None, particles=None, action_penalty=-1.0, delta=20):
         """Function to calculate reward based on state and selected action
 
         Parameters
@@ -154,9 +154,9 @@ class RFMultiState(State):
         collision_weight = -20
         lost_weight = -10
         reward_val += (collision_weight * collision_rate) + (lost_weight * lost_rate)
-    
+
         return reward_val
-        
+
     # returns reward as a function of range, action, and action penalty or as a function of range only
     def range_reward(self, state, action_idx=None, particles=None, action_penalty=-.05):
         """Function to calculate reward based on state and selected action
