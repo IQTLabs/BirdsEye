@@ -55,11 +55,12 @@ class RFMultiState(State):
         reward = 'range_reward' if reward is None else reward
         self.AVAIL_REWARDS = {'range_reward' : self.range_reward,
                               'entropy_collision_reward': self.entropy_collision_reward,
+                              'heuristic_reward': self.heuristic_reward,
                 }
         self.reward_func = self.AVAIL_REWARDS[reward]
         if reward == 'range_reward':
             self.belief_mdp = False
-        elif reward == 'entropy_collision_reward':
+        elif reward in ['entropy_collision_reward', 'heuristic_reward']:
             self.belief_mdp = True
 
     def __str__(self): 
@@ -121,6 +122,41 @@ class RFMultiState(State):
         # state is [range, bearing, relative course, own speed]
         return np.array([0,0,0,0])
 
+    # returns reward as a function of range, action, and action penalty or as a function of range only
+    def heuristic_reward(self, state, action_idx=None, particles=None, action_penalty=-.05, delta=20):
+        """Function to calculate reward based on state and selected action
+
+        Parameters
+        ----------
+        state : array_like
+            List of current state variables
+        action_idx : integer
+            Index for action to make step
+        action_penalty : float
+            Penalty value to reward if action provided
+
+        Returns
+        -------
+        reward_val : float
+            Calculated reward value
+        """
+
+        # Set reward to 0/. as default
+        reward_val = 0.
+        if action_idx is not None: # returns reward as a function of range, action, and action penalty
+            if action_idx not in [2,3]: 
+                reward_val += action_penalty
+            
+        col = 20
+        lost = 150
+        collision_rate = np.mean([np.mean(particles[:,4*t] < col) for t in range(self.n_targets)])
+        lost_rate = np.mean([np.mean(particles[:,4*t] > lost) for t in range(self.n_targets)])
+        collision_weight = -20
+        lost_weight = -10
+        reward_val += (collision_weight * collision_rate) + (lost_weight * lost_rate)
+    
+        return reward_val
+        
     # returns reward as a function of range, action, and action penalty or as a function of range only
     def range_reward(self, state, action_idx=None, particles=None, action_penalty=-.05):
         """Function to calculate reward based on state and selected action
