@@ -88,12 +88,38 @@ class DoubleRSSILofi(Sensor):
             self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
-        
+        # TODO add front, mid, back
+        # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        expected_rssi = hyp
+        expected_front_greater = (expected_rssi[:,0] - expected_rssi[:,1]) > 2
+        expected_unsure = np.abs(expected_rssi[:,0] - expected_rssi[:,1]) <= 2
+        expected_back_greater = (expected_rssi[:,0] - expected_rssi[:,1]) < -2
+        observed_rssi = obs[0]
+        observed_front_greater = (observed_rssi[0] - observed_rssi[1]) > 2
+        observed_unsure = np.abs(observed_rssi[0] - observed_rssi[1]) <= 2
+        observed_back_greater = (observed_rssi[0] - observed_rssi[1]) < -2
+        if observed_front_greater: 
+            match = (0.9**(1/2)) * expected_front_greater
+            unsure = (0.5**(1/2)) * expected_unsure
+            no_match = (0.1**(1/2)) * expected_back_greater
+            likelihood = match + unsure + no_match
+        elif observed_unsure: 
+            match =  (0.75**(1/2)) * expected_unsure
+            unsure = (0.25**(1/2)) * expected_front_greater
+            no_match = (0.25**(1/2)) * expected_back_greater
+            likelihood = match + unsure + no_match
+        elif observed_back_greater: 
+            match =  (0.9**(1/2)) * expected_back_greater
+            unsure = (0.5**(1/2)) * expected_unsure
+            no_match = (0.1**(1/2)) * expected_front_greater
+            likelihood = match + unsure + no_match
+        return likelihood
+        ###
         expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_front_greater = expected_rssi[:,0] > expected_rssi[:,1]
         observed_rssi = obs[0]
         observed_front_greater = observed_rssi[0] > observed_rssi[1]
-
+        ###
         match = 0.9 * (observed_front_greater == expected_front_greater) 
         no_match = 0.1 * (observed_front_greater != expected_front_greater)
         likelihood = match+no_match
