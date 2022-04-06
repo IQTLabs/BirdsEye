@@ -784,7 +784,11 @@ def filter_runs(method_name, config_filter=None):
 
     for r in runs:
         match = True
-        config = get_config(method_name, r)['Methods']
+        if method_name == 'baseline': 
+            config = get_config(method_name, r)['Methods']
+            config.update(get_config(method_name, r)['Defaults'])
+        else: 
+            config = get_config(method_name, r)['Methods']
         for k,v in config_filter.items():
             if v is None:
                 continue

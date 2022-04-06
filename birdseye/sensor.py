@@ -98,17 +98,17 @@ class DoubleRSSILofi(Sensor):
         observed_front_greater = (observed_rssi[0] - observed_rssi[1]) > 2
         observed_unsure = np.abs(observed_rssi[0] - observed_rssi[1]) <= 2
         observed_back_greater = (observed_rssi[0] - observed_rssi[1]) < -2
-        if observed_front_greater: 
+        if observed_front_greater:
             match = (0.9**(1/2)) * expected_front_greater
             unsure = (0.5**(1/2)) * expected_unsure
             no_match = (0.1**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
-        elif observed_unsure: 
+        elif observed_unsure:
             match =  (0.75**(1/2)) * expected_unsure
             unsure = (0.25**(1/2)) * expected_front_greater
             no_match = (0.25**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
-        elif observed_back_greater: 
+        elif observed_back_greater:
             match =  (0.9**(1/2)) * expected_back_greater
             unsure = (0.5**(1/2)) * expected_unsure
             no_match = (0.1**(1/2)) * expected_front_greater
@@ -120,10 +120,10 @@ class DoubleRSSILofi(Sensor):
         observed_rssi = obs[0]
         observed_front_greater = observed_rssi[0] > observed_rssi[1]
         ###
-        match = 0.9 * (observed_front_greater == expected_front_greater) 
+        match = 0.9 * (observed_front_greater == expected_front_greater)
         no_match = 0.1 * (observed_front_greater != expected_front_greater)
         likelihood = match+no_match
-        
+
         return likelihood
 
     # samples observation given state

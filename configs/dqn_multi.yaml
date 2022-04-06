@@ -2,14 +2,15 @@
 env : RFMultiEnv
 method : dqn
 action : simpleactions
-sensor : doublerssi
+sensor : doublerssilofi
 state : rfmultistate 
-fading_sigma: 2.0
+fading_sigma: 8.0
 #reward: range_reward
 reward: entropy_collision_reward
 particle_resample: 0.01
 particle_min: 10
 particle_max: 200
+delta_col: 15
 
 
 target_speed: 1.0
