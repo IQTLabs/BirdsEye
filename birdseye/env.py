@@ -36,6 +36,14 @@ class RFMultiEnv(object):
             updated_particles.append(new_p)
         return np.array(updated_particles)
 
+    def particle_noise(self, particles, sigmas=[5,2,2], xp=None):
+
+        particles[:,[0,4]] += np.random.normal(0,sigmas[0], (len(particles), 2))
+        particles[:,[0,4]] = np.clip(particles[:,[0,4]], a_min=1, a_max=None)
+        particles[:,[1,5]] += np.random.normal(0,sigmas[1], (len(particles), 2))
+        particles[:,[2,6]] += np.random.normal(0,sigmas[2], (len(particles), 2))
+
+        return particles
     def reset(self, num_particles=2000):
         """Reset initial state and particle filter
 
@@ -60,9 +68,9 @@ class RFMultiEnv(object):
                         observe_fn=lambda states, **kwargs: np.array([self.sensor.observation([x[4*t:4*(t+1)] for t in range(self.state.n_targets)]) for x in states]),
                         n_particles=num_particles,
                         dynamics_fn=self.dynamics,
-                        noise_fn=lambda x, **kwargs: x,
                         resample_proportion= 0.01, #0.005,
-                        #noise_fn=lambda x:
+                        #noise_fn=lambda x, **kwargs: x,
+                        noise_fn=lambda x, **kwargs: self.particle_noise(x), 
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
                         weight_fn=lambda hyp, o, xp=None,**kwargs: self.sensor.weight(hyp, o), #[self.sensor.weight(None, o, state=x) for x in xp],
                         resample_fn=systematic_resample,

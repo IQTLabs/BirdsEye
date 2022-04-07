@@ -206,8 +206,8 @@ def run_baseline(env, config=None, global_start_time=None):
         print(".")
         print("\n==============================")
         print("Trial: {}".format(i))
-        print("Collision Rate: {}".format(coll/i))
-        print("Loss Rate: {}".format(lost/i))
+        print("Collision Rate: {}".format(coll))
+        print("Loss Rate: {}".format(lost))
         print("==============================")
 
         # Saving results to CSV file
