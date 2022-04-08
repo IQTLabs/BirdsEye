@@ -91,13 +91,14 @@ class DoubleRSSILofi(Sensor):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
-        expected_front_greater = (expected_rssi[:,0] - expected_rssi[:,1]) > 2
-        expected_unsure = np.abs(expected_rssi[:,0] - expected_rssi[:,1]) <= 2
-        expected_back_greater = (expected_rssi[:,0] - expected_rssi[:,1]) < -2
+        lofi_sigma = 5
+        expected_front_greater = (expected_rssi[:,0] - expected_rssi[:,1]) > lofi_sigma
+        expected_unsure = np.abs(expected_rssi[:,0] - expected_rssi[:,1]) <= lofi_sigma
+        expected_back_greater = (expected_rssi[:,0] - expected_rssi[:,1]) < (-1*lofi_sigma)
         observed_rssi = obs[0]
-        observed_front_greater = (observed_rssi[0] - observed_rssi[1]) > 2
-        observed_unsure = np.abs(observed_rssi[0] - observed_rssi[1]) <= 2
-        observed_back_greater = (observed_rssi[0] - observed_rssi[1]) < -2
+        observed_front_greater = (observed_rssi[0] - observed_rssi[1]) > lofi_sigma
+        observed_unsure = np.abs(observed_rssi[0] - observed_rssi[1]) <= lofi_sigma
+        observed_back_greater = (observed_rssi[0] - observed_rssi[1]) < (-1*lofi_sigma)
         if observed_front_greater:
             match = (0.9**(1/2)) * expected_front_greater
             unsure = (0.5**(1/2)) * expected_unsure
@@ -142,6 +143,17 @@ class DoubleRSSILofi(Sensor):
                 power_back += dB_to_power(rssi(distance, directivity_rx_back, fading_sigma=self.fading_sigma))
             rssi_front = power_to_dB(power_front)
             rssi_back = power_to_dB(power_back)
+            
+            # if np.isnan([rssi_front, rssi_back]).any(): 
+            #     print([rssi_front, rssi_back])
+            #     print(state)
+            #     print('fading = ',self.fading_sigma)
+            #     print('distance = ',distance)
+            #     print('theta = ',theta_front)
+            #     print('directivity_rx_front = ',directivity_rx_front)
+            #     print('directivity_rx_b = ',directivity_rx_back)
+            #     print('power_fron = ',power_front)
+            #     print('power_back = ',power_back)
             return [rssi_front, rssi_back]
 
         # else single target

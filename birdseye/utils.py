@@ -628,8 +628,7 @@ def angle_diff(angle):
 
     diff = (diff + 360) % 360
 
-    if diff > 180:
-        diff -= 360
+    diff[diff > 180] -= 360
     return diff
 
 # calculate different tracking errors
