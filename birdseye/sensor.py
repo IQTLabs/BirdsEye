@@ -82,12 +82,29 @@ class DoubleRSSILofi(Sensor):
     """
     def __init__(self, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern()
-        self.std_dev = 10
+        self.std_dev = 7
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
+        # TODO add front, mid, back
+        # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        expected_rssi = hyp
+        observed_rssi = obs[0]
+        lofi_sigma = 5
+        expected_diff = (expected_rssi[:,0] - expected_rssi[:,1]) 
+        observed_diff = (observed_rssi[0] - observed_rssi[1]) 
+     
+        # Gaussian weighting function
+        numerator = np.power(expected_diff - observed_diff, 2.)
+        denominator = 2 * np.power(self.std_dev, 2.)
+        weight = np.exp( - numerator / denominator) #+ 0.000000001
+        #likelihood = np.prod(weight, axis=1)
+        return weight
+
+        return likelihood
+    def weight2(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
