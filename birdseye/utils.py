@@ -622,6 +622,16 @@ def particles_centroid_xy(particles):
 
     return [mean_x, mean_y]
 
+def angle_diff(angle): 
+
+    diff =  angle % 360
+
+    diff = (diff + 360) % 360
+
+    if diff > 180:
+        diff -= 360
+    return diff
+
 # calculate different tracking errors
 def tracking_error(all_targets, all_particles):
 
@@ -658,11 +668,12 @@ def tracking_error(all_targets, all_particles):
 
         ## Error Measures
         #r_error = target_r - mean_r
-        r_error = np.mean(target_r - particles[:,0])
+        r_error = np.mean(np.abs(target_r - particles[:,0]))
         #theta_error = np.degrees(target_theta - mean_theta) # final error in degrees
-        theta_error = np.mean(np.degrees(target_theta-np.radians(particles[:,1])))
-        if theta_error > 360:
-            theta_error = theta_error % 360
+        #theta_error = np.mean(np.degrees(target_theta-np.radians(particles[:,1])))
+        theta_error = np.mean(np.abs(angle_diff(target[1] - particles[:,1])))
+        # if theta_error > 360:
+        #     theta_error = theta_error % 360
         #heading_diff = np.abs(target_heading - mean_heading) % 360
         heading_diff = np.abs(np.mean(target_heading - particles[:,2])) % 360
         heading_error = heading_diff if heading_diff <= 180 else 360-heading_diff
