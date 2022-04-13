@@ -292,8 +292,6 @@ def run_dqn(env, config, global_start_time):
 
 def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     """ Perform one test run """
-    total_col = 0
-    total_lost = 0
 
     o = env.reset()
 
@@ -330,7 +328,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
             total_col = np.mean([np.mean(env.pf.particles[:,4*t] < 15) for t in range(env.state.n_targets)])
-            total_loss = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
+            total_lost = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
 
             # for target_state in env.state.target_state: 
             #     if target_state[0] < 15:
