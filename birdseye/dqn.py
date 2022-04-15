@@ -62,7 +62,8 @@ dqn_defaults = {
     'save_path' : 'checkpoints',
     'log_path' : 'rl_log',
     'use_gpu' : True,
-    'plotting': False
+    'plotting': False,
+    'eval_mode': False
 }
 
 
@@ -157,6 +158,7 @@ def run_dqn(env, config, global_start_time):
     max_value = config.max_value
     max_episode_length = config.max_episode_length
     plotting = config.plotting
+    eval_mode = config.eval_mode
 
     # Results instance for saving results to file
     results = Results(method_name='dqn',
@@ -200,6 +202,12 @@ def run_dqn(env, config, global_start_time):
         os.makedirs(save_path)
 
     start_ts = time.time()
+
+    if eval_mode in ['True','true',True]: 
+        checkpoint = torch.load('checkpoints/dqn.checkpoint')
+        qnet.load_state_dict(checkpoint[0])
+        evaluate(env, qnet, max_episode_length, device, ob_scale, results)
+        return  
 
     for n_iter in range(1, number_timesteps + 1):
         if prioritized_replay:
@@ -271,24 +279,26 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-            trials = 500 #500
-            run_data = []
-            for i in range(trials):
-                run_start_time = datetime.now()
-                print('test trial {}/{}'.format(i, trials))
-                result = test(env, qnet, max_episode_length, device, ob_scale, results)
-                run_time = datetime.now()-run_start_time
-                if results.plotting:
-                    results.save_gif(n_iter, i)
-                run_data.append([datetime.now(), run_time] + result)
-            #result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
-            #result = [datetime.now(), n_iter] + result_avg
-            #run_data.append(result)
-
-            # Saving results to CSV file
-            results.write_dataframe(run_data=run_data)
+            evaluate(env, qnet, max_episode_length, device, ob_scale, results)
 
     close_logger(logger)
+
+def evaluate(env, qnet, max_episode_length, device, ob_scale, results): 
+    
+    trials = 500 #500
+    run_data = []
+    for i in range(trials):
+        run_start_time = datetime.now()
+        print('test trial {}/{}'.format(i, trials))
+        result = test(env, qnet, max_episode_length, device, ob_scale, results)
+        run_time = datetime.now()-run_start_time
+        if results.plotting:
+            results.save_gif(n_iter, i)
+        run_data.append([datetime.now(), run_time] + result)
+
+    # Saving results to CSV file
+    results.write_dataframe(run_data=run_data)
+
 
 def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     """ Perform one test run """
@@ -451,6 +461,7 @@ def dqn(args=None, env=None):
         defaults['double_q'] = config.getboolean('Defaults', 'double_q')
         defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
         defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
+        defaults['eval_mode'] = config.getboolean('Defaults', 'eval_mode')
 
     parser = argparse.ArgumentParser(description='DQN',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
