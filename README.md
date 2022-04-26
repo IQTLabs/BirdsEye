@@ -83,6 +83,10 @@ In order to streamline this process a `Makefile` has been provided as a shorthan
 ```
 Accepted make values are: `run_mcts, run_dqn, run_batch, build`
 
+If you don't have or want to use GPUs you can preface the `make` command with `GPUS=` like so:
+```
+> GPUS= make run_mcts
+```
 
 ## 2. Configurations 
 Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.  
