@@ -139,10 +139,8 @@ class DoubleRSSILofi(Sensor):
         expected_rssi = hyp
         lofi_sigma = 1e-8#5
         expected_diff = expected_rssi[:,0] - expected_rssi[:,1]
-        print(expected_diff)
         observed_rssi = obs[0]
         observed_diff = observed_rssi[0] - observed_rssi[1]
-        print(observed_diff)
         expected_front_greater = expected_diff > lofi_sigma
         expected_unsure = np.abs(expected_diff) <= lofi_sigma
         expected_back_greater = expected_diff < (-1*lofi_sigma)

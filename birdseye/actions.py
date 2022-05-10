@@ -84,7 +84,7 @@ class BaselineActions(Actions):
     """
     def __init__(self):
         self.del_theta = [-30, 0, 30]
-        self.del_r = [0,2,4]
+        self.del_r = [0,4]
         baseline_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=baseline_action_space, verbose=False)
 
