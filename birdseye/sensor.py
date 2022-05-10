@@ -104,27 +104,31 @@ class DoubleRSSILofi(Sensor):
         return weight
 
         return likelihood
+
     def weight2(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
-        lofi_sigma = 5
-        expected_front_greater = (expected_rssi[:,0] - expected_rssi[:,1]) > lofi_sigma
-        expected_unsure = np.abs(expected_rssi[:,0] - expected_rssi[:,1]) <= lofi_sigma
-        expected_back_greater = (expected_rssi[:,0] - expected_rssi[:,1]) < (-1*lofi_sigma)
+        lofi_sigma = 1e-8#5
+        expected_diff = expected_rssi[:,0] - expected_rssi[:,1]
         observed_rssi = obs[0]
-        observed_front_greater = (observed_rssi[0] - observed_rssi[1]) > lofi_sigma
-        observed_unsure = np.abs(observed_rssi[0] - observed_rssi[1]) <= lofi_sigma
-        observed_back_greater = (observed_rssi[0] - observed_rssi[1]) < (-1*lofi_sigma)
+        observed_diff = observed_rssi[0] - observed_rssi[1]
+        expected_front_greater = expected_diff > lofi_sigma
+        expected_unsure = np.abs(expected_diff) <= lofi_sigma
+        expected_back_greater = expected_diff < (-1*lofi_sigma)
+        
+        observed_front_greater = observed_diff > lofi_sigma
+        observed_unsure = np.abs(observed_diff) <= lofi_sigma
+        observed_back_greater = observed_diff < (-1*lofi_sigma)
         if observed_front_greater:
             match = (0.9**(1/2)) * expected_front_greater
             unsure = (0.5**(1/2)) * expected_unsure
             no_match = (0.1**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
         elif observed_unsure:
-            match =  (0.75**(1/2)) * expected_unsure
-            unsure = (0.25**(1/2)) * expected_front_greater
-            no_match = (0.25**(1/2)) * expected_back_greater
+            match =  (0.90**(1/2)) * expected_unsure
+            unsure = (0.10**(1/2)) * expected_front_greater
+            no_match = (0.10**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
         elif observed_back_greater:
             match =  (0.9**(1/2)) * expected_back_greater
@@ -160,6 +164,8 @@ class DoubleRSSILofi(Sensor):
                 power_back += dB_to_power(rssi(distance, directivity_rx_back, fading_sigma=self.fading_sigma))
             rssi_front = power_to_dB(power_front)
             rssi_back = power_to_dB(power_back)
+            rssi_front = power_front
+            rssi_back = power_back
             
             # if np.isnan([rssi_front, rssi_back]).any(): 
             #     print([rssi_front, rssi_back])
