@@ -59,8 +59,10 @@ def rssi(distance, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9, fadin
     )
     # fading
     if fading_sigma:
+        pre = power_rx
+        #print('power_rx = ',pre)
         power_rx -= np.random.normal(0, fading_sigma)
-
+        #print('fading = ',power_rx - pre)
     return power_rx
 
 def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
@@ -82,20 +84,20 @@ class DoubleRSSILofi(Sensor):
     """
     def __init__(self, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern()
-        self.std_dev = 7
+        self.std_dev = 6
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
-
+    
     def weight(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs[0]
         lofi_sigma = 5
-        expected_diff = (expected_rssi[:,0] - expected_rssi[:,1]) 
-        observed_diff = (observed_rssi[0] - observed_rssi[1]) 
-     
+        expected_diff = (expected_rssi[:,0] - expected_rssi[:,1])
+        observed_diff = (observed_rssi[0] - observed_rssi[1])
+
         # Gaussian weighting function
         numerator = np.power(expected_diff - observed_diff, 2.)
         denominator = 2 * np.power(self.std_dev, 2.)
@@ -104,27 +106,59 @@ class DoubleRSSILofi(Sensor):
         return weight
 
         return likelihood
+
+    def weight3(self, hyp, obs):
+        # TODO add front, mid, back
+        # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        expected_rssi = hyp
+        observed_rssi = obs[0]
+        
+        multiplier = 1
+        expected_diff = multiplier * (expected_rssi[:,0] - expected_rssi[:,1]) 
+        observed_diff = multiplier * (observed_rssi[0] - observed_rssi[1]) 
+        print('std = ',np.std(expected_diff))
+        lofi_sigma = 0.7* np.std(expected_diff)#np.std(expected_diff)#(1e-11)/observed_diff # 3e-6 #observed_diff/10 #1e-5
+        # Gaussian weighting function
+        numerator = np.power(expected_diff - observed_diff, 2.)
+        print('numerator = ',numerator)
+        denominator = 2 * np.power(lofi_sigma, 2.)
+        print('denominator = ',denominator)
+        weight = np.exp( - numerator / denominator) + 0.001#* (1/(lofi_sigma*np.sqrt(2*np.pi))) + 0.001
+        #likelihood = np.prod(weight, axis=1)
+        print('expect = ',expected_diff)
+        print('obs = ',observed_diff)
+        print('observed = ',observed_rssi)
+        print('weight = ',weight)
+        
+        return weight
+
+        return likelihood
     def weight2(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
-        lofi_sigma = 5
-        expected_front_greater = (expected_rssi[:,0] - expected_rssi[:,1]) > lofi_sigma
-        expected_unsure = np.abs(expected_rssi[:,0] - expected_rssi[:,1]) <= lofi_sigma
-        expected_back_greater = (expected_rssi[:,0] - expected_rssi[:,1]) < (-1*lofi_sigma)
+        lofi_sigma = 1e-8#5
+        expected_diff = expected_rssi[:,0] - expected_rssi[:,1]
+        print(expected_diff)
         observed_rssi = obs[0]
-        observed_front_greater = (observed_rssi[0] - observed_rssi[1]) > lofi_sigma
-        observed_unsure = np.abs(observed_rssi[0] - observed_rssi[1]) <= lofi_sigma
-        observed_back_greater = (observed_rssi[0] - observed_rssi[1]) < (-1*lofi_sigma)
+        observed_diff = observed_rssi[0] - observed_rssi[1]
+        print(observed_diff)
+        expected_front_greater = expected_diff > lofi_sigma
+        expected_unsure = np.abs(expected_diff) <= lofi_sigma
+        expected_back_greater = expected_diff < (-1*lofi_sigma)
+        
+        observed_front_greater = observed_diff > lofi_sigma
+        observed_unsure = np.abs(observed_diff) <= lofi_sigma
+        observed_back_greater = observed_diff < (-1*lofi_sigma)
         if observed_front_greater:
             match = (0.9**(1/2)) * expected_front_greater
             unsure = (0.5**(1/2)) * expected_unsure
             no_match = (0.1**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
         elif observed_unsure:
-            match =  (0.75**(1/2)) * expected_unsure
-            unsure = (0.25**(1/2)) * expected_front_greater
-            no_match = (0.25**(1/2)) * expected_back_greater
+            match =  (0.90**(1/2)) * expected_unsure
+            unsure = (0.10**(1/2)) * expected_front_greater
+            no_match = (0.10**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
         elif observed_back_greater:
             match =  (0.9**(1/2)) * expected_back_greater
@@ -160,7 +194,10 @@ class DoubleRSSILofi(Sensor):
                 power_back += dB_to_power(rssi(distance, directivity_rx_back, fading_sigma=self.fading_sigma))
             rssi_front = power_to_dB(power_front)
             rssi_back = power_to_dB(power_back)
-            
+            #print('rssi_front = {}, rssi_back = {}'.format(rssi_front, rssi_back))
+            #rssi_front = power_front
+            #rssi_back = power_back
+
             # if np.isnan([rssi_front, rssi_back]).any(): 
             #     print([rssi_front, rssi_back])
             #     print(state)
