@@ -7,7 +7,7 @@ from scipy.ndimage.filters import gaussian_filter
 
 class RFMultiEnv(object):
 
-    def __init__(self, sensor=None, actions=None, state=None, simulated=False):
+    def __init__(self, sensor=None, actions=None, state=None, simulated=True):
         # Sensor definitions
         self.sensor = sensor
         # Action space and function to convert from action to index and vice versa
@@ -38,12 +38,19 @@ class RFMultiEnv(object):
 
     def particle_noise(self, particles, sigmas=[1,2,2], xp=None):
 
-        particles[:,[0,4]] += np.random.normal(0,sigmas[0], (len(particles), 2))
-        particles[:,[0,4]] = np.clip(particles[:,[0,4]], a_min=1, a_max=None)
-        particles[:,[1,5]] += np.random.normal(0,sigmas[1], (len(particles), 2))
-        particles[:,[2,6]] += np.random.normal(0,sigmas[2], (len(particles), 2))
+        for t in range(self.state.n_targets): 
+            particles[:,[4*t]] += np.random.normal(0,sigmas[0], (len(particles), 1))
+            particles[:,[4*t]] = np.clip(particles[:,[4*t]], a_min=1, a_max=None)
+            particles[:,[(4*t)+1]] += np.random.normal(0,sigmas[1], (len(particles), 1))
+            particles[:,[(4*t)+2]] += np.random.normal(0,sigmas[2], (len(particles), 1))
+
+            # particles[:,[0,4]] += np.random.normal(0,sigmas[0], (len(particles), 2))
+            # particles[:,[0,4]] = np.clip(particles[:,[0,4]], a_min=1, a_max=None)
+            # particles[:,[1,5]] += np.random.normal(0,sigmas[1], (len(particles), 2))
+            # particles[:,[2,6]] += np.random.normal(0,sigmas[2], (len(particles), 2))
 
         return particles
+
     def reset(self, num_particles=2000):
         """Reset initial state and particle filter
 
@@ -59,7 +66,8 @@ class RFMultiEnv(object):
         """
 
         self.iters = 0
-        self.state.target_state = self.state.init_target_state()
+        if self.simulated: 
+            self.state.target_state = self.state.init_target_state()
         self.state.sensor_state = self.state.init_sensor_state()
 
         # Setup particle filter
@@ -80,6 +88,27 @@ class RFMultiEnv(object):
         env_obs = self.env_observation()
         return env_obs
 
+    # returns observation, reward, done, info
+    def real_step(self, action, bearing):
+        #action = self.actions.index_to_action(action_idx)
+
+        # Update position of sensor
+        self.state.update_sensor(action, bearing=bearing)
+
+        # Get sensor observation
+        observation = self.sensor.real_observation()
+        observation = np.array(observation) if observation is not None else None
+
+        # Update particle filter
+        self.pf.update(observation, xp=self.pf.particles, control=action)
+        particle_swap(self)
+
+        # Calculate reward based on updated state & action
+        reward = self.state.reward_func(state=None, action=action, particles=self.pf.particles)
+
+        belief_obs = self.env_observation()
+
+        return (belief_obs, reward, observation)
 
     # returns observation, reward, done, info
     def step(self, action_idx):
@@ -129,21 +158,21 @@ class RFMultiEnv(object):
 
         return (env_obs, reward, 0, info)
 
-    def entropy_collision_reward(self, state, action_idx=None, delta=10, collision_weight=1):
-        pf_r = self.pf.particles[:,0]
-        pf_theta = np.radians(self.pf.particles[:,1])
-        pf_x, pf_y = pol2cart(pf_r, pf_theta)
-        xedges = np.arange(-150, 153, 3)
-        yedges = np.arange(-150, 153, 3)
-        b = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
-        b /= np.sum(b)
-        b += 0.0000001
+    # def entropy_collision_reward(self, state, action_idx=None, delta=10, collision_weight=1):
+    #     pf_r = self.pf.particles[:,0]
+    #     pf_theta = np.radians(self.pf.particles[:,1])
+    #     pf_x, pf_y = pol2cart(pf_r, pf_theta)
+    #     xedges = np.arange(-150, 153, 3)
+    #     yedges = np.arange(-150, 153, 3)
+    #     b = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
+    #     b /= np.sum(b)
+    #     b += 0.0000001
 
-        H = -1. * np.sum([b * np.log(b)])
-        collision_rate = np.mean(self.pf.particles[:,0] < delta)
-        cost = H + collision_weight * collision_rate
+    #     H = -1. * np.sum([b * np.log(b)])
+    #     collision_rate = np.mean(self.pf.particles[:,0] < delta)
+    #     cost = H + collision_weight * collision_rate
 
-        return -1. * cost
+    #     return -1. * cost
 
     def env_observation(self):
         """Helper function for environment observation

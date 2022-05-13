@@ -10,7 +10,7 @@ from torch.optim import Adam
 from birdseye.rl_common.util import Flatten
 
 class SmallRFPFQnet(nn.Module):
-    def __init__(self, n_targets, map_dim, state_dim, policy_dim, atom_num, dueling):
+    def __init__(self, n_targets, map_dim, state_dim, policy_dim, atom_num=1, dueling=True):
         super().__init__()
         self.n_targets = n_targets
         self.atom_num = atom_num

@@ -179,42 +179,88 @@ class DoubleRSSILofi(Sensor):
     # samples observation given state
     def observation(self, state):
         # Calculate observation for multiple targets
-        if len(state) > 1: #state.n_targets > 1:
-            power_front = 0
-            power_back = 0
-            for ts in state: # target_state, particle_state
-                distance = ts[0]
-                theta_front = ts[1] * np.pi / 180.0
-                theta_back = theta_front + np.pi
-                directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
-                directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
-                power_front += dB_to_power(rssi(distance, directivity_rx_front, fading_sigma=self.fading_sigma))
-                power_back += dB_to_power(rssi(distance, directivity_rx_back, fading_sigma=self.fading_sigma))
-            rssi_front = power_to_dB(power_front)
-            rssi_back = power_to_dB(power_back)
-            #print('rssi_front = {}, rssi_back = {}'.format(rssi_front, rssi_back))
-            #rssi_front = power_front
-            #rssi_back = power_back
+        #if len(state) > 1: #state.n_targets > 1:
+        power_front = 0
+        power_back = 0
+        for ts in state: # target_state, particle_state
+            distance = ts[0]
+            theta_front = ts[1] * np.pi / 180.0
+            theta_back = theta_front + np.pi
+            directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
+            directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
+            power_front += dB_to_power(rssi(distance, directivity_rx_front, fading_sigma=self.fading_sigma))
+            power_back += dB_to_power(rssi(distance, directivity_rx_back, fading_sigma=self.fading_sigma))
+        rssi_front = power_to_dB(power_front)
+        rssi_back = power_to_dB(power_back)
+        #print('rssi_front = {}, rssi_back = {}'.format(rssi_front, rssi_back))
+        #rssi_front = power_front
+        #rssi_back = power_back
 
-            # if np.isnan([rssi_front, rssi_back]).any(): 
-            #     print([rssi_front, rssi_back])
-            #     print(state)
-            #     print('fading = ',self.fading_sigma)
-            #     print('distance = ',distance)
-            #     print('theta = ',theta_front)
-            #     print('directivity_rx_front = ',directivity_rx_front)
-            #     print('directivity_rx_b = ',directivity_rx_back)
-            #     print('power_fron = ',power_front)
-            #     print('power_back = ',power_back)
-            return [rssi_front, rssi_back]
+        # if np.isnan([rssi_front, rssi_back]).any(): 
+        #     print([rssi_front, rssi_back])
+        #     print(state)
+        #     print('fading = ',self.fading_sigma)
+        #     print('distance = ',distance)
+        #     print('theta = ',theta_front)
+        #     print('directivity_rx_front = ',directivity_rx_front)
+        #     print('directivity_rx_b = ',directivity_rx_back)
+        #     print('power_fron = ',power_front)
+        #     print('power_back = ',power_back)
+        return [rssi_front, rssi_back]
 
-        # else single target
-        else:
-            # TODO: implement this
-            return None
-            #return 1/ ((np.random.normal(state[0], self.std_dev)) ** 2)
+        
 
 
+class SingleRSSI(Sensor):
+    """
+    Uses RSSI comparison from two opposite facing Yagi/directional antennas
+    """
+    def __init__(self, fading_sigma=None):
+        self.radiation_pattern = get_radiation_pattern()
+        self.std_dev = 10
+        self.fading_sigma = fading_sigma
+        if self.fading_sigma:
+            self.fading_sigma = float(self.fading_sigma)
+
+    def weight(self, hyp, obs):
+        expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        observed_rssi = obs
+        # Gaussian weighting function
+        numerator = np.power(expected_rssi - observed_rssi, 2.)
+        denominator = 2 * np.power(self.std_dev, 2.)
+        weight = np.exp( - numerator / denominator) #+ 0.000000001
+        likelihood = np.prod(weight, axis=1)
+        return likelihood
+
+    # samples observation given state
+    def observation(self, state):
+        # Calculate observation for multiple targets
+        power_front = 0
+        
+        for ts in state: # target_state, particle_state
+            distance = ts[0]
+            theta_front = ts[1] * np.pi / 180.0
+            directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
+            power_front += dB_to_power(rssi(distance, directivity_rx_front, fading_sigma=self.fading_sigma))
+        rssi_front = power_to_dB(power_front)
+        return [rssi_front]
+
+    # sample state from observation
+    def gen_state(self, obs):
+        r_dist = np.sqrt(1/obs)
+        #return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
+        return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
+
+    def near_state(self, state):
+        return np.array(self.gen_state(self.observation(state)))
+
+class GamutRF(SingleRSSI): 
+    def __init__(self, fading_sigma=None): 
+        super().__init__(fading_sigma)
+
+    def observation(self): 
+        #TODO: return RSSI from GamutRF hardware 
+        return None
 
 class DoubleRSSI(Sensor):
     """

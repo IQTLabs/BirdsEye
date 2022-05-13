@@ -9,6 +9,7 @@ from tqdm import tqdm
 import numpy as np
 from .utils import pol2cart, tracking_error, particle_swap
 from pfilter import ParticleFilter, systematic_resample
+import matplotlib.pyplot as plt
 
 ##################################################################
 # MCTS Algorithm
@@ -219,6 +220,9 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
     # 500 time steps with an action to be selected at each
     plots = []
+    selected_plots = [7]
+    fig = plt.figure(figsize=(10*len(selected_plots), 10), dpi=100)
+    axs = None
 
     for time_step in tqdm(range(num_iters)):
 
@@ -273,7 +277,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         #         total_loss += 1
 
         if results is not None and results.plotting:
-            results.build_multitarget_plots(env, time_step, fig, ax, centroid_distance_error, selected_plots=[4])
+            
+            axs = results.build_multitarget_plots(env, time_step, fig, axs, centroid_distance_error, selected_plots=selected_plots)
 
         # Save results to output arrays
         all_target_states[time_step] = env.state.target_state

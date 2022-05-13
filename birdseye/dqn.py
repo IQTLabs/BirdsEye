@@ -66,6 +66,24 @@ dqn_defaults = {
     'eval_mode': False
 }
 
+def simple_prep(env, device): 
+    policy_dim = len(env.actions.action_space)
+    map_dim = (env.state.n_targets, 300, 300) 
+    network = SmallRFPFQnet(env.state.n_targets, map_dim, env.state.state_dim, policy_dim)
+    qnet = network.to(device)
+    checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
+    qnet.load_state_dict(checkpoint[0])
+
+    return qnet
+
+def simple_run(qnet, observation, device): 
+    with torch.no_grad():
+        observation = torch.from_numpy(np.expand_dims(observation, 0).astype(np.float32)).to(device)
+        q_values = qnet(observation)
+        action = q_values.argmax(1).cpu().numpy()[0]
+
+        return action 
+
 
 def run_dqn(env, config, global_start_time):
     """Function to run DQN
@@ -204,7 +222,7 @@ def run_dqn(env, config, global_start_time):
     start_ts = time.time()
 
     if eval_mode in ['True','true',True]: 
-        checkpoint = torch.load('checkpoints/dqn.checkpoint')
+        checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
         qnet.load_state_dict(checkpoint[0])
         evaluate(env, qnet, max_episode_length, device, ob_scale, results)
         return  
@@ -293,7 +311,7 @@ def evaluate(env, qnet, max_episode_length, device, ob_scale, results):
         result = test(env, qnet, max_episode_length, device, ob_scale, results)
         run_time = datetime.now()-run_start_time
         if results.plotting:
-            results.save_gif(n_iter, i)
+            results.save_gif(i)
         run_data.append([datetime.now(), run_time] + result)
 
     # Saving results to CSV file
@@ -366,7 +384,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
 
             if results is not None and results.plotting:
                 #results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
-                results.build_multitarget_plots(env, time_step, fig, ax, centroid_distance_error)
+                results.build_multitarget_plots(env=env, time_step=n, centroid_distance_error=centroid_distance_error, selected_plots=[4])
 
 
     return [all_target_states, all_sensor_states, all_actions,

@@ -31,18 +31,14 @@ class Actions(object):
         """Return ordered list of actions
         """
         return self.action_list
+    
+    #returns index of action given an action
+    def action_to_index(self, action):
+        return self.action_space.index(action)
 
-    def action_to_index(self, index=0):
-        """Undefined action to index method:
-           Provided an index, return associated action
-        """
-        raise NotImplementedError()
-
-    def index_to_action(self, action=None):
-        """Undefined index to action method:
-           Provided an action, return associated index
-        """
-        raise NotImplementedError()
+    #returns action given an index
+    def index_to_action(self, a_idx):
+        return self.action_space[a_idx]
 
     def setup_action_list(self):
         """Define ordered list of actions

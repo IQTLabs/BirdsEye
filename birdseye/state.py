@@ -28,8 +28,9 @@ class State(object):
 class RFMultiState(State):
     """RF Multi Target State
     """
-    def __init__(self, n_targets=2, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None):
+    def __init__(self, n_targets=2, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None, simulated=True):
 
+        self.state_dim = 4
         ### Target Settings 
         # Transition probability
         self.prob_target_change_crs = prob
@@ -40,13 +41,15 @@ class RFMultiState(State):
         self.target_movement = target_movement if target_movement is not None else 'random'
         self.target_move_iter = 0
         # Target start distance
-        self.target_start = int(target_start) if target_start is not None else 75
+        self.target_start = int(target_start) if target_start is not None else 150
         # Number of targets
-        self.n_targets = n_targets
+        self.n_targets = int(n_targets) if n_targets is not None else 1
         
         ### Target & sensor states
         # Setup an initial random state
-        self.target_state = self.init_target_state()
+        self.target_state = None
+        if simulated: 
+            self.target_state = self.init_target_state()
         # Setup an initial sensor state
         self.sensor_state = self.init_sensor_state()
 
@@ -123,7 +126,7 @@ class RFMultiState(State):
         return np.array([0,0,0,0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
-    def heuristic_reward(self, state, action_idx=None, particles=None, action_penalty=-1.0, delta=20):
+    def heuristic_reward(self, state, action=None, action_idx=None, particles=None, action_penalty=-1.0, delta=20):
         """Function to calculate reward based on state and selected action
 
         Parameters
@@ -143,7 +146,10 @@ class RFMultiState(State):
 
         # Set reward to 0/. as default
         reward_val = 0.
-        if action_idx is not None: # returns reward as a function of range, action, and action penalty
+        if action is not None: 
+            if action[0] != 0: 
+                reward_val += action_penalty
+        elif action_idx is not None: # returns reward as a function of range, action, and action penalty
             if action_idx not in [2,3]: 
                 reward_val += action_penalty
             
@@ -158,7 +164,7 @@ class RFMultiState(State):
         return reward_val
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
-    def range_reward(self, state, action_idx=None, particles=None, action_penalty=-.05):
+    def range_reward(self, state, action=None, action_idx=None, particles=None, action_penalty=-.05):
         """Function to calculate reward based on state and selected action
 
         Parameters
@@ -182,7 +188,10 @@ class RFMultiState(State):
         max_state_range = np.max(state_ranges)
         min_state_range = np.min(state_ranges)
 
-        if action_idx is not None: # returns reward as a function of range, action, and action penalty
+        if action is not None: 
+            if action[0] != 0: 
+                reward_val += action_penalty
+        elif action_idx is not None: # returns reward as a function of range, action, and action penalty
             if action_idx not in [2,3]: 
                 reward_val += action_penalty
 
@@ -202,7 +211,7 @@ class RFMultiState(State):
                 reward_val = 0.1
         return reward_val
 
-    def entropy_collision_reward(self, state, action_idx=None, particles=None, delta=15, collision_weight=1):
+    def entropy_collision_reward(self, state, action=None, action_idx=None, particles=None, delta=15, collision_weight=1):
 
         map_width = 600
         min_map = -1*int(map_width/2)
@@ -296,13 +305,15 @@ class RFMultiState(State):
 
         return [r, theta, crs, spd]
 
-    def update_sensor(self, control):
+    def update_sensor(self, control, bearing=None):
         r, theta_deg, crs, spd = self.sensor_state
 
         spd = control[1]
 
         crs = crs % 360
         crs += control[0]
+        if bearing is not None: 
+            crs = bearing 
         if crs < 0:
             crs += 360
         crs = crs % 360
