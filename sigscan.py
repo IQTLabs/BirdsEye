@@ -73,11 +73,6 @@ def on_connect(client, userdata, flags, rc):
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
     client.subscribe(sub_channel)
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message 
-client.connect('localhost', 1883, 60) 
-client.loop_start()
 
 
 
@@ -121,6 +116,13 @@ class DQNPlanner(PathPlanner):
         
 # main loop 
 def main(config=None): 
+
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message 
+    client.connect('localhost', 1883, 60) 
+    client.loop_start()
+
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     results = birdseye.utils.Results(method_name='dqn',
