@@ -1,5 +1,6 @@
 .vscode/
 checkpoints/
+.DS_Store
 
 # Don't save any run output
 runs*

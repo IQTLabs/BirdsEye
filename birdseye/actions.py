@@ -31,18 +31,14 @@ class Actions(object):
         """Return ordered list of actions
         """
         return self.action_list
+    
+    #returns index of action given an action
+    def action_to_index(self, action):
+        return self.action_space.index(action)
 
-    def action_to_index(self, index=0):
-        """Undefined action to index method:
-           Provided an index, return associated action
-        """
-        raise NotImplementedError()
-
-    def index_to_action(self, action=None):
-        """Undefined index to action method:
-           Provided an action, return associated index
-        """
-        raise NotImplementedError()
+    #returns action given an index
+    def index_to_action(self, a_idx):
+        return self.action_space[a_idx]
 
     def setup_action_list(self):
         """Define ordered list of actions
@@ -67,7 +63,7 @@ class SimpleActions(Actions):
     """
     def __init__(self):
         self.del_theta = [-30, 0, 30]
-        self.del_r = [3,4]
+        self.del_r = [0,4]
         simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=False)
 
@@ -79,8 +75,26 @@ class SimpleActions(Actions):
     def index_to_action(self, a_idx):
         return self.action_space[a_idx]
 
+class BaselineActions(Actions):
+    """SimpleActions for testing purposes
+    """
+    def __init__(self):
+        self.del_theta = [-30, 0, 30]
+        self.del_r = [0,4]
+        baseline_action_space = tuple(itertools.product(self.del_theta, self.del_r))
+        super().__init__(action_space=baseline_action_space, verbose=False)
+
+    #returns index of action given an action
+    def action_to_index(self, action):
+        return self.action_space.index(action)
+
+    #returns action given an index
+    def index_to_action(self, a_idx):
+        return self.action_space[a_idx]
+
 
 AVAIL_ACTIONS = {'simpleactions' : SimpleActions,
+                 'baselineactions': BaselineActions
                 }
 
 def get_action(action_name=''):

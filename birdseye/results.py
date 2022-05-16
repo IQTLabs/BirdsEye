@@ -784,10 +784,14 @@ def filter_runs(method_name, config_filter=None):
 
     for r in runs:
         match = True
-        config = get_config(method_name, r)['Methods']
+        if method_name == 'baseline': 
+            config = get_config(method_name, r)['Methods']
+            config.update(get_config(method_name, r)['Defaults'])
+        else: 
+            config = get_config(method_name, r)['Methods']
         for k,v in config_filter.items():
-            if v is None:
-                continue
+            #if v is None:
+            #    continue
             if k == 'target_speed':
                 v = float(v)
                 if ((config.get(k) is None) and (v != 1.)) or (float(config.get(k)) != v):
@@ -812,6 +816,16 @@ def filter_runs(method_name, config_filter=None):
                 config_datetime = datetime.strptime(v, '%Y-%m-%dT%H:%M:%S')
                 run_datetime = datetime.strptime(r, '%Y-%m-%dT%H:%M:%S')
                 if run_datetime > config_datetime:
+                    match = False
+                    break
+            elif k == 'fading_sigma': 
+                v = float(v)
+                if float(config.get(k,0.0)) != v: 
+                    match = False
+                    break
+            elif k == 'particle_resample':
+                v = float(v)
+                if float(config.get(k,0.005)) != v: 
                     match = False
                     break
             elif config.get(k) != v:

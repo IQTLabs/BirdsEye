@@ -1,0 +1,170 @@
+import paho.mqtt.client as mqtt
+import numpy as np 
+from datetime import datetime
+import itertools
+import torch 
+import time
+import json
+import matplotlib.pyplot as plt
+
+import birdseye.sensor 
+import birdseye.env 
+import birdseye.actions
+import birdseye.state
+import birdseye.utils
+import birdseye.dqn 
+
+data = {}
+
+# helper functions for lat/lon
+def get_distance(coord1, coord2): 
+    lat1, long1 = coord1
+    lat2, long2 = coord2
+    # approximate radius of earth in km
+    R = 6373.0
+
+    lat1 = np.radians(lat1) 
+    long1 = np.radians(long1) 
+
+    lat2 = np.radians(lat2) 
+    long2 = np.radians(long2) 
+
+    dlon = long2 - long1
+    dlat = lat2 - lat1
+
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+    distance = R * c
+    return distance*(1e3)
+    
+    
+def get_bearing(coord1, coord2):
+    lat1, long1 = coord1
+    lat2, long2 = coord2
+    dLon = (long2 - long1)
+    x = np.cos(np.radians(lat2)) * np.sin(np.radians(dLon))
+    y = np.cos(np.radians(lat1)) * np.sin(np.radians(lat2)) - np.sin(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.cos(np.radians(dLon))
+    brng = np.arctan2(x,y)
+    brng = np.degrees(brng)
+
+    return -brng + 90
+
+# MQTT
+def on_message(client, userdata, message):
+    global data
+    json_message = json.loads(message.payload)
+    data['rssi'] = json_message['rssi']
+    data['position'] = json_message['position']
+    if data.get('previous_position', None) is not None: 
+        data['bearing'] = get_bearing(data['previous_position'], data['position'])
+        data['distance'] = get_distance(data['previous_position'], data['position'])
+        if data.get('previous_bearing', None) is not None: 
+            delta_bearing = data['bearing'] - data['previous_bearing']
+            data['action'] = (delta_bearing, data['distance']) 
+            print('bearing = ',data['bearing'])
+            print('delta_bearing = ',delta_bearing) 
+        data['previous_bearing'] = data['bearing']
+    data['previous_position'] = json_message['position']
+    #print('data: ',data)
+
+def on_connect(client, userdata, flags, rc):
+    sub_channel = 'gamutRF'
+    print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
+    client.subscribe(sub_channel)
+
+client = mqtt.Client()
+client.on_connect = on_connect
+client.on_message = on_message 
+client.connect('localhost', 1883, 60) 
+client.loop_start()
+
+
+
+# GamutRF Sensor 
+class GamutRFSensor(birdseye.sensor.SingleRSSI): 
+    def __init__(self, fading_sigma=None, threshold=-120): 
+        super().__init__(fading_sigma)
+        self.threshold = threshold
+
+    def real_observation(self): 
+        global data 
+        if (data.get('rssi', None)) is None or (data['rssi'] < self.threshold): 
+            return None 
+        return data['rssi']
+
+# Human walking action space 
+class WalkingActions(birdseye.actions.Actions):
+    """WalkingActions for a human walking
+    """
+    def __init__(self):
+        # change in heading 
+        self.del_theta = [-45, 0, 45]
+        # speed 
+        self.del_r = [0,1.5]
+        simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
+        super().__init__(action_space=simple_action_space, verbose=False)
+
+# Path Planners 
+class PathPlanner(): 
+    def __init__(self, env, config, device): 
+        pass
+    def proposal(self, observation): 
+        pass
+
+class DQNPlanner(PathPlanner): 
+    def __init__(self, env, device): 
+        self.model = birdseye.dqn.simple_prep(env, device)
+        self.device = device
+    def proposal(self, observation): 
+        return birdseye.dqn.simple_run(self.model, observation, self.device)
+        
+# main loop 
+def main(config=None): 
+    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    results = birdseye.utils.Results(method_name='dqn',
+                        global_start_time=global_start_time,
+                        plotting=True,
+                        config=config)
+
+    sensor = GamutRFSensor(fading_sigma=8, threshold=-120) # fading sigm = 8dB, threshold = -120dB
+    actions = WalkingActions()
+    actions.print_action_info()
+    state = birdseye.state.RFMultiState(n_targets=2, reward='entropy_collision_reward', simulated=False)
+    env = birdseye.env.RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=False)
+
+    planner = DQNPlanner(env, device)
+    belief = env.reset()
+
+    selected_plots = [8]
+    fig = plt.figure(figsize=(10*len(selected_plots), 10), dpi=100)
+    axs = None
+
+    time_step = 0
+    time.sleep(2)
+    while True: 
+        time_step += 1 
+
+        action_proposal = planner.proposal(belief) 
+        action_proposal = actions.index_to_action(action_proposal)
+        #print('action proposal = ',action_proposal)
+
+        action_taken = data.get('action', (0,0))
+        
+        # update belief based on action and sensor observation (sensor is read inside)
+        #print('action_taken = ',action_taken)
+        belief, reward, observation = env.real_step(action_taken, data.get('bearing', None))
+
+        textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
+        axs = results.build_multitarget_plots(env=env, time_step=time_step, fig=fig, axs=axs, selected_plots=selected_plots, simulated=False, textstr=textstr)
+
+if __name__ == '__main__':
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('-b', '--batch',
+    #                          action='store_true',
+    #                          help='Specify batch run option')
+    # args = parser.parse_args()
+    
+    main()
+

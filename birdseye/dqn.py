@@ -62,8 +62,27 @@ dqn_defaults = {
     'save_path' : 'checkpoints',
     'log_path' : 'rl_log',
     'use_gpu' : True,
-    'plotting': False
+    'plotting': False,
+    'eval_mode': False
 }
+
+def simple_prep(env, device): 
+    policy_dim = len(env.actions.action_space)
+    map_dim = (env.state.n_targets, 300, 300) 
+    network = SmallRFPFQnet(env.state.n_targets, map_dim, env.state.state_dim, policy_dim)
+    qnet = network.to(device)
+    checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
+    qnet.load_state_dict(checkpoint[0])
+
+    return qnet
+
+def simple_run(qnet, observation, device): 
+    with torch.no_grad():
+        observation = torch.from_numpy(np.expand_dims(observation, 0).astype(np.float32)).to(device)
+        q_values = qnet(observation)
+        action = q_values.argmax(1).cpu().numpy()[0]
+
+        return action 
 
 
 def run_dqn(env, config, global_start_time):
@@ -157,6 +176,7 @@ def run_dqn(env, config, global_start_time):
     max_value = config.max_value
     max_episode_length = config.max_episode_length
     plotting = config.plotting
+    eval_mode = config.eval_mode
 
     # Results instance for saving results to file
     results = Results(method_name='dqn',
@@ -172,9 +192,10 @@ def run_dqn(env, config, global_start_time):
 
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
-    in_dim = (1, 100, 100)
-    #network = CNN(in_dim, policy_dim, atom_num, dueling)
-    network = SmallRFPFQnet(in_dim, 4, policy_dim, atom_num, dueling)
+    map_dim = (env.state.n_targets, 300, 300) # TODO: modify to match multi target 
+    #network = CNN(map_dim, policy_dim, atom_num, dueling)
+    #  SmallRFPFQnet(n_targets, map_dim, state_dim, policy_dim, atom_num, dueling)
+    network = SmallRFPFQnet(env.state.n_targets, map_dim, 4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
@@ -199,6 +220,12 @@ def run_dqn(env, config, global_start_time):
         os.makedirs(save_path)
 
     start_ts = time.time()
+
+    if eval_mode in ['True','true',True]: 
+        checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
+        qnet.load_state_dict(checkpoint[0])
+        evaluate(env, qnet, max_episode_length, device, ob_scale, results)
+        return  
 
     for n_iter in range(1, number_timesteps + 1):
         if prioritized_replay:
@@ -270,29 +297,29 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-            trials = 500
-            run_data = []
-            for i in range(trials):
-                run_start_time = datetime.now()
-                print('test trial {}/{}'.format(i, trials))
-                result = test(env, qnet, max_episode_length, device, ob_scale, results)
-                run_time = datetime.now()-run_start_time
-                if results.plotting:
-                    results.save_gif(n_iter, i)
-                run_data.append([datetime.now(), run_time] + result)
-            #result_avg = [np.mean([res[i] for res in results_list], axis=0).tolist() for i in range(len(results_list[0]))]
-            #result = [datetime.now(), n_iter] + result_avg
-            #run_data.append(result)
-
-            # Saving results to CSV file
-            results.write_dataframe(run_data=run_data)
+            evaluate(env, qnet, max_episode_length, device, ob_scale, results)
 
     close_logger(logger)
 
+def evaluate(env, qnet, max_episode_length, device, ob_scale, results): 
+    
+    trials = 500 #500
+    run_data = []
+    for i in range(trials):
+        run_start_time = datetime.now()
+        print('test trial {}/{}'.format(i, trials))
+        result = test(env, qnet, max_episode_length, device, ob_scale, results)
+        run_time = datetime.now()-run_start_time
+        if results.plotting:
+            results.save_gif(i)
+        run_data.append([datetime.now(), run_time] + result)
+
+    # Saving results to CSV file
+    results.write_dataframe(run_data=run_data)
+
+
 def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     """ Perform one test run """
-    total_col = 0
-    total_lost = 0
 
     o = env.reset()
 
@@ -304,12 +331,12 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
     all_reward = np.zeros(number_timesteps)
     all_col = np.zeros(number_timesteps)
     all_loss = np.zeros(number_timesteps)
-    all_r_err = np.zeros(number_timesteps)
-    all_theta_err = np.zeros(number_timesteps)
-    all_heading_err = np.zeros(number_timesteps)
-    all_centroid_err = np.zeros(number_timesteps)
-    all_rmse = np.zeros(number_timesteps)
-    all_mae = np.zeros(number_timesteps)
+    all_r_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_theta_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_heading_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_centroid_err = np.zeros((number_timesteps, env.state.n_targets))
+    all_rmse = np.zeros((number_timesteps, env.state.n_targets))
+    all_mae = np.zeros((number_timesteps, env.state.n_targets))
     all_inference_times = np.zeros(number_timesteps)
     all_pf_cov = [None]*number_timesteps
 
@@ -328,11 +355,15 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             # error metrics
             r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
-            if env.state.target_state[0] < 10:
-                total_col += 1
+            total_col = np.mean([np.mean(env.pf.particles[:,4*t] < 15) for t in range(env.state.n_targets)])
+            total_lost = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
 
-            if env.state.target_state[0] > 150:
-                total_lost += 1
+            # for target_state in env.state.target_state: 
+            #     if target_state[0] < 15:
+            #         total_col += 1
+
+            #     if target_state[0] > 150:
+            #         total_lost += 1
 
             # Save results to output arrays
             all_target_states[n] = env.state.target_state
@@ -352,7 +383,8 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             all_pf_cov[n] = list(env.pf.cov_state.flatten())
 
             if results is not None and results.plotting:
-                results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
+                #results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
+                results.build_multitarget_plots(env=env, time_step=n, centroid_distance_error=centroid_distance_error, selected_plots=[4])
 
 
     return [all_target_states, all_sensor_states, all_actions,
@@ -447,6 +479,7 @@ def dqn(args=None, env=None):
         defaults['double_q'] = config.getboolean('Defaults', 'double_q')
         defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
         defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
+        defaults['eval_mode'] = config.getboolean('Defaults', 'eval_mode')
 
     parser = argparse.ArgumentParser(description='DQN',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)

@@ -7,8 +7,9 @@ import csv
 from datetime import datetime
 from tqdm import tqdm
 import numpy as np
-from .utils import pol2cart, tracking_error
+from .utils import pol2cart, tracking_error, particle_swap
 from pfilter import ParticleFilter, systematic_resample
+import matplotlib.pyplot as plt
 
 ##################################################################
 # MCTS Algorithm
@@ -63,8 +64,10 @@ def rollout_random(env, state, depth):
     ## random action
     action, action_index = env.actions.get_random_action()
 
+    #print([state[4*t:4*(t+1)] for t in range(env.state.n_targets)])
     # generate next state and reward with random action; observation doesn't matter
-    state_prime = env.state.update_state(state, action)
+    #state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)])
+    state_prime = np.array([env.state.update_state(s, action) for s in state])
     reward = env.state.reward_func(state=state_prime, action_idx=action_index, particles=env.pf.particles)
 
     return reward + lambda_arg * rollout_random(env, state_prime, depth-1)
@@ -81,6 +84,7 @@ def simulate(env, Q, N, state, history, depth, c, belief):
     # expansion
     test_index = history.copy()
     test_index.append(1)
+
 
     if tuple(test_index) not in Q:
 
@@ -99,10 +103,11 @@ def simulate(env, Q, N, state, history, depth, c, belief):
     action = env.actions.index_to_action(search_action_index)
 
     # take action; get new state, observation, and reward
-    state_prime = env.state.update_state(state, action)
+    #state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)]) # env.state.update_state(state, action)
+    state_prime = np.array([env.state.update_state(s, action) for s in state])
     observation = env.sensor.observation(state_prime)
 
-    if env.state.belief_mdp: 
+    if env.state.belief_mdp:
         env.pf.particles = belief
         env.pf.update(np.array(observation), xp=belief, control=action)
         belief = env.pf.particles
@@ -112,7 +117,7 @@ def simulate(env, Q, N, state, history, depth, c, belief):
     # recursive call after taking action and getting observation
     new_history = history.copy()
     new_history.append(search_action_index)
-    new_history.append(observation)
+    new_history.append(tuple([int(o) for o in observation]))
     (Q, N, successor_reward) = simulate(env, Q, N, state_prime, new_history, depth-1, c, belief)
     q = reward + lambda_arg * successor_reward
 
@@ -138,16 +143,16 @@ def select_action(env, Q, N, belief, depth, c, iterations):
 
     original_particles = np.copy(env.pf.particles)
     original_n_particles = env.pf.n_particles
-    original_weights = env.pf.weights 
+    original_weights = env.pf.weights
     env.pf.n_particles = 200
     env.pf.weights = np.ones(env.pf.n_particles) / env.pf.n_particles
     while counter < iterations:
 
         # draw state randomly based on belief state (pick a random particle)
         state = random.choice(belief)
-
+        converted_state = state.reshape(env.state.n_targets, 4)
         # simulate
-        simulate(env, Q, N, state.astype(float), history, depth, c, np.copy(original_particles)[random.sample(range(len(original_particles)), 200)])
+        simulate(env, Q, N, converted_state.astype(float), history, depth, c, np.copy(original_particles)[random.sample(range(len(original_particles)), 200)])
 
         counter += 1
     env.pf.n_particles = original_n_particles
@@ -200,12 +205,12 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     all_reward = np.zeros(num_iters)
     all_col = np.zeros(num_iters)
     all_loss = np.zeros(num_iters)
-    all_r_err = np.zeros(num_iters)
-    all_theta_err = np.zeros(num_iters)
-    all_heading_err = np.zeros(num_iters)
-    all_centroid_err = np.zeros(num_iters)
-    all_rmse = np.zeros(num_iters)
-    all_mae = np.zeros(num_iters)
+    all_r_err = np.zeros((num_iters, env.state.n_targets))
+    all_theta_err = np.zeros((num_iters, env.state.n_targets))
+    all_heading_err = np.zeros((num_iters, env.state.n_targets))
+    all_centroid_err = np.zeros((num_iters, env.state.n_targets))
+    all_rmse = np.zeros((num_iters, env.state.n_targets))
+    all_mae = np.zeros((num_iters, env.state.n_targets))
     all_inference_times = np.zeros(num_iters)
     all_pf_cov = [None]*num_iters
 
@@ -215,6 +220,9 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
     # 500 time steps with an action to be selected at each
     plots = []
+    selected_plots = [7]
+    fig = plt.figure(figsize=(10*len(selected_plots), 10), dpi=100)
+    axs = None
 
     for time_step in tqdm(range(num_iters)):
 
@@ -230,10 +238,12 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # select an action
         inference_start_time = datetime.now()
+
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, simulations)
         inference_time = (datetime.now() - inference_start_time).total_seconds()
         # take action; get next true state, obs, and reward
-        next_state = env.state.update_state(env.state.target_state, action, target_update=True)
+        #next_state = env.state.update_state(env.state.target_state, action, target_update=True)
+        next_state = np.array([env.state.update_state(target_state, action) for target_state in env.state.target_state])
         #next_state = env.state.update_state(env.state.target_state, action, target_control=env.state.circular_control(time_step, size=5))
         # Update absolute position of sensor
         env.state.update_sensor(action)
@@ -245,6 +255,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
+        #print(env.pf.particles.shape)
+        particle_swap(env)
         belief = env.pf.particles
 
         reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
@@ -254,15 +266,19 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
 
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
+        total_col = np.mean([np.mean(env.pf.particles[:,4*t] < 15) for t in range(env.state.n_targets)])
+        total_loss = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
 
-        if env.state.target_state[0] < 10:
-            total_col += 1
+        # for target_state in env.state.target_state:
+        #     if target_state[0] < 15:
+        #         total_col += 1
 
-        if env.state.target_state[0] > 150:
-            total_loss += 1
+        #     if target_state[0] > 150:
+        #         total_loss += 1
 
         if results is not None and results.plotting:
-            results.build_plots(env.state.target_state, belief, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), time_step, fig, ax)
+            
+            axs = results.build_multitarget_plots(env, time_step, fig, axs, centroid_distance_error, selected_plots=selected_plots)
 
         # Save results to output arrays
         all_target_states[time_step] = env.state.target_state

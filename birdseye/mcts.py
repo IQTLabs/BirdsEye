@@ -95,12 +95,14 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         run_time = datetime.now()-run_start_time
         run_data.append([datetime.now(), run_time] + result[1:])
 
-        mcts_coll = result[6][-1]/iterations
-        mcts_loss = result[7][-1]/iterations
+        # mcts_coll = result[6][-1]/iterations
+        # mcts_loss = result[7][-1]/iterations
+        mcts_coll = result[6][-1]
+        mcts_loss = result[7][-1]
         print(".")
         print("\n==============================")
         print("Runs: {}".format(i))
-        print("NUM PARTICLES: {}".format(simulations))
+        print("SIMULATIONS: {}".format(simulations))
         print("MCTS Depth {} Results".format(DEPTH))
         print("Collision Rate: {}".format(mcts_coll/i))
         print("Loss Rate: {}".format(mcts_loss/i))
