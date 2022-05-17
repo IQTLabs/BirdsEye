@@ -6,6 +6,12 @@ import torch
 import time
 import json
 import matplotlib.pyplot as plt
+import base64
+import random
+from io import BytesIO
+from flask import Flask
+from matplotlib.figure import Figure
+import threading
 
 import birdseye.sensor 
 import birdseye.env 
@@ -73,13 +79,6 @@ def on_connect(client, userdata, flags, rc):
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
     client.subscribe(sub_channel)
 
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message 
-client.connect('localhost', 1883, 60) 
-client.loop_start()
-
-
 
 # GamutRF Sensor 
 class GamutRFSensor(birdseye.sensor.SingleRSSI): 
@@ -119,52 +118,69 @@ class DQNPlanner(PathPlanner):
     def proposal(self, observation): 
         return birdseye.dqn.simple_run(self.model, observation, self.device)
         
+# Flask 
+def run_flask(fig): 
+    app = Flask(__name__)
+
+    @app.route("/")
+    def hello():
+        # Save figure to a temporary buffer.
+        buf = BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight')
+        # Embed the result in the html output.
+        data = base64.b64encode(buf.getbuffer()).decode("ascii")
+        return f'<html><head><meta http-equiv="refresh" content="1"></head><body><img src="data:image/png;base64,{data}"/></body></html>'
+
+    host_name = '0.0.0.0'
+    port = 4999
+    threading.Thread(target=lambda: app.run(host=host_name, port=port, debug=True, use_reloader=False)).start()
+    
 # main loop 
 def main(config=None): 
+
+    # MQTT 
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message 
+    client.connect('localhost', 1883, 60) 
+    client.loop_start()
+
+    # BirdsEye 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     results = birdseye.utils.Results(method_name='dqn',
                         global_start_time=global_start_time,
                         plotting=True,
                         config=config)
-
     sensor = GamutRFSensor(fading_sigma=8, threshold=-120) # fading sigm = 8dB, threshold = -120dB
     actions = WalkingActions()
     actions.print_action_info()
     state = birdseye.state.RFMultiState(n_targets=2, reward='entropy_collision_reward', simulated=False)
     env = birdseye.env.RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=False)
-
     planner = DQNPlanner(env, device)
     belief = env.reset()
 
-    selected_plots = [8]
-    fig = plt.figure(figsize=(10*len(selected_plots), 10), dpi=100)
-    axs = None
+    # Flask
+    fig = Figure(figsize=(8,8))
+    ax = fig.subplots()
+    run_flask(fig)
 
     time_step = 0
     time.sleep(2)
     while True: 
         time_step += 1 
-
-        action_proposal = planner.proposal(belief) 
-        action_proposal = actions.index_to_action(action_proposal)
-        #print('action proposal = ',action_proposal)
-
+        
+        action_proposal = actions.index_to_action(planner.proposal(belief))
         action_taken = data.get('action', (0,0))
         
         # update belief based on action and sensor observation (sensor is read inside)
-        #print('action_taken = ',action_taken)
         belief, reward, observation = env.real_step(action_taken, data.get('bearing', None))
 
         textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        axs = results.build_multitarget_plots(env=env, time_step=time_step, fig=fig, axs=axs, selected_plots=selected_plots, simulated=False, textstr=textstr)
+        
+        results.live_plot(env=env, time_step=time_step, ax=ax, simulated=False, textstr=textstr)
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-b', '--batch',
-    #                          action='store_true',
-    #                          help='Specify batch run option')
-    # args = parser.parse_args()
-    
+
     main()
 

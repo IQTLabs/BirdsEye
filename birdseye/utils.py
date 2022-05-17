@@ -139,6 +139,53 @@ class Results(object):
     ##################################################################
     # Plotting
     ##################################################################
+
+    def live_plot(self, env, time_step=None, ax=None, simulated=True, textstr=None): 
+        
+        ax.clear()
+        ax.set_title('Time = {}'.format(time_step))
+
+        abs_sensor = env.state.sensor_state
+        abs_particles = env.get_absolute_particles()
+        self.sensor_hist.append(abs_sensor)
+        
+        color_array = [['salmon','darkred', 'red'],['lightskyblue','darkblue','blue']]
+        lines = [] # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
+        for t in range(env.state.n_targets):
+            particles_x, particles_y = pol2cart(abs_particles[:,t,0], np.radians(abs_particles[:,t,1]))
+            # centroid_x = np.mean(particles_x)
+            # centroid_y = np.mean(particles_y)
+            # centroid_r, centroid_theta = cart2pol(centroid_x, centroid_y)
+            
+            
+            line1, = ax.plot(particles_x, particles_y, 'o', color=color_array[t][0], markersize=4, markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
+            #ax.plot(centroid_theta, centroid_r, '*', color=color_array[t][1],markeredgecolor='white', label='centroid', markersize=12, zorder=2)
+            if t == 0: 
+                lines.extend([line1])
+            else: 
+                lines.extend([])
+
+            
+        sensor_x, sensor_y = pol2cart(np.array(self.sensor_hist)[:,0], np.radians(np.array(self.sensor_hist)[:,1]))
+        if len(self.sensor_hist) > 1: 
+            ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=4.0, color='mediumorchid', zorder=3, markersize=12)
+
+        line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
+        lines.extend([line4])
+
+        ax.legend(handles=lines, loc='upper center', bbox_to_anchor=(0.5,-0.05), fancybox=True, shadow=True,ncol=2)
+
+        map_width = 600
+        min_map = -1*int(map_width/2)
+        max_map = int(map_width/2)
+        ax.set_xlim(min_map, max_map)
+        ax.set_ylim(min_map, max_map)
+        if textstr: 
+            props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
+            ax.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
+            ax.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+
     def build_multitarget_plots(self, env, time_step=None, fig=None, axs=None, centroid_distance_error=None, selected_plots=[1,2,3,4,5], simulated=True, textstr=None):
         xp = env.state.target_state
         belief = env.pf.particles.reshape(len(env.pf.particles), env.state.n_targets, 4)
@@ -165,8 +212,6 @@ class Results(object):
 
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-
-
 
         if len(self.abs_target_hist) < self.history_length:
             self.abs_target_hist = [abs_target] * self.history_length
