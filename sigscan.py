@@ -75,7 +75,7 @@ def on_message(client, userdata, message):
     #print('data: ',data)
 
 def on_connect(client, userdata, flags, rc):
-    sub_channel = 'gamutRF'
+    sub_channel = 'gamutrf/rssi'
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
     client.subscribe(sub_channel)
 
