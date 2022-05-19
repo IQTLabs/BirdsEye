@@ -23,3 +23,8 @@ run_batch_nobuild:
 	@echo "Running batch evaluation script"
 	@docker run -it $(GPUS) birds_eye -b
 	@echo
+run_sigscan: build run_sigscan_nobuild
+run_sigscan_nobuild:
+	@echo
+	@echo "Running sigscan script"
+	@docker run -it --net=host $(GPUS) birds_eye sigscan.py
