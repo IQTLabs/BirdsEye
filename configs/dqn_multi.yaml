@@ -32,6 +32,7 @@ delta_col: 15
 
 # Other 
 model: small
+version: single_omni_entropy_walking
 
 [Defaults]
 number_timesteps : 100000
