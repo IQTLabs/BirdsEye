@@ -57,6 +57,17 @@ class Actions(object):
         for ai in zip(self.get_action_list(), self.avail_actions()):
             print("   {}   {}".format(ai[0], ai[1]))
 
+# Human walking action space 
+class WalkingActions(Actions):
+    """WalkingActions for a human walking
+    """
+    def __init__(self):
+        # change in heading 
+        self.del_theta = [-45, 0, 45]
+        # speed 
+        self.del_r = [0,1.5]
+        simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
+        super().__init__(action_space=simple_action_space, verbose=False)
 
 class SimpleActions(Actions):
     """SimpleActions for testing purposes
@@ -94,7 +105,8 @@ class BaselineActions(Actions):
 
 
 AVAIL_ACTIONS = {'simpleactions' : SimpleActions,
-                 'baselineactions': BaselineActions
+                 'baselineactions': BaselineActions, 
+                 'walkingactions': WalkingActions
                 }
 
 def get_action(action_name=''):

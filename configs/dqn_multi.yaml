@@ -4,13 +4,14 @@ method : dqn
 state : rfmultistate 
 
 # Action space 
-action : simpleactions
+action : walkingactions
+#action : simpleactions
 
 # Sensor and antenna 
-sensor : doublerssilofi
-#sensor : singlerssi
-antenna_filename: radiation_pattern_yagi_5.csv
-#antenna_filename: radiation_pattern_monopole.csv
+#sensor : doublerssi
+sensor : singlerssi
+#antenna_filename: radiation_pattern_yagi_5.csv
+antenna_filename: radiation_pattern_monopole.csv
 
 # Target settings 
 n_targets: 2

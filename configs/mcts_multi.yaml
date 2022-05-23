@@ -4,18 +4,19 @@ method : mcts
 state : rfmultistate 
 
 # Action space 
-action : simpleactions
+action : walkingactions
+#action : simpleactions
 
 # Sensor 
-sensor : doublerssi
-#sensor : singlerssi
-antenna_filename: radiation_pattern_yagi_5.csv
-#antenna_filename: radiation_pattern_monopole.csv
+#sensor : doublerssi
+sensor : singlerssi
+#antenna_filename: radiation_pattern_yagi_5.csv
+antenna_filename: radiation_pattern_monopole.csv
 
 # Reward 
 #reward: range_reward
-reward: heuristic_reward
-#reward: entropy_collision_reward
+#reward: heuristic_reward
+reward: entropy_collision_reward
 
 # Target settings 
 n_targets: 2
