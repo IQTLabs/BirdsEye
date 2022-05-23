@@ -1,29 +1,35 @@
 [Methods]
-# particle filter initialization larger r  
-# adjust dqn env observation heatmap size 
 env : RFMultiEnv
 method : mcts
+state : rfmultistate 
+
+# Action space 
 action : simpleactions
+
+# Sensor 
 sensor : doublerssi
 #sensor : singlerssi
-state : rfmultistate 
 antenna_filename: radiation_pattern_yagi_5.csv
 #antenna_filename: radiation_pattern_monopole.csv
-n_targets: 2
-target_speed: 1.0
-target_start: 130
-#resample_proportion: 0.005
-fading_sigma: 8.0
-particle_resample: 0.01
-particle_min: 10
-particle_max: 200
+
+# Reward 
 #reward: range_reward
 reward: heuristic_reward
 #reward: entropy_collision_reward
-version: paper
-delta_col: 15
-#likelihood: weight2
-#target_speed_range: [0,1,2,3,4]
+
+# Target settings 
+n_targets: 2
+fading_sigma: 8.0
+target_speed: 1.0
+target_start: 100
+
+# Particle filter settings 
+particle_resample: 0.01
+particle_min: 10
+particle_max: 200
+
+# Other 
+# version: paper
 
 [Defaults]
 lambda_arg : 0.8
