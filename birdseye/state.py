@@ -28,7 +28,7 @@ class State(object):
 class RFMultiState(State):
     """RF Multi Target State
     """
-    def __init__(self, n_targets=2, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None, simulated=True):
+    def __init__(self, n_targets=1, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None, simulated=True):
 
         self.state_dim = 4
         ### Target Settings 
