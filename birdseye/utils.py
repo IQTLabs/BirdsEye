@@ -6,6 +6,7 @@ import pandas as pd
 from pathlib import Path
 import imageio
 from itertools import permutations
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
@@ -90,7 +91,7 @@ class Results(object):
     Results class for saving run results
     to file with common format.
     '''
-    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config=None):
+    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config=None, experiment_name=None):
         self.num_iters = num_iters
         self.method_name = method_name
         self.global_start_time = global_start_time
@@ -102,18 +103,22 @@ class Results(object):
                 self.plotting = False
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
         self.gif_dir = '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)
+        self.logdir = '{}/{}/{}_logs/'.format(RUN_DIR, method_name, global_start_time)
 
         Path(self.gif_dir+'/png/').mkdir(parents=True, exist_ok=True)
         Path(self.gif_dir+'/gif/').mkdir(parents=True, exist_ok=True)
+        Path(self.logdir).mkdir(parents=True, exist_ok=True)
         self.col_names =['time', 'run_time', 'target_state', 'sensor_state',
                          'action', 'observation', 'reward', 'collisions', 'lost',
                          'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse','mae','inference_times', 'pf_cov']
 
+        self.pf_stats = defaultdict(list)
         self.abs_target_hist = []
         self.abs_sensor_hist = []
         self.target_hist = []
         self.sensor_hist = []
         self.history_length = 50
+        self.time_step = 0
 
         if config: 
             write_header_log(config, self.method_name, self.global_start_time)
@@ -140,10 +145,16 @@ class Results(object):
     # Plotting
     ##################################################################
 
-    def live_plot(self, env, time_step=None, ax=None, simulated=True, textstr=None): 
+    def live_plot(self, env, time_step=None, fig=None, ax=None, simulated=True, textstr=None): 
         
+        self.time_step = time_step
         ax.clear()
         ax.set_title('Time = {}'.format(time_step))
+
+        self.pf_stats['mean_hypothesis'].append(env.pf.mean_hypothesis)
+        self.pf_stats['map_hypothesis'].append(env.pf.map_hypothesis)
+        self.pf_stats['mean_state'].append(env.pf.mean_state)
+        self.pf_state['map_state'].append(env.pf.map_state)
 
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
@@ -182,10 +193,13 @@ class Results(object):
         ax.set_ylim(min_map, max_map)
         if textstr: 
             props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
-            ax.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            fig.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
             props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
-            ax.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-
+            fig.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            pfstats_str = ['mean_hypothesis = {:.0f} dB\nmap_hypothesis = {:.2f} dB'.format(self.pf_stats['mean_hypothesis'], self.pf_state['map_hypothesis'])]
+            props = dict(boxstyle='round', facecolor='khaki', alpha=0.5)
+            fig.text(1.04, 0.25, pfstats_str[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+           
     def build_multitarget_plots(self, env, time_step=None, fig=None, axs=None, centroid_distance_error=None, selected_plots=[1,2,3,4,5], simulated=True, textstr=None):
         xp = env.state.target_state
         belief = env.pf.particles.reshape(len(env.pf.particles), env.state.n_targets, 4)
@@ -630,7 +644,7 @@ class Results(object):
             #ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
 
         
-        plt.pause(0.001)
+        
         png_filename = '{}/png/{}.png'.format(self.gif_dir, time_step)
         #print('saving plots in {}'.format(png_filename))
         #plt.savefig(png_filename, bbox_inches='tight')

@@ -162,6 +162,30 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
 
+class MCTSRunner(): 
+    def __init__(self, env, depth, c, simulations=1000): 
+
+        self.env = env
+        self.depth = depth
+        self.c = c
+        self.simulations = simulations
+
+        self.Q = {}
+        self.N = {}
+
+        self.action = None
+
+    def run(self, belief_heatmap): 
+
+        self.env.reset()
+
+        if self.action is not None:
+            self.Q = {}
+            self.N = {}
+
+        self.Q, self.N, self.action = select_action(self.env, self.Q, self.N, self.env.pf.particles, self.depth, self.c, self.simulations)
+        
+        return self.action
 
 ##################################################################
 # Trial

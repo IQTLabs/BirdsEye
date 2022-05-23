@@ -217,7 +217,7 @@ class SingleRSSI(Sensor):
     """
     def __init__(self, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern()
-        self.std_dev = 10
+        self.std_dev = 15
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)

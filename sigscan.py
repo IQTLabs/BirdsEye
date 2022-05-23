@@ -12,6 +12,7 @@ from io import BytesIO
 from flask import Flask
 from matplotlib.figure import Figure
 import threading
+from collections import defaultdict
 
 import birdseye.sensor 
 import birdseye.env 
@@ -19,6 +20,7 @@ import birdseye.actions
 import birdseye.state
 import birdseye.utils
 import birdseye.dqn 
+import birdseye.mcts_utils
 
 data = {}
 
@@ -90,6 +92,7 @@ class GamutRFSensor(birdseye.sensor.SingleRSSI):
         global data 
         if (data.get('rssi', None)) is None or (data['rssi'] < self.threshold): 
             return None 
+            #return -40
         return data['rssi']
 
 # Human walking action space 
@@ -111,6 +114,13 @@ class PathPlanner():
     def proposal(self, observation): 
         pass
 
+class MCTSPlanner(PathPlanner): 
+    def __init__(self, env, actions, depth, c, simulations):
+        self.runner =  birdseye.mcts.MCTSRunner(env=env, depth=depth, c=c, simulations=simulations)
+        self.actions = actions 
+    def proposal(self, observation): 
+        return self.actions.action_to_idx(self.runner.run(observation))
+
 class DQNPlanner(PathPlanner): 
     def __init__(self, env, device): 
         self.model = birdseye.dqn.simple_prep(env, device)
@@ -119,7 +129,7 @@ class DQNPlanner(PathPlanner):
         return birdseye.dqn.simple_run(self.model, observation, self.device)
         
 # Flask 
-def run_flask(fig): 
+def run_flask(fig, results): 
     app = Flask(__name__)
 
     @app.route("/")
@@ -127,9 +137,12 @@ def run_flask(fig):
         # Save figure to a temporary buffer.
         buf = BytesIO()
         fig.savefig(buf, format='png', bbox_inches='tight')
+        png_filename = '{}/png/{}.png'.format(results.gif_dir, results.time_step)
+        #fig.savefig(png_filename, format='png', bbox_inches='tight')
+        print('save timestep ',results.time_step)
         # Embed the result in the html output.
         data = base64.b64encode(buf.getbuffer()).decode("ascii")
-        return f'<html><head><meta http-equiv="refresh" content="1"></head><body><img src="data:image/png;base64,{data}"/></body></html>'
+        return f'<html><head><meta http-equiv="refresh" content="0.5"></head><body><img src="data:image/png;base64,{data}"/></body></html>'
 
     host_name = '0.0.0.0'
     port = 4999
@@ -142,7 +155,7 @@ def main(config=None):
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message 
-    client.connect('localhost', 1883, 60) 
+    client.connect('ljt.dynamic.ucsd.edu', 1883, 60) 
     client.loop_start()
 
     # BirdsEye 
@@ -157,15 +170,23 @@ def main(config=None):
     actions.print_action_info()
     state = birdseye.state.RFMultiState(n_targets=2, reward='entropy_collision_reward', simulated=False)
     env = birdseye.env.RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=False)
-    planner = DQNPlanner(env, device)
+    if planner_method in ['dqn', 'DQN']: 
+        planner = DQNPlanner(env, device)
+    elif planner_method in ['mcts','MCTS']: 
+        depth=10
+        c=20
+        simulations=100
+        planner = MCTSPlanner(env, actions, depth, c, simulations)
     belief = env.reset()
 
     # Flask
     fig = Figure(figsize=(8,8))
     ax = fig.subplots()
-    run_flask(fig)
 
     time_step = 0
+    run_flask(fig, results)
+
+    data = defaultdict(list)
     time.sleep(2)
     while True: 
         time_step += 1 
@@ -176,9 +197,19 @@ def main(config=None):
         # update belief based on action and sensor observation (sensor is read inside)
         belief, reward, observation = env.real_step(action_taken, data.get('bearing', None))
 
-        textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
+        #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]        
+        textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
+        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, simulated=False, textstr=textstr)
         
-        results.live_plot(env=env, time_step=time_step, ax=ax, simulated=False, textstr=textstr)
+        np.save('{}/{}_particles.npy'.format(results.logdir,int(time.time())), env.pf.particles)
+
+        data['action_proposal'].append(action_proposal)
+        data['action_taken'].append(action_taken)
+        data['reward'].append(reward)
+        data['observation'].append(observation)
+        
+        for key in data: 
+            np.save('{}/{}.npy'.format(results.logdir, key), data[key])
 
 if __name__ == '__main__':
 
