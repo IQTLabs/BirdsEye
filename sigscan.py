@@ -84,8 +84,8 @@ def on_connect(client, userdata, flags, rc):
 
 # GamutRF Sensor 
 class GamutRFSensor(birdseye.sensor.SingleRSSI): 
-    def __init__(self, fading_sigma=None, threshold=-120): 
-        super().__init__(fading_sigma)
+    def __init__(self, antenna_filename=None, fading_sigma=None, threshold=-120): 
+        super().__init__(antenna_filename=antenna_filename, fading_sigma=fading_sigma)
         self.threshold = threshold
 
     def real_observation(self): 
@@ -165,11 +165,29 @@ def main(config=None):
                         global_start_time=global_start_time,
                         plotting=True,
                         config=config)
-    sensor = GamutRFSensor(fading_sigma=8, threshold=-120) # fading sigm = 8dB, threshold = -120dB
+
+    # Sensor 
+    if antenna_type in ['directional', 'yagi', 'logp']: 
+        antenna_filename = 'radiation_pattern_yagi_5.csv'
+    elif antenna_type in ['omni', 'omnidirectional']: 
+        antenna_filename = 'radiation_pattern_monopole.csv'
+    power_tx=26
+    directivity_tx=1
+    f=5.7e9
+    sensor = GamutRFSensor(antenna_filename=antenna_filename, power_tx=power_tx, directivity_tx=directivity_tx, f=f, fading_sigma=8, threshold=-120) # fading sigm = 8dB, threshold = -120dB
+    
+    # Action space 
     actions = WalkingActions()
     actions.print_action_info()
+    
+    # State managment 
     state = birdseye.state.RFMultiState(n_targets=2, reward='entropy_collision_reward', simulated=False)
+    
+    # Environment 
     env = birdseye.env.RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=False)
+    belief = env.reset()
+
+    # Motion planner 
     if planner_method in ['dqn', 'DQN']: 
         planner = DQNPlanner(env, device)
     elif planner_method in ['mcts','MCTS']: 
@@ -177,15 +195,14 @@ def main(config=None):
         c=20
         simulations=100
         planner = MCTSPlanner(env, actions, depth, c, simulations)
-    belief = env.reset()
-
+    
     # Flask
     fig = Figure(figsize=(8,8))
     ax = fig.subplots()
-
     time_step = 0
     run_flask(fig, results)
 
+    # Main loop 
     data = defaultdict(list)
     time.sleep(2)
     while True: 

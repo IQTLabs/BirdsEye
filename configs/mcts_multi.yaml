@@ -5,12 +5,16 @@ env : RFMultiEnv
 method : mcts
 action : simpleactions
 sensor : doublerssilofi
+#sensor : singlerssi
 state : rfmultistate 
+antenna_filename: radiation_pattern_yagi_5.csv
+#antenna_filename: radiation_pattern_monopole.csv
+n_targets: 2
 target_speed: 1.0
 target_start: 100
 #resample_proportion: 0.005
 fading_sigma: 8.0
-reward: heuristic_reward
+reward: range_reward
 #reward: range_reward
 particle_resample: 0.01
 particle_min: 10

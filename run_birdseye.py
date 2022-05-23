@@ -61,6 +61,7 @@ def run_birdseye(args=None, env=None):
     action_name = config_dict['action']
     sensor_name = config_dict['sensor']
     state_name = config_dict['state']
+    antenna_filename = config_dict.get('antenna_filename')
     n_targets = config_dict.get('n_targets')
     target_speed = config_dict.get('target_speed')
     target_speed_range = config_dict.get('target_speed_range')
@@ -73,12 +74,16 @@ def run_birdseye(args=None, env=None):
     # Setup requested method objects
     run_method = get_method(method_name)
     env_class = AVAIL_ENVS[env_name]
-    actions = get_action(action_name)
-    sensor = get_sensor(sensor_name)
-    state = get_state(state_name)
+    action_class = get_action(action_name)
+    sensor_class = get_sensor(sensor_name)
+    state_class = get_state(state_name)
 
+    #antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9,
+    sensor = sensor_class(antenna_filename='radiation_pattern_yagi_5.csv',  fading_sigma=fading_sigma)
+    actions = action_class() 
+    state = state_class(n_targets=n_targets, target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement, target_start=target_start, reward=reward)
     # Setup environment
-    env = env_class(sensor(fading_sigma=fading_sigma), actions(), state(n_targets=n_targets, target_speed=target_speed, target_speed_range=target_speed_range, target_movement=target_movement, target_start=target_start, reward=reward))
+    env = env_class(sensor, actions, state)
 
     # Run the requested algorithm
     run_method(args=config, env=env)
