@@ -58,7 +58,8 @@ atom_num : 1
 ob_scale : 1
 gamma : 0.99
 grad_norm : 10.0
-save_interval : 100000
+save_interval : 10000
+eval_interval : 100000
 #10000
 save_path : checkpoints
 log_path : rl_log

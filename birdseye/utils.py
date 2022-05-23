@@ -642,8 +642,6 @@ class Results(object):
                 props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
                 ax.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
             #ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
-
-        
         
         png_filename = '{}/png/{}.png'.format(self.gif_dir, time_step)
         #print('saving plots in {}'.format(png_filename))

@@ -14,9 +14,9 @@ sensor : singlerssi
 antenna_filename: radiation_pattern_monopole.csv
 
 # Reward 
-#reward: range_reward
+reward: range_reward
 #reward: heuristic_reward
-reward: entropy_collision_reward
+#reward: entropy_collision_reward
 
 # Target settings 
 n_targets: 2
