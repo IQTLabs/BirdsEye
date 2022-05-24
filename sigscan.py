@@ -51,7 +51,7 @@ def on_message(client, userdata, message):
     #print('data: ',data)
 
 def on_connect(client, userdata, flags, rc):
-    sub_channel = 'gamutRF'
+    sub_channel = 'gamutrf/rssi'
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
     client.subscribe(sub_channel)
 
@@ -111,10 +111,12 @@ def run_flask(fig, results, debug):
         # Save figure to a temporary buffer.
         flask_start_time = timer()
         buf = BytesIO()
-        fig.savefig(buf, format='png', bbox_inches='tight')
-        png_filename = '{}/png/{}.png'.format(results.gif_dir, results.time_step)
-        #fig.savefig(png_filename, format='png', bbox_inches='tight')
-        
+
+        try:
+            fig.savefig(buf, format='png', bbox_inches='tight')
+        except ValueError:
+            return '<html><head><meta http-equiv="refresh" content="1"></head><body><p>No image, refreshing...</p></body></html>'
+
         # Embed the result in the html output.
         data = base64.b64encode(buf.getbuffer()).decode("ascii")
         flask_end_time = timer()
@@ -139,7 +141,7 @@ def main(config=None, debug=False):
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message 
-    client.connect('ljt.dynamic.ucsd.edu', 1883, 60) 
+    client.connect(localhost, 1883, 60) 
     client.loop_start()
 
     # BirdsEye 
@@ -210,7 +212,7 @@ def main(config=None, debug=False):
 
         #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]        
         textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        data['position'] = [ 45.598101, -122.678819 ]
+        #data['position'] = [ 45.598101, -122.678819 ]
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)

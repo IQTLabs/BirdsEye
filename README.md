@@ -5,13 +5,13 @@ The BirdsEye project demonstrates the simulated
 tracking of radio frequency (RF) signals via
 reinforcement learning (RL) techniques implemented
 on low-fidelity sensors. 
-This permits the in-situ observation-training RL paradigm without the need
+This permits training and inference without the need
 for significant compute hardware such as graphical
 processing units (GPU).
 Instead, these methods can
-be run on low-cost, commercial, off-the-shelf
+be run on low-cost, commercial-off-the-shelf
 technology, providing capabilities to applications in
-which covert or concealed sensors are paramount in
+which low-cost sensors are paramount in
 deployment, or where more sensitive sensors do not
 function or cannot be installed due to the nature of
 the environment.
@@ -83,6 +83,10 @@ In order to streamline this process a `Makefile` has been provided as a shorthan
 ```
 Accepted make values are: `run_mcts, run_dqn, run_batch, build`
 
+If you don't have or want to use GPUs you can preface the `make` command with `GPUS=` like so:
+```
+> GPUS= make run_mcts
+```
 
 ## 2. Configurations 
 Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.  
@@ -102,7 +106,17 @@ $ python run_birdseye.py -c configs/dqn.yaml
 ## 4. Results
 The results of the experiments will be stored in the `./runs` directory.   
 Log files are created which store the configurations for each experiment along with metrics and state information per time step.   
-For a detailed guide and visualizations please see [results user guide notebook](results_guide.ipynb).
+For a detailed guide and visualizations please see results user guide notebook: [results_guide.ipynb](results_guide.ipynb).
+
+<p align="center">
+  <img src="data/results_example.png" />   
+  <em align = "center"><b>Fig. 3: Localization results (distance between mean belief and actual target location)</b></em>
+</p>
+
+<p align="center">
+  <img src="data/speedup.png" />   
+  <em align = "center"><b>Fig. 4: Inference times and speed comparison</b></em>
+</p>
 
 
 
