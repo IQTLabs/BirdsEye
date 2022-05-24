@@ -287,27 +287,19 @@ class DoubleRSSI(Sensor):
 
     # samples observation given state
     def observation(self, state):
-        # Calculate observation for multiple targets
-        if len(state) > 1: #state.n_targets > 1:
-            power_front = 0
-            power_back = 0
-            for ts in state: # target_state, particle_state
-                distance = ts[0]
-                theta_front = ts[1] * np.pi / 180.0
-                theta_back = theta_front + np.pi
-                directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
-                directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
-                power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
-                power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
-            rssi_front = power_to_dB(power_front)
-            rssi_back = power_to_dB(power_back)
-            return [rssi_front, rssi_back]
-
-        # else single target
-        else:
-            # TODO: implement this
-            return None
-            #return 1/ ((np.random.normal(state[0], self.std_dev)) ** 2)
+        power_front = 0
+        power_back = 0
+        for ts in state: # target_state, particle_state
+            distance = ts[0]
+            theta_front = ts[1] * np.pi / 180.0
+            theta_back = theta_front + np.pi
+            directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
+            directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
+            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+        rssi_front = power_to_dB(power_front)
+        rssi_back = power_to_dB(power_back)
+        return [rssi_front, rssi_back]
 
     # sample state from observation
     def gen_state(self, obs):

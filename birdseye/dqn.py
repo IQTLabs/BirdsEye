@@ -67,12 +67,12 @@ dqn_defaults = {
     'eval_mode': False
 }
 
-def simple_prep(env, device): 
+def simple_prep(env, device, checkpoint_filename): 
     policy_dim = len(env.actions.action_space)
     map_dim = (env.state.n_targets, 300, 300) 
     network = SmallRFPFQnet(env.state.n_targets, map_dim, env.state.state_dim, policy_dim)
     qnet = network.to(device)
-    checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
+    checkpoint = torch.load(checkpoint_filename, map_location=device)
     qnet.load_state_dict(checkpoint[0])
 
     return qnet

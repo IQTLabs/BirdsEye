@@ -84,8 +84,8 @@ def on_connect(client, userdata, flags, rc):
 
 # GamutRF Sensor 
 class GamutRFSensor(birdseye.sensor.SingleRSSI): 
-    def __init__(self, antenna_filename=None, fading_sigma=None, threshold=-120): 
-        super().__init__(antenna_filename=antenna_filename, fading_sigma=fading_sigma)
+    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None, threshold=-120): 
+        super().__init__(antenna_filename=antenna_filename, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=fading_sigma)
         self.threshold = threshold
 
     def real_observation(self): 
@@ -116,14 +116,14 @@ class PathPlanner():
 
 class MCTSPlanner(PathPlanner): 
     def __init__(self, env, actions, depth, c, simulations):
-        self.runner =  birdseye.mcts.MCTSRunner(env=env, depth=depth, c=c, simulations=simulations)
+        self.runner =  birdseye.mcts_utils.MCTSRunner(env=env, depth=depth, c=c, simulations=simulations)
         self.actions = actions 
     def proposal(self, observation): 
-        return self.actions.action_to_idx(self.runner.run(observation))
+        return self.actions.action_to_index(self.runner.run(observation))
 
 class DQNPlanner(PathPlanner): 
-    def __init__(self, env, device): 
-        self.model = birdseye.dqn.simple_prep(env, device)
+    def __init__(self, env, device, checkpoint_filename): 
+        self.model = birdseye.dqn.simple_prep(env, device, checkpoint_filename)
         self.device = device
     def proposal(self, observation): 
         return birdseye.dqn.simple_run(self.model, observation, self.device)
@@ -167,6 +167,7 @@ def main(config=None):
                         config=config)
 
     # Sensor 
+    antenna_type = 'omni'
     if antenna_type in ['directional', 'yagi', 'logp']: 
         antenna_filename = 'radiation_pattern_yagi_5.csv'
     elif antenna_type in ['omni', 'omnidirectional']: 
@@ -181,15 +182,18 @@ def main(config=None):
     actions.print_action_info()
     
     # State managment 
-    state = birdseye.state.RFMultiState(n_targets=2, reward='entropy_collision_reward', simulated=False)
+    #reward='entropy_collision_reward'
+    reward='heuristic_reward'
+    state = birdseye.state.RFMultiState(n_targets=2, reward=reward, simulated=False)
     
     # Environment 
     env = birdseye.env.RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=False)
     belief = env.reset()
 
     # Motion planner 
+    planner_method = 'mcts'
     if planner_method in ['dqn', 'DQN']: 
-        planner = DQNPlanner(env, device)
+        planner = DQNPlanner(env, device, 'checkpoints/dqn_doublerssi.checkpoint')
     elif planner_method in ['mcts','MCTS']: 
         depth=10
         c=20

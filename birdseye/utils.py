@@ -119,6 +119,7 @@ class Results(object):
         self.sensor_hist = []
         self.history_length = 50
         self.time_step = 0
+        self.texts = []
 
         if config: 
             write_header_log(config, self.method_name, self.global_start_time)
@@ -154,8 +155,11 @@ class Results(object):
         self.pf_stats['mean_hypothesis'].append(env.pf.mean_hypothesis)
         self.pf_stats['map_hypothesis'].append(env.pf.map_hypothesis)
         self.pf_stats['mean_state'].append(env.pf.mean_state)
-        self.pf_state['map_state'].append(env.pf.map_state)
+        self.pf_stats['map_state'].append(env.pf.map_state)
 
+        #print('mean_state shape = ',np.array(self.pf_stats['mean_state']).shape)
+        #print(np.array(self.pf_stats['mean_hypothesis']))
+        
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
@@ -192,14 +196,22 @@ class Results(object):
         ax.set_xlim(min_map, max_map)
         ax.set_ylim(min_map, max_map)
         if textstr: 
-            props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
-            fig.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-            props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
-            fig.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-            pfstats_str = ['mean_hypothesis = {:.0f} dB\nmap_hypothesis = {:.2f} dB'.format(self.pf_stats['mean_hypothesis'], self.pf_state['map_hypothesis'])]
-            props = dict(boxstyle='round', facecolor='khaki', alpha=0.5)
-            fig.text(1.04, 0.25, pfstats_str[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-           
+            last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
+            last_map_hyp  = self.pf_stats['map_hypothesis'][-1][0]
+
+            pfstats_str = ['Observed RSSI = {} dB\nML estimated RSSI =  {:.1f} dB\nMAP estimated RSSI = {:.1f} dB'.format(env.last_observation, last_mean_hyp, last_map_hyp)]
+            if len(fig.texts) == 0: 
+                props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
+                text = fig.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+                props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
+                text = fig.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+                props = dict(boxstyle='round', facecolor='khaki', alpha=0.5)
+                text = fig.text(1.04, 0.25, pfstats_str[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            else: 
+                fig.texts[0].set_text(textstr[0])
+                fig.texts[1].set_text(textstr[1])
+                fig.texts[2].set_text(pfstats_str[0])
+               
     def build_multitarget_plots(self, env, time_step=None, fig=None, axs=None, centroid_distance_error=None, selected_plots=[1,2,3,4,5], simulated=True, textstr=None):
         xp = env.state.target_state
         belief = env.pf.particles.reshape(len(env.pf.particles), env.state.n_targets, 4)
