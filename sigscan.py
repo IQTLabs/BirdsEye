@@ -13,6 +13,7 @@ from flask import Flask
 from matplotlib.figure import Figure
 import threading
 from collections import defaultdict
+from timeit import default_timer as timer
 
 import birdseye.sensor 
 import birdseye.env 
@@ -21,42 +22,15 @@ import birdseye.state
 import birdseye.utils
 import birdseye.dqn 
 import birdseye.mcts_utils
+from birdseye.utils import get_distance, get_bearing
 
 data = {}
-
-# helper functions for lat/lon
-def get_distance(coord1, coord2): 
-    lat1, long1 = coord1
-    lat2, long2 = coord2
-    # approximate radius of earth in km
-    R = 6373.0
-
-    lat1 = np.radians(lat1) 
-    long1 = np.radians(long1) 
-
-    lat2 = np.radians(lat2) 
-    long2 = np.radians(long2) 
-
-    dlon = long2 - long1
-    dlat = lat2 - lat1
-
-    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
-    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
-
-    distance = R * c
-    return distance*(1e3)
-    
-    
-def get_bearing(coord1, coord2):
-    lat1, long1 = coord1
-    lat2, long2 = coord2
-    dLon = (long2 - long1)
-    x = np.cos(np.radians(lat2)) * np.sin(np.radians(dLon))
-    y = np.cos(np.radians(lat1)) * np.sin(np.radians(lat2)) - np.sin(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.cos(np.radians(dLon))
-    brng = np.arctan2(x,y)
-    brng = np.degrees(brng)
-
-    return -brng + 90
+data['rssi'] = None
+data['position'] = None 
+data['distance'] = None 
+data['previous_position'] = None 
+data['bearing'] = None 
+data['previous_bearing'] = None 
 
 # MQTT
 def on_message(client, userdata, message):
@@ -129,19 +103,29 @@ class DQNPlanner(PathPlanner):
         return birdseye.dqn.simple_run(self.model, observation, self.device)
         
 # Flask 
-def run_flask(fig, results): 
+def run_flask(fig, results, debug): 
     app = Flask(__name__)
 
     @app.route("/")
     def hello():
         # Save figure to a temporary buffer.
+        flask_start_time = timer()
         buf = BytesIO()
         fig.savefig(buf, format='png', bbox_inches='tight')
         png_filename = '{}/png/{}.png'.format(results.gif_dir, results.time_step)
         #fig.savefig(png_filename, format='png', bbox_inches='tight')
-        print('save timestep ',results.time_step)
+        
         # Embed the result in the html output.
         data = base64.b64encode(buf.getbuffer()).decode("ascii")
+        flask_end_time = timer()
+
+        if debug: 
+            print('=======================================')
+            print('Flask Timing')
+            print('time step = ',results.time_step)
+            print('buffer size = {:.2f} MB'.format(buf.getbuffer().nbytes/1e6))
+            print('Duration = {:.4f} s'.format(flask_end_time - flask_start_time))
+            print('=======================================')
         return f'<html><head><meta http-equiv="refresh" content="0.5"></head><body><img src="data:image/png;base64,{data}"/></body></html>'
 
     host_name = '0.0.0.0'
@@ -149,7 +133,7 @@ def run_flask(fig, results):
     threading.Thread(target=lambda: app.run(host=host_name, port=port, debug=True, use_reloader=False)).start()
     
 # main loop 
-def main(config=None): 
+def main(config=None, debug=False): 
 
     # MQTT 
     client = mqtt.Client()
@@ -201,38 +185,67 @@ def main(config=None):
         planner = MCTSPlanner(env, actions, depth, c, simulations)
     
     # Flask
-    fig = Figure(figsize=(8,8))
+    fig = Figure(figsize=(10,10))
     ax = fig.subplots()
     time_step = 0
-    run_flask(fig, results)
+    run_flask(fig, results, debug)
 
     # Main loop 
     data = defaultdict(list)
     time.sleep(2)
     while True: 
+        loop_start = timer()
+
+        action_start = timer() 
         time_step += 1 
-        
         action_proposal = actions.index_to_action(planner.proposal(belief))
         action_taken = data.get('action', (0,0))
+        action_end = timer() 
         
+        step_start = timer() 
         # update belief based on action and sensor observation (sensor is read inside)
         belief, reward, observation = env.real_step(action_taken, data.get('bearing', None))
+        step_end = timer() 
+        
 
         #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]        
         textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, simulated=False, textstr=textstr)
-        
-        np.save('{}/{}_particles.npy'.format(results.logdir,int(time.time())), env.pf.particles)
+        data['position'] = [ 45.598101, -122.678819 ]
 
+        plot_start = timer()
+        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
+        plot_end = timer() 
+        
+        
+        particle_save_start = timer() 
+        np.save('{}/{}_particles.npy'.format(results.logdir,int(time.time())), env.pf.particles)
+        particle_save_end = timer() 
+        
+
+        data_start = timer() 
         data['action_proposal'].append(action_proposal)
         data['action_taken'].append(action_taken)
         data['reward'].append(reward)
         data['observation'].append(observation)
-        
         for key in data: 
             np.save('{}/{}.npy'.format(results.logdir, key), data[key])
+        data_end = timer()
+        
+        loop_end = timer()
+
+        if debug: 
+            print('=======================================')
+            print('BirdsEye Timing')
+            print('time step = {}'.format(time_step))
+            print('action selection = {:.4f} s'.format(action_end-action_start))
+            print('env step = {:.4f} s'.format(step_end - step_start))
+            print('plot = {:.4f} s'.format(plot_end-plot_start))
+            print('particle save = {:.4f} s'.format(particle_save_end - particle_save_start))
+            print('data save = {:.4f} s'.format(data_end-data_start))
+            print('main loop = {:.4f} s'.format(loop_end-loop_start))
+            print('=======================================')
 
 if __name__ == '__main__':
-
-    main()
+    config=None
+    main(debug=True)
 
