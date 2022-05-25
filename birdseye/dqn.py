@@ -58,7 +58,8 @@ dqn_defaults = {
     'ob_scale' : 1,
     'gamma' : 0.99,
     'grad_norm' : 10.0,
-    'save_interval' : 1000,
+    'save_interval' : 100000,
+    'eval_interval' : 100000,
     'save_path' : 'checkpoints',
     'log_path' : 'rl_log',
     'use_gpu' : True,
@@ -66,12 +67,12 @@ dqn_defaults = {
     'eval_mode': False
 }
 
-def simple_prep(env, device): 
+def simple_prep(env, device, checkpoint_filename): 
     policy_dim = len(env.actions.action_space)
     map_dim = (env.state.n_targets, 300, 300) 
     network = SmallRFPFQnet(env.state.n_targets, map_dim, env.state.state_dim, policy_dim)
     qnet = network.to(device)
-    checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
+    checkpoint = torch.load(checkpoint_filename, map_location=device)
     qnet.load_state_dict(checkpoint[0])
 
     return qnet
@@ -156,6 +157,7 @@ def run_dqn(env, config, global_start_time):
     dueling = config.dueling
     save_path = config.save_path
     save_interval = config.save_interval
+    eval_interval = config.eval_interval
     ob_scale = config.ob_scale
     gamma = config.gamma
     grad_norm = config.grad_norm
@@ -297,6 +299,8 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
+        
+        if eval_interval and n_iter % eval_interval == 0:
             evaluate(env, qnet, max_episode_length, device, ob_scale, results)
 
     close_logger(logger)
@@ -508,6 +512,7 @@ def dqn(args=None, env=None):
     parser.add_argument('--gamma', type=float, help='Gamma input value')
     parser.add_argument('--grad_norm', type=float, help='Max norm value of the gradients to be used in gradient clipping')
     parser.add_argument('--save_interval', type=int, help='Interval for saving output values')
+    parser.add_argument('--eval_interval', type=int, help='Interval for evaluating model')
     parser.add_argument('--save_path', type=str, help='Path for saving')
     parser.add_argument('--log_path', type=str, help='Path for logging output')
     parser.add_argument('--use_gpu', type=bool, help='Flag for using GPU device')

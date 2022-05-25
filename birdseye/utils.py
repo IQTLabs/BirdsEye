@@ -6,11 +6,18 @@ import pandas as pd
 from pathlib import Path
 import imageio
 from itertools import permutations
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 from IPython.display import clear_output
 from scipy.ndimage.filters import gaussian_filter
+from PIL import Image, ImageDraw
+import math
+import requests
+from itertools import product
+from io import BytesIO
+
 
 from .definitions import *
 
@@ -83,6 +90,240 @@ def cart2pol(x, y):
     return rho, phi
 
 ##################################################################
+# helper functions for lat/lon
+##################################################################
+def get_distance(coord1, coord2): 
+    lat1, long1 = coord1
+    lat2, long2 = coord2
+    # approximate radius of earth in km
+    R = 6373.0
+
+    lat1 = np.radians(lat1) 
+    long1 = np.radians(long1) 
+
+    lat2 = np.radians(lat2) 
+    long2 = np.radians(long2) 
+
+    dlon = long2 - long1
+    dlat = lat2 - lat1
+
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2)**2
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+
+    distance = R * c
+    return distance*(1e3)
+    
+    
+def get_bearing(coord1, coord2):
+    lat1, long1 = coord1
+    lat2, long2 = coord2
+    dLon = (long2 - long1)
+    x = np.cos(np.radians(lat2)) * np.sin(np.radians(dLon))
+    y = np.cos(np.radians(lat1)) * np.sin(np.radians(lat2)) - np.sin(np.radians(lat1)) * np.cos(np.radians(lat2)) * np.cos(np.radians(dLon))
+    brng = np.arctan2(x,y)
+    brng = np.degrees(brng)
+
+    return -brng + 90
+
+class GPSVis(object):
+    """
+        modified from: 
+        https://github.com/tisljaricleo/GPS-visualization-Python 
+        MIT License 
+        Copyright (c) 2021 Leo Tišljarić
+
+        Class for GPS data visualization using pre-downloaded OSM map in image format.
+    """
+    def __init__(self, position=None, map_path=None, bounds=None):
+        """
+        :param data_path: Path to file containing GPS records.
+        :param map_path: Path to pre-downloaded OSM map in image format.
+        :param bounds: Upper-left, and lower-right GPS points of the map (lat1, lon1, lat2, lon2).
+        """
+        #self.data_path = data_path
+        self.position = position
+        self.map_path = map_path
+        self.bounds = bounds
+        
+
+        if self.map_path is not None and self.bounds is not None: 
+            self.img = self.create_image_from_map() 
+        elif self.position is not None: 
+            self.zoom = 17
+            self.TILE_SIZE = 256
+            distance = 500
+
+            #coord = [45.598915, -122.679929]
+            coord = self.position
+            
+            #x, y = point_to_pixels(coord[0],coord[1], zoom)
+            lat_dist = distance/111111
+            lon_dist = distance / (111111 * np.cos(np.radians(coord[0])))
+            top, bot = coord[0] + lat_dist, coord[0] - lat_dist
+            lef, rgt = coord[1] - lon_dist, coord[1] + lon_dist
+            self.bounds = [top, lef, bot, rgt]
+
+            self.img = self.create_image_from_position()
+        self.get_ticks()
+
+
+    def plot_map(self, axis1=None, output=None, save_as='resultMap.png'):
+        """
+        Method for plotting the map. You can choose to save it in file or to plot it.
+        :param output: Type 'plot' to show the map or 'save' to save it. Default None 
+        :param save_as: Name and type of the resulting image.
+        :return:
+        """
+        # create Fig and Axis if doesn't exist 
+        if axis1 is None: 
+            fig, axis1 = plt.subplots(figsize=(10, 13))
+        
+        # Plot background map 
+        axis1.imshow(np.flipud(self.img), alpha=0.6, origin='lower')# , extent=[-122.68450, -122.67505, 45.59494, 45.60311], aspect='auto')
+        
+        # Plot points 
+        # img_points = np.array(img_points)
+        # axis1.plot(img_points[:,0],img_points[:,1], marker='.', markersize=12, color='red', linestyle='None')
+        #axis1.plot(10, 10, marker='.', markersize=22, color='blue', linestyle='None')
+        
+        # Set axis dimensions, labels and tick marks 
+        axis1.set_xlim(0,int(self.width_meters))
+        axis1.set_ylim(0,int(self.height_meters))
+        axis1.set_xlabel('Longitude')
+        axis1.set_ylabel('Latitude')
+        axis1.set_xticks(np.linspace(0,int(self.width_meters),num=8))
+        axis1.set_xticklabels(self.x_ticks)
+        axis1.set_yticks(np.linspace(0,int(self.height_meters),num=8))
+        axis1.set_yticklabels(self.y_ticks)
+        axis1.grid()
+
+        # Save or display 
+        if output == 'save':
+            plt.savefig(save_as)
+        elif output == 'plot':
+            plt.show()
+
+    def point_to_pixels(self, lat, lon, zoom):
+            """convert gps coordinates to web mercator"""
+            r = math.pow(2, zoom) * self.TILE_SIZE
+            lat = math.radians(lat)
+
+            x = int((lon + 180.0) / 360.0 * r)
+            y = int((1.0 - math.log(math.tan(lat) + (1.0 / math.cos(lat))) / math.pi) / 2.0 * r)
+
+            return x, y
+
+    def create_image_from_position(self):
+        URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png".format
+        
+        # print('top, bottom',top,bot)
+        # print('left, right',lef,rgt)
+
+        top, lef, bot, rgt = self.bounds
+
+        x0, y0 = self.point_to_pixels(top, lef, self.zoom)
+        x1, y1 = self.point_to_pixels(bot, rgt, self.zoom)
+
+        x0_tile, y0_tile = int(x0 / self.TILE_SIZE), int(y0 / self.TILE_SIZE)
+        x1_tile, y1_tile = math.ceil(x1 / self.TILE_SIZE), math.ceil(y1 / self.TILE_SIZE)
+
+        assert (x1_tile - x0_tile) * (y1_tile - y0_tile) < 50, "That's too many tiles!"
+
+        # full size image we'll add tiles to
+        img = Image.new('RGB', (
+            (x1_tile - x0_tile) * self.TILE_SIZE,
+            (y1_tile - y0_tile) * self.TILE_SIZE))
+
+        # loop through every tile inside our bounded box
+        for x_tile, y_tile in product(range(x0_tile, x1_tile), range(y0_tile, y1_tile)):
+            with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom)) as resp:
+                tile_img = Image.open(BytesIO(resp.content))
+            # add each tile to the full size image
+            img.paste(
+                im=tile_img,
+                box=((x_tile - x0_tile) * self.TILE_SIZE, (y_tile - y0_tile) * self.TILE_SIZE))
+
+        x, y = x0_tile * self.TILE_SIZE, y0_tile * self.TILE_SIZE
+
+        img = img.crop((
+            int(x0-x),  # left
+            int(y0-y),  # top
+            int(x1-x),  # right
+            int(y1-y))) # bottom
+
+        self.width_meters = get_distance((self.bounds[0],self.bounds[1]),(self.bounds[0],self.bounds[3]))
+        self.height_meters = get_distance((self.bounds[0],self.bounds[1]),(self.bounds[2],self.bounds[1]))
+        img = img.resize((int(self.width_meters),int(self.height_meters)))
+
+        return img
+
+    def create_image_from_map(self):
+        """
+        Create the image that contains the original map and the GPS records.
+        :param color: Color of the GPS records.
+        :param width: Width of the drawn GPS records.
+        :return:
+        """
+
+        img = Image.open(self.map_path, 'r')
+        self.width_meters = get_distance((self.bounds[0],self.bounds[1]),(self.bounds[0],self.bounds[3]))
+        self.height_meters = get_distance((self.bounds[0],self.bounds[1]),(self.bounds[2],self.bounds[1]))
+        img = img.resize((int(self.width_meters),int(self.height_meters)))
+        print('background image size (pixels) = ',img.size)
+
+        
+        # if self.data_path: 
+        #     data = pd.read_csv(self.data_path, names=['LATITUDE', 'LONGITUDE'], sep=',')
+        #     gps_data = tuple(zip(data['LATITUDE'].values, data['LONGITUDE'].values))
+        #     print(self.result_image.size[0], self.result_image.size[1])
+        #     for d in gps_data:
+        #         x1, y1 = self.scale_to_img(d, (self.result_image.size[0], self.result_image.size[1]))
+        #         img_points.append((x1, y1))
+        #         print(x1,y1)
+
+        return img
+
+    def scale_to_img(self, lat_lon, w_h):
+        """
+        Conversion from latitude and longitude to the image pixels.
+        It is used for drawing the GPS records on the map image.
+        :param lat_lon: GPS record to draw (lat1, lon1).
+        :param w_h: Size of the map image (w, h).
+        :return: Tuple containing x and y coordinates to draw on map image.
+        """
+        # https://gamedev.stackexchange.com/questions/33441/how-to-convert-a-number-from-one-min-max-set-to-another-min-max-set/33445
+        lat_old = (self.bounds[2], self.bounds[0])
+        new = (0, w_h[1])
+        y = ((lat_lon[0] - lat_old[0]) * (new[1] - new[0]) / (lat_old[1] - lat_old[0])) + new[0]
+        lon_old = (self.bounds[1], self.bounds[3])
+        new = (0, w_h[0])
+        x = ((lat_lon[1] - lon_old[0]) * (new[1] - new[0]) / (lon_old[1] - lon_old[0])) + new[0]
+        # y must be reversed because the orientation of the image in the matplotlib.
+        # image - (0, 0) in upper left corner; coordinate system - (0, 0) in lower left corner
+        return int(x),int(y) # w_h[1] - int(y)
+
+    def set_origin(self, lat_lon):
+
+        self.origin = self.scale_to_img(lat_lon, (int(self.width_meters), int(self.height_meters)))
+
+    def get_ticks(self):
+        """
+        Generates custom ticks based on the GPS coordinates of the map for the matplotlib output.
+        :return:
+        """
+        self.x_ticks = map(
+            lambda x: round(x, 6),
+            np.linspace(self.bounds[1], self.bounds[3], num=8))
+        self.y_ticks = map(
+            lambda x: round(x, 6),
+            np.linspace(self.bounds[2], self.bounds[0], num=8))
+        # Ticks must be reversed because the orientation of the image in the matplotlib.
+        # image - (0, 0) in upper left corner; coordinate system - (0, 0) in lower left corner
+        self.y_ticks = list(self.y_ticks) #sorted(y_ticks, reverse=True)
+        self.x_ticks = list(self.x_ticks)
+
+
+##################################################################
 # Saving Results
 ##################################################################
 class Results(object):
@@ -90,7 +331,7 @@ class Results(object):
     Results class for saving run results
     to file with common format.
     '''
-    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config=None):
+    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config=None, experiment_name=None):
         self.num_iters = num_iters
         self.method_name = method_name
         self.global_start_time = global_start_time
@@ -102,18 +343,25 @@ class Results(object):
                 self.plotting = False
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
         self.gif_dir = '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)
+        self.logdir = '{}/{}/{}_logs/'.format(RUN_DIR, method_name, global_start_time)
 
         Path(self.gif_dir+'/png/').mkdir(parents=True, exist_ok=True)
         Path(self.gif_dir+'/gif/').mkdir(parents=True, exist_ok=True)
+        Path(self.logdir).mkdir(parents=True, exist_ok=True)
         self.col_names =['time', 'run_time', 'target_state', 'sensor_state',
                          'action', 'observation', 'reward', 'collisions', 'lost',
                          'r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse','mae','inference_times', 'pf_cov']
 
+        self.pf_stats = defaultdict(list)
         self.abs_target_hist = []
         self.abs_sensor_hist = []
         self.target_hist = []
         self.sensor_hist = []
         self.history_length = 50
+        self.time_step = 0
+        self.texts = []
+        self.openstreetmap = None 
+        self.transform = None 
 
         if config: 
             write_header_log(config, self.method_name, self.global_start_time)
@@ -140,52 +388,93 @@ class Results(object):
     # Plotting
     ##################################################################
 
-    def live_plot(self, env, time_step=None, ax=None, simulated=True, textstr=None): 
+    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, simulated=True, textstr=None): 
         
-        ax.clear()
-        ax.set_title('Time = {}'.format(time_step))
+        if self.openstreetmap is None and data['position'] is not None: 
+            self.openstreetmap = GPSVis(
+              position = data['position']
+              #map_path='map_delta_park.png',  # Path to map downloaded from the OSM.
+              #bounds=(45.60311,-122.68450, 45.59494, -122.67505) # upper left, lower right
+            )
+            self.openstreetmap.set_origin(data['position'])
+            self.transform = np.array([self.openstreetmap.origin[0], self.openstreetmap.origin[1]])
+        
+
+        self.time_step = time_step
+        self.pf_stats['mean_hypothesis'].append(env.pf.mean_hypothesis)
+        self.pf_stats['map_hypothesis'].append(env.pf.map_hypothesis)
+        self.pf_stats['mean_state'].append(env.pf.mean_state)
+        self.pf_stats['map_state'].append(env.pf.map_state)
 
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
+
+        ax.clear()
+        if self.openstreetmap is not None:     
+            self.openstreetmap.plot_map(axis1=ax)
+        ax.set_title('Time = {}'.format(time_step))
         
         color_array = [['salmon','darkred', 'red'],['lightskyblue','darkblue','blue']]
         lines = [] # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
+
+        # Plot Particles 
         for t in range(env.state.n_targets):
             particles_x, particles_y = pol2cart(abs_particles[:,t,0], np.radians(abs_particles[:,t,1]))
+            if self.transform is not None: 
+                particles_x += self.transform[0]
+                particles_y += self.transform[1]
+
             # centroid_x = np.mean(particles_x)
             # centroid_y = np.mean(particles_y)
             # centroid_r, centroid_theta = cart2pol(centroid_x, centroid_y)
-            
-            
-            line1, = ax.plot(particles_x, particles_y, 'o', color=color_array[t][0], markersize=4, markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
             #ax.plot(centroid_theta, centroid_r, '*', color=color_array[t][1],markeredgecolor='white', label='centroid', markersize=12, zorder=2)
+            line1, = ax.plot(particles_x, particles_y, 'o', color=color_array[t][0], markersize=4, markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
+            
             if t == 0: 
                 lines.extend([line1])
             else: 
                 lines.extend([])
 
-            
+        # Plot Sensor   
         sensor_x, sensor_y = pol2cart(np.array(self.sensor_hist)[:,0], np.radians(np.array(self.sensor_hist)[:,1]))
+        if self.transform is not None: 
+            sensor_x += self.transform[0]
+            sensor_y += self.transform[1]
         if len(self.sensor_hist) > 1: 
             ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=4.0, color='mediumorchid', zorder=3, markersize=12)
-
         line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
         lines.extend([line4])
 
+        # Legend 
         ax.legend(handles=lines, loc='upper center', bbox_to_anchor=(0.5,-0.05), fancybox=True, shadow=True,ncol=2)
 
-        map_width = 600
-        min_map = -1*int(map_width/2)
-        max_map = int(map_width/2)
-        ax.set_xlim(min_map, max_map)
-        ax.set_ylim(min_map, max_map)
-        if textstr: 
-            props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
-            ax.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-            props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
-            ax.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+        # X/Y Limits 
+        if self.openstreetmap is None: 
+            map_width = 600
+            min_map = -1*int(map_width/2)
+            max_map = int(map_width/2)
+            ax.set_xlim(min_map, max_map)
+            ax.set_ylim(min_map, max_map)
 
+        # Sidebar Text 
+        if textstr: 
+            last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
+            last_map_hyp  = self.pf_stats['map_hypothesis'][-1][0]
+
+            pfstats_str = ['Observed RSSI = {} dB\nML estimated RSSI =  {:.1f} dB\nMAP estimated RSSI = {:.1f} dB'.format(env.last_observation, last_mean_hyp, last_map_hyp)]
+            if len(fig.texts) == 0: 
+                props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
+                text = fig.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+                props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
+                text = fig.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+                props = dict(boxstyle='round', facecolor='khaki', alpha=0.5)
+                text = fig.text(1.04, 0.25, pfstats_str[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            else: 
+                fig.texts[0].set_text(textstr[0])
+                fig.texts[1].set_text(textstr[1])
+                fig.texts[2].set_text(pfstats_str[0])
+               
     def build_multitarget_plots(self, env, time_step=None, fig=None, axs=None, centroid_distance_error=None, selected_plots=[1,2,3,4,5], simulated=True, textstr=None):
         xp = env.state.target_state
         belief = env.pf.particles.reshape(len(env.pf.particles), env.state.n_targets, 4)
@@ -628,9 +917,7 @@ class Results(object):
                 props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
                 ax.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
             #ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
-
         
-        plt.pause(0.001)
         png_filename = '{}/png/{}.png'.format(self.gif_dir, time_step)
         #print('saving plots in {}'.format(png_filename))
         #plt.savefig(png_filename, bbox_inches='tight')

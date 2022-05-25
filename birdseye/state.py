@@ -28,7 +28,7 @@ class State(object):
 class RFMultiState(State):
     """RF Multi Target State
     """
-    def __init__(self, n_targets=2, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None, simulated=True):
+    def __init__(self, n_targets=1, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None, simulated=True):
 
         self.state_dim = 4
         ### Target Settings 
@@ -107,7 +107,7 @@ class RFMultiState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
 
     def random_state(self):
         """Function to initialize a random state
@@ -291,6 +291,8 @@ class RFMultiState(State):
         if crs < 0:
             crs += 360
 
+        spd = random.randint(0,1)
+        
         # Transform changes to coords to cartesian
         dx, dy = pol2cart(spd, np.radians(crs))
         if transition_overwrite: 

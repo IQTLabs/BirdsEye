@@ -19,6 +19,8 @@ class RFMultiEnv(object):
 
         self.pfrnn = pfrnn()
 
+        self.last_observation = None
+
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics
 
@@ -107,6 +109,8 @@ class RFMultiEnv(object):
         reward = self.state.reward_func(state=None, action=action, particles=self.pf.particles)
 
         belief_obs = self.env_observation()
+        
+        self.last_observation = observation 
 
         return (belief_obs, reward, observation)
 
