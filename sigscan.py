@@ -141,7 +141,7 @@ def main(config=None, debug=False):
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message 
-    client.connect(localhost, 1883, 60) 
+    client.connect('ljt.dynamic.ucsd.edu', 1883, 60) 
     client.loop_start()
 
     # BirdsEye 
@@ -212,7 +212,7 @@ def main(config=None, debug=False):
 
         #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]        
         textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        #data['position'] = [ 45.598101, -122.678819 ]
+        data['position'] = [ 45.598101, -122.678819 ]
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)

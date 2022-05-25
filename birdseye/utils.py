@@ -13,6 +13,11 @@ import matplotlib.tri as tri
 from IPython.display import clear_output
 from scipy.ndimage.filters import gaussian_filter
 from PIL import Image, ImageDraw
+import math
+import requests
+from itertools import product
+from io import BytesIO
+
 
 from .definitions import *
 
@@ -129,18 +134,36 @@ class GPSVis(object):
 
         Class for GPS data visualization using pre-downloaded OSM map in image format.
     """
-    def __init__(self, map_path, bounds):
+    def __init__(self, position=None, map_path=None, bounds=None):
         """
         :param data_path: Path to file containing GPS records.
         :param map_path: Path to pre-downloaded OSM map in image format.
         :param bounds: Upper-left, and lower-right GPS points of the map (lat1, lon1, lat2, lon2).
         """
         #self.data_path = data_path
+        self.position = position
         self.map_path = map_path
         self.bounds = bounds
         
 
-        self.img = self.create_image() 
+        if self.map_path is not None and self.bounds is not None: 
+            self.img = self.create_image_from_map() 
+        elif self.position is not None: 
+            self.zoom = 17
+            self.TILE_SIZE = 256
+            distance = 500
+
+            #coord = [45.598915, -122.679929]
+            coord = self.position
+            
+            #x, y = point_to_pixels(coord[0],coord[1], zoom)
+            lat_dist = distance/111111
+            lon_dist = distance / (111111 * np.cos(np.radians(coord[0])))
+            top, bot = coord[0] + lat_dist, coord[0] - lat_dist
+            lef, rgt = coord[1] - lon_dist, coord[1] + lon_dist
+            self.bounds = [top, lef, bot, rgt]
+
+            self.img = self.create_image_from_position()
         self.get_ticks()
 
 
@@ -180,7 +203,61 @@ class GPSVis(object):
         elif output == 'plot':
             plt.show()
 
-    def create_image(self):
+    def point_to_pixels(self, lat, lon, zoom):
+            """convert gps coordinates to web mercator"""
+            r = math.pow(2, zoom) * self.TILE_SIZE
+            lat = math.radians(lat)
+
+            x = int((lon + 180.0) / 360.0 * r)
+            y = int((1.0 - math.log(math.tan(lat) + (1.0 / math.cos(lat))) / math.pi) / 2.0 * r)
+
+            return x, y
+
+    def create_image_from_position(self):
+        URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png".format
+        
+        # print('top, bottom',top,bot)
+        # print('left, right',lef,rgt)
+
+        top, lef, bot, rgt = self.bounds
+
+        x0, y0 = self.point_to_pixels(top, lef, self.zoom)
+        x1, y1 = self.point_to_pixels(bot, rgt, self.zoom)
+
+        x0_tile, y0_tile = int(x0 / self.TILE_SIZE), int(y0 / self.TILE_SIZE)
+        x1_tile, y1_tile = math.ceil(x1 / self.TILE_SIZE), math.ceil(y1 / self.TILE_SIZE)
+
+        assert (x1_tile - x0_tile) * (y1_tile - y0_tile) < 50, "That's too many tiles!"
+
+        # full size image we'll add tiles to
+        img = Image.new('RGB', (
+            (x1_tile - x0_tile) * self.TILE_SIZE,
+            (y1_tile - y0_tile) * self.TILE_SIZE))
+
+        # loop through every tile inside our bounded box
+        for x_tile, y_tile in product(range(x0_tile, x1_tile), range(y0_tile, y1_tile)):
+            with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom)) as resp:
+                tile_img = Image.open(BytesIO(resp.content))
+            # add each tile to the full size image
+            img.paste(
+                im=tile_img,
+                box=((x_tile - x0_tile) * self.TILE_SIZE, (y_tile - y0_tile) * self.TILE_SIZE))
+
+        x, y = x0_tile * self.TILE_SIZE, y0_tile * self.TILE_SIZE
+
+        img = img.crop((
+            int(x0-x),  # left
+            int(y0-y),  # top
+            int(x1-x),  # right
+            int(y1-y))) # bottom
+
+        self.width_meters = get_distance((self.bounds[0],self.bounds[1]),(self.bounds[0],self.bounds[3]))
+        self.height_meters = get_distance((self.bounds[0],self.bounds[1]),(self.bounds[2],self.bounds[1]))
+        img = img.resize((int(self.width_meters),int(self.height_meters)))
+
+        return img
+
+    def create_image_from_map(self):
         """
         Create the image that contains the original map and the GPS records.
         :param color: Color of the GPS records.
@@ -315,8 +392,9 @@ class Results(object):
         
         if self.openstreetmap is None and data['position'] is not None: 
             self.openstreetmap = GPSVis(
-             map_path='map_delta_park.png',  # Path to map downloaded from the OSM.
-             bounds=(45.60311,-122.68450, 45.59494, -122.67505) # upper left, lower right
+              position = data['position']
+              #map_path='map_delta_park.png',  # Path to map downloaded from the OSM.
+              #bounds=(45.60311,-122.68450, 45.59494, -122.67505) # upper left, lower right
             )
             self.openstreetmap.set_origin(data['position'])
             self.transform = np.array([self.openstreetmap.origin[0], self.openstreetmap.origin[1]])
