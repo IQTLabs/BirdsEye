@@ -144,6 +144,7 @@ def main(config=None, debug=False):
     flask_host = config.get('flask_host', '0.0.0.0')
     flask_port = int(config.get('flask_port', 4999))
 
+    n_antennas = int(config.get('n_antennas', 1))
     antenna_type = config.get('antenna_type', 'omni')
     planner_method = config.get('planner_method', 'dqn')
     power_tx = float(config.get('power_tx', 26))
@@ -153,8 +154,17 @@ def main(config=None, debug=False):
     threshold = float(config.get('threshold', -120))
     reward = config.get('reward', 'heuristic_reward')
     n_targets = int(config.get('n_targets', 2))
-    dqn_checkpoint = config.get('dqn_checkpoint','checkpoints/dqn_doublerssi.checkpoint')
-
+    dqn_checkpoint = config.get('dqn_checkpoint', None)
+    if planner_method in ['dqn', 'DQN'] and dqn_checkpoint is None: 
+        if n_antennas == 1 and antenna_type == 'directional': 
+            dqn_checkpoint = 'checkpoints/single_directional_entropy_walking.checkpoint'
+        elif n_antennas == 1 and antenna_type == 'omni': 
+            dqn_checkpoint = 'checkpoints/single_omni_entropy_walking.checkpoint'
+        elif n_antennas == 2 and antenna_type == 'directional' and n_targets == 2: 
+            dqn_checkpoint = 'checkpoints/double_directional_entropy_walking.checkpoint'
+        elif n_antennas == 2 and antenna_type == 'directional' and n_targets == 1:
+            dqn_checkpoint = 'checkpoints/double_directional_entropy_walking_1target.checkpoint'
+    
     # MQTT 
     client = mqtt.Client()
     client.on_connect = on_connect
