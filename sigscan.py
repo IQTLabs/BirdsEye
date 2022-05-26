@@ -14,6 +14,7 @@ from matplotlib.figure import Figure
 import threading
 from collections import defaultdict
 from timeit import default_timer as timer
+import configparser
 
 import birdseye.sensor 
 import birdseye.env 
@@ -59,7 +60,7 @@ def on_connect(client, userdata, flags, rc):
 # GamutRF Sensor 
 class GamutRFSensor(birdseye.sensor.SingleRSSI): 
     def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None, threshold=-120): 
-        super().__init__(antenna_filename=antenna_filename, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=fading_sigma)
+        super().__init__(antenna_filename=antenna_filename, power_tx=power_tx, directivity_tx=directivity_tx, f=f, fading_sigma=fading_sigma)
         self.threshold = threshold
 
     def real_observation(self): 
@@ -103,7 +104,7 @@ class DQNPlanner(PathPlanner):
         return birdseye.dqn.simple_run(self.model, observation, self.device)
         
 # Flask 
-def run_flask(fig, results, debug): 
+def run_flask(flask_host, flask_port, fig, results, debug): 
     app = Flask(__name__)
 
     @app.route("/")
@@ -130,38 +131,57 @@ def run_flask(fig, results, debug):
             print('=======================================')
         return f'<html><head><meta http-equiv="refresh" content="0.5"></head><body><img src="data:image/png;base64,{data}"/></body></html>'
 
-    host_name = '0.0.0.0'
-    port = 4999
+    host_name = flask_host #'0.0.0.0'
+    port = flask_port #4999
     threading.Thread(target=lambda: app.run(host=host_name, port=port, debug=True, use_reloader=False)).start()
     
 # main loop 
 def main(config=None, debug=False): 
 
+    mqtt_host = config.get('mqtt_host', 'localhost')
+    mqtt_port = int(config.get('mqtt_port', 1883))
+
+    flask_host = config.get('flask_host', '0.0.0.0')
+    flask_port = int(config.get('flask_port', 4999))
+
+    antenna_type = config.get('antenna_type', 'omni')
+    planner_method = config.get('planner_method', 'dqn')
+    power_tx = float(config.get('power_tx', 26))
+    directivity_tx = float(config.get('directivity_tx', 1))
+    f = float(config.get('f', 5.7e9))
+    fading_sigma = float(config.get('fading_sigma', 8))
+    threshold = float(config.get('threshold', -120))
+    reward = config.get('reward', 'heuristic_reward')
+    n_targets = int(config.get('n_targets', 2))
+    dqn_checkpoint = config.get('dqn_checkpoint','checkpoints/dqn_doublerssi.checkpoint')
+
     # MQTT 
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message 
-    client.connect('ljt.dynamic.ucsd.edu', 1883, 60) 
+    client.connect(mqtt_host, mqtt_port, 60) 
     client.loop_start()
 
     # BirdsEye 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    results = birdseye.utils.Results(method_name='dqn',
+    results = birdseye.utils.Results(method_name=planner_method,
                         global_start_time=global_start_time,
-                        plotting=True,
                         config=config)
 
     # Sensor 
-    antenna_type = 'omni'
     if antenna_type in ['directional', 'yagi', 'logp']: 
         antenna_filename = 'radiation_pattern_yagi_5.csv'
     elif antenna_type in ['omni', 'omnidirectional']: 
         antenna_filename = 'radiation_pattern_monopole.csv'
-    power_tx=26
-    directivity_tx=1
-    f=5.7e9
-    sensor = GamutRFSensor(antenna_filename=antenna_filename, power_tx=power_tx, directivity_tx=directivity_tx, f=f, fading_sigma=8, threshold=-120) # fading sigm = 8dB, threshold = -120dB
+
+    sensor = GamutRFSensor(
+        antenna_filename=antenna_filename, 
+        power_tx=power_tx, 
+        directivity_tx=directivity_tx, 
+        f=f, 
+        fading_sigma=fading_sigma, 
+        threshold=threshold) # fading sigm = 8dB, threshold = -120dB
     
     # Action space 
     actions = WalkingActions()
@@ -169,17 +189,15 @@ def main(config=None, debug=False):
     
     # State managment 
     #reward='entropy_collision_reward'
-    reward='heuristic_reward'
-    state = birdseye.state.RFMultiState(n_targets=2, reward=reward, simulated=False)
+    state = birdseye.state.RFMultiState(n_targets=n_targets, reward=reward, simulated=False)
     
     # Environment 
     env = birdseye.env.RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=False)
     belief = env.reset()
 
     # Motion planner 
-    planner_method = 'mcts'
     if planner_method in ['dqn', 'DQN']: 
-        planner = DQNPlanner(env, device, 'checkpoints/dqn_doublerssi.checkpoint')
+        planner = DQNPlanner(env, device, dqn_checkpoint)
     elif planner_method in ['mcts','MCTS']: 
         depth=10
         c=20
@@ -190,7 +208,7 @@ def main(config=None, debug=False):
     fig = Figure(figsize=(10,10))
     ax = fig.subplots()
     time_step = 0
-    run_flask(fig, results, debug)
+    run_flask(flask_host, flask_port, fig, results, debug)
 
     # Main loop 
     data = defaultdict(list)
@@ -209,7 +227,6 @@ def main(config=None, debug=False):
         belief, reward, observation = env.real_step(action_taken, data.get('bearing', None))
         step_end = timer() 
         
-
         #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]        
         textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
         data['position'] = [ 45.598101, -122.678819 ]
@@ -218,11 +235,9 @@ def main(config=None, debug=False):
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
         plot_end = timer() 
         
-        
         particle_save_start = timer() 
         np.save('{}/{}_particles.npy'.format(results.logdir,int(time.time())), env.pf.particles)
         particle_save_end = timer() 
-        
 
         data_start = timer() 
         data['action_proposal'].append(action_proposal)
@@ -249,5 +264,7 @@ def main(config=None, debug=False):
 
 if __name__ == '__main__':
     config=None
-    main(debug=True)
+    config = configparser.ConfigParser()                                     
+    config.read('sigscan_config.ini')
+    main(config=config['sigscan'], debug=True)
 
