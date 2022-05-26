@@ -7,6 +7,7 @@ from pathlib import Path
 import imageio
 from itertools import permutations
 from collections import defaultdict
+import configparser
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
@@ -1093,7 +1094,10 @@ class Results(object):
 ##################################################################
 def write_header_log(config, method, global_start_time):
 
-    config2log = {section: dict(config[section]) for section in config.sections()}
+    if type(config) == configparser.ConfigParser:
+        config2log = {section: dict(config[section]) for section in config.sections()}
+    else: 
+        config2log = dict(config)
 
     #write output header
     run_dir = RUN_DIR
