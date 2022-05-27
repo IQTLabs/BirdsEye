@@ -26,12 +26,16 @@ import birdseye.mcts_utils
 from birdseye.utils import get_distance, get_bearing
 
 data = {}
+data = defaultdict(list)
 data['rssi'] = None
 data['position'] = None 
 data['distance'] = None 
 data['previous_position'] = None 
-data['bearing'] = None 
-data['previous_bearing'] = None 
+data['bearing'] = 0
+data['previous_bearing'] = 0
+data['action_proposal'] = []
+data['action_taken'] = []
+data['reward'] = []
 
 # MQTT
 def on_message(client, userdata, message):
@@ -137,6 +141,7 @@ def run_flask(flask_host, flask_port, fig, results, debug):
     
 # main loop 
 def main(config=None, debug=False): 
+    global data
 
     mqtt_host = config.get('mqtt_host', 'localhost')
     mqtt_port = int(config.get('mqtt_port', 1883))
@@ -221,7 +226,6 @@ def main(config=None, debug=False):
     run_flask(flask_host, flask_port, fig, results, debug)
 
     # Main loop 
-    data = defaultdict(list)
     time.sleep(2)
     while True: 
         loop_start = timer()
@@ -229,6 +233,7 @@ def main(config=None, debug=False):
         action_start = timer() 
         time_step += 1 
         action_proposal = actions.index_to_action(planner.proposal(belief))
+        #action_proposal = [0,0]
         action_taken = data.get('action', (0,0))
         action_end = timer() 
         
@@ -239,7 +244,6 @@ def main(config=None, debug=False):
         
         #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]        
         textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        data['position'] = [ 45.598101, -122.678819 ]
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
