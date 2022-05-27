@@ -152,7 +152,7 @@ class GPSVis(object):
         elif self.position is not None: 
             self.zoom = 17
             self.TILE_SIZE = 256
-            distance = 500
+            distance = 200
 
             #coord = [45.598915, -122.679929]
             coord = self.position
