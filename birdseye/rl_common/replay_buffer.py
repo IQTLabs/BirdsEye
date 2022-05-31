@@ -170,6 +170,10 @@ class ReplayBuffer(object):
         self._maxsize = size
         self._next_idx = 0
         self._device = device
+        self.beta = None
+
+    def update_priorities(self, _idxes, _priorities):
+        return
 
     def __len__(self):
         return len(self._storage)

@@ -1,3 +1,4 @@
+from collections import namedtuple
 from datetime import datetime
 import random
 import sys
@@ -14,11 +15,11 @@ from .env import RFEnv
 from .utils import write_header_log, Results, pol2cart, tracking_error, particle_swap
 
 # Default baseline inputs
-baseline_defaults = {
+baseline_defaults = namedtuple('baseline_defaults', {
     'plotting' : False,
     'trials' : 500,
     'timesteps' : 150
-}
+})
 
 
 def static(env): 
@@ -217,16 +218,9 @@ def run_baseline(env, config=None, global_start_time=None):
 
 
 
-def baseline(args=None, env=None):
+def baseline(env=None):
 
     defaults = baseline_defaults
-
-    if args:
-        config = configparser.ConfigParser(defaults)
-        config.read_dict({section: dict(args[section]) for section in args.sections()})
-        defaults = dict(config.items('Defaults'))
-        # Fix for boolean args
-        defaults['plotting'] = config.getboolean('Defaults', 'plotting')
 
     parser = argparse.ArgumentParser(description='Baselines',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -241,6 +235,12 @@ def baseline(args=None, env=None):
     parser.add_argument('--trials', type=int, help='Number of runs')
     parser.add_argument('--timesteps', type=int, help='Number of timesteps')
     args,_ = parser.parse_known_args()
+
+    config = configparser.ConfigParser(defaults)
+    config.read_dict(vars(args))
+    defaults = dict(config.items('Defaults'))
+    # Fix for boolean args
+    defaults['plotting'] = config.getboolean('Defaults', 'plotting')
 
     if not env:
         # Setup environment
@@ -257,4 +257,4 @@ def baseline(args=None, env=None):
 
 
 if __name__ == '__main__':
-    baseline(args=sys.argv[1:])
+    baseline()

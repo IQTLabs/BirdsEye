@@ -69,7 +69,7 @@ def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9)
     """
     Calculate distance between receiver and transmitter based on RSSI.
     """
-    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi - (20*np.log10(f)) + (20*np.log10(speed_of_ligt/(4*np.pi))))/20)
+    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi - (20*np.log10(f)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
     return distance
 
 def dB_to_power(dB):
@@ -258,7 +258,7 @@ class SingleRSSI(Sensor):
         return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
 
     def near_state(self, state):
-        return np.array(self.gen_state(self.observation(state)))
+        return np.array(self.gen_state(self.observation(state)[0]))
 
 
 class DoubleRSSI(Sensor):

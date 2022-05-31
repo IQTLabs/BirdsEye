@@ -85,7 +85,7 @@ def get_optim(args, model):
 
 class pfrnn(object): 
     def __init__(self): 
-        self.args = parse_args(arg_string="")
+        self.args = parse_args(arg_string=None)
         self.model = Localizer(self.args)
         self.optimizer = get_optim(self.args, self.model)
         self.particles = None 
