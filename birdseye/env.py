@@ -20,6 +20,7 @@ class RFMultiEnv(object):
         self.pfrnn = pfrnn()
 
         self.last_observation = None
+        self.pf = None
 
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics
@@ -281,6 +282,7 @@ class RFEnv(object):
         self.simulated = simulated
 
         self.pfrnn = pfrnn()
+        self.pf = None
 
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics

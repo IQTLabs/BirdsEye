@@ -1,3 +1,4 @@
+from collections import namedtuple
 from datetime import datetime
 import sys
 import configparser
@@ -13,7 +14,7 @@ from .env import RFEnv
 from .utils import write_header_log, Results
 
 # Default MCTS inputs
-mcts_defaults = {
+mcts_defaults = namedtuple('mcts_defaults', {
     'lambda_arg' : 0.8,
     'collision' : -2.,
     'loss' : -2.,
@@ -22,7 +23,7 @@ mcts_defaults = {
     'plotting' : False,
     'trials' : 100,
     'iterations' : 500
-}
+})
 
 
 def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
@@ -115,16 +116,9 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
 
 
 
-def mcts(args=None, env=None):
+def mcts(env=None):
     # Grab mcts specific defaults
     defaults = mcts_defaults
-
-    if args:
-        config = configparser.ConfigParser(defaults)
-        config.read_dict({section: dict(args[section]) for section in args.sections()})
-        defaults = dict(config.items('Defaults'))
-        # Fix for boolean args
-        defaults['plotting'] = config.getboolean('Defaults', 'plotting')
 
     parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -138,6 +132,12 @@ def mcts(args=None, env=None):
     parser.add_argument('--trials', type=int, help='Number of runs')
     parser.add_argument('--iterations', type=int, help='Number of iterations')
     args,_ = parser.parse_known_args()
+
+    config = configparser.ConfigParser(defaults)
+    config.read_dict(vars(args))
+    defaults = dict(config.items('Defaults'))
+    # Fix for boolean args
+    defaults['plotting'] = config.getboolean('Defaults', 'plotting')
 
     if not env:
         # Setup environment
@@ -153,4 +153,4 @@ def mcts(args=None, env=None):
 
 
 if __name__ == '__main__':
-    mcts(args=sys.argv[1:])
+    mcts()

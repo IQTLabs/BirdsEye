@@ -473,18 +473,6 @@ def huber_loss(abs_td_error):
 def dqn(args=None, env=None):
     defaults = dqn_defaults
 
-    if args:
-        config = configparser.ConfigParser(defaults)
-        config.read_dict({section: dict(args[section]) for section in args.sections()})
-        defaults = dict(config.items('Defaults'))
-        # Fix for boolean args
-        defaults['param_noise'] = config.getboolean('Defaults', 'param_noise')
-        defaults['dueling'] = config.getboolean('Defaults', 'dueling')
-        defaults['double_q'] = config.getboolean('Defaults', 'double_q')
-        defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
-        defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
-        defaults['eval_mode'] = config.getboolean('Defaults', 'eval_mode')
-
     parser = argparse.ArgumentParser(description='DQN',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
@@ -518,6 +506,17 @@ def dqn(args=None, env=None):
     parser.add_argument('--use_gpu', type=bool, help='Flag for using GPU device')
     args,_ = parser.parse_known_args()
 
+    config = configparser.ConfigParser(defaults)
+    config.read_dict(vars(args))
+    defaults = dict(config.items('Defaults'))
+    # Fix for boolean args
+    defaults['param_noise'] = config.getboolean('Defaults', 'param_noise')
+    defaults['dueling'] = config.getboolean('Defaults', 'dueling')
+    defaults['double_q'] = config.getboolean('Defaults', 'double_q')
+    defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
+    defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
+    defaults['eval_mode'] = config.getboolean('Defaults', 'eval_mode')
+
     if not env:
         # Setup environment
         actions = SimpleActions()
@@ -533,4 +532,4 @@ def dqn(args=None, env=None):
 
 
 if __name__ == '__main__':
-    dqn(args=sys.argv[1:])
+    dqn()
