@@ -1,9 +1,8 @@
 import random
 import itertools
-import numpy as np
 
 
-class Actions(object):
+class Actions:
     """Common base class for action methods
 
         Parameters
@@ -18,7 +17,7 @@ class Actions(object):
         self.action_space = action_space
         self.action_list = self.setup_action_list()
         self.verbose = verbose
-        
+
         if verbose:
             self.print_action_info()
 
@@ -31,7 +30,7 @@ class Actions(object):
         """Return ordered list of actions
         """
         return self.action_list
-    
+
     #returns index of action given an action
     def action_to_index(self, action):
         return self.action_space.index(action)
@@ -57,14 +56,14 @@ class Actions(object):
         for ai in zip(self.get_action_list(), self.avail_actions()):
             print("   {}   {}".format(ai[0], ai[1]))
 
-# Human walking action space 
+# Human walking action space
 class WalkingActions(Actions):
     """WalkingActions for a human walking
     """
     def __init__(self):
-        # change in heading 
+        # change in heading
         self.del_theta = [-45, 0, 45]
-        # speed 
+        # speed
         self.del_r = [0,1.5]
         simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=False)
@@ -105,7 +104,7 @@ class BaselineActions(Actions):
 
 
 AVAIL_ACTIONS = {'simpleactions' : SimpleActions,
-                 'baselineactions': BaselineActions, 
+                 'baselineactions': BaselineActions,
                  'walkingactions': WalkingActions
                 }
 

@@ -38,7 +38,7 @@ def init_logger(log_dir):
 
     return logger
 
-def close_logger(logger): 
+def close_logger(logger):
     handlers = logger.handlers[:]
     for handler in handlers:
         handler.close()

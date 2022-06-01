@@ -10,7 +10,7 @@ import numpy as np
 import torch
 
 
-class SegmentTree(object):
+class SegmentTree:
     def __init__(self, capacity, operation, neutral_element):
         """Build a Segment Tree data structure.
 
@@ -156,7 +156,7 @@ class MinSegmentTree(SegmentTree):
         return super(MinSegmentTree, self).reduce(start, end)
 
 
-class ReplayBuffer(object):
+class ReplayBuffer:
     def __init__(self, size, device):
         """Create Replay buffer.
 
