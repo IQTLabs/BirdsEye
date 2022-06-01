@@ -1,12 +1,9 @@
-from collections import namedtuple
 from datetime import datetime
 import random
-import sys
 import configparser
 import argparse
-import pandas as pd
+from types import SimpleNamespace
 from tqdm import tqdm
-import os.path
 from .actions import *
 from .sensor import *
 from .state import *
@@ -15,22 +12,22 @@ from .env import RFEnv
 from .utils import write_header_log, Results, pol2cart, tracking_error, particle_swap
 
 # Default baseline inputs
-baseline_defaults = namedtuple('baseline_defaults', {
+baseline_defaults = {
     'plotting' : False,
     'trials' : 500,
     'timesteps' : 150
-})
+}
 
 
-def static(env): 
+def static(env):
     return (0,0)
 
-def random_policy(env): 
+def random_policy(env):
     random_action_index = random.choice(env.actions.get_action_list())
     return env.actions.index_to_action(random_action_index)
 
 baseline_policy = {
-    'static': static, 
+    'static': static,
     'random': random_policy
 }
 
@@ -82,7 +79,7 @@ def baseline_trial(env, policy, num_timesteps, plotting=False, results=None):
         # select an action
         inference_start_time = datetime.now()
 
-        # action 
+        # action
         action = policy(env)
 
         inference_time = (datetime.now() - inference_start_time).total_seconds()
@@ -100,7 +97,7 @@ def baseline_trial(env, policy, num_timesteps, plotting=False, results=None):
         particle_swap(env)
         belief = env.pf.particles
         #reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
-        reward = 0 
+        reward = 0
         env.state.target_state = next_state
 
         # error metrics
@@ -174,7 +171,7 @@ def run_baseline(env, config=None, global_start_time=None):
         Axis object
     """
     if config is None:
-        config = baseline_defaults
+        config = SimpleNamespace(**baseline_defaults)
     # simulations = config.simulations
     # DEPTH = config.depth
     # lambda_arg = config.lambda_arg
@@ -218,9 +215,16 @@ def run_baseline(env, config=None, global_start_time=None):
 
 
 
-def baseline(env=None):
-
+def baseline(args=None, env=None):
     defaults = baseline_defaults
+    config = None
+
+    if args:
+        config = configparser.ConfigParser(defaults)  # pytype: disable=wrong-arg-types
+        config.read_dict({section: dict(args[section]) for section in args.sections()})
+        defaults = dict(config.items('Defaults'))
+        # Fix for boolean args
+        defaults['plotting'] = config.getboolean('Defaults', 'plotting')
 
     parser = argparse.ArgumentParser(description='Baselines',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -236,12 +240,6 @@ def baseline(env=None):
     parser.add_argument('--timesteps', type=int, help='Number of timesteps')
     args,_ = parser.parse_known_args()
 
-    config = configparser.ConfigParser(defaults)
-    config.read_dict(vars(args))
-    defaults = dict(config.items('Defaults'))
-    # Fix for boolean args
-    defaults['plotting'] = config.getboolean('Defaults', 'plotting')
-
     if not env:
         # Setup environment
         actions = SimpleActions()
@@ -250,7 +248,8 @@ def baseline(env=None):
         env = RFEnv(sensor, actions, state)
 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    write_header_log(config, 'baseline', global_start_time)
+    if config:
+        write_header_log(config, 'baseline', global_start_time)
 
     env.actions = BaselineActions()
     run_baseline(env=env, config=args, global_start_time=global_start_time)

@@ -1,10 +1,7 @@
-from collections import namedtuple
 from datetime import datetime
-import sys
 import configparser
 import argparse
-import pandas as pd
-import os.path
+from types import SimpleNamespace
 from .mcts_utils import *
 from .actions import *
 from .sensor import *
@@ -14,7 +11,7 @@ from .env import RFEnv
 from .utils import write_header_log, Results
 
 # Default MCTS inputs
-mcts_defaults = namedtuple('mcts_defaults', {
+mcts_defaults = {
     'lambda_arg' : 0.8,
     'collision' : -2.,
     'loss' : -2.,
@@ -23,7 +20,7 @@ mcts_defaults = namedtuple('mcts_defaults', {
     'plotting' : False,
     'trials' : 100,
     'iterations' : 500
-})
+}
 
 
 def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
@@ -59,7 +56,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         Axis object
     """
     if config is None:
-        config = mcts_defaults
+        config = SimpleNamespace(**mcts_defaults)
     simulations = config.simulations
     DEPTH = config.depth
     lambda_arg = config.lambda_arg
@@ -116,9 +113,17 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
 
 
 
-def mcts(env=None):
+def mcts(args=None, env=None):
     # Grab mcts specific defaults
     defaults = mcts_defaults
+    config = None
+
+    if args:
+        config = configparser.ConfigParser(defaults)  # pytype: disable=wrong-arg-types
+        config.read_dict({section: dict(args[section]) for section in args.sections()})
+        defaults = dict(config.items('Defaults'))
+        # Fix for boolean args
+        defaults['plotting'] = config.getboolean('Defaults', 'plotting')
 
     parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -133,12 +138,6 @@ def mcts(env=None):
     parser.add_argument('--iterations', type=int, help='Number of iterations')
     args,_ = parser.parse_known_args()
 
-    config = configparser.ConfigParser(defaults)
-    config.read_dict(vars(args))
-    defaults = dict(config.items('Defaults'))
-    # Fix for boolean args
-    defaults['plotting'] = config.getboolean('Defaults', 'plotting')
-
     if not env:
         # Setup environment
         actions = SimpleActions()
@@ -147,7 +146,8 @@ def mcts(env=None):
         env = RFEnv(sensor, actions, state)
 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    write_header_log(config, 'mcts', global_start_time)
+    if config:
+        write_header_log(config, 'mcts', global_start_time)
 
     run_mcts(env=env, config=args, global_start_time=global_start_time)
 
