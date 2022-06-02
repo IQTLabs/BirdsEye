@@ -19,7 +19,9 @@ jobs:
       - name: Smoke tests
         run: |
           pip3 install -r requirements.txt && \
+          pip3 install pytest && \
           PYTHONPATH=. python3 -m birdseye.baseline --help \
           PYTHONPATH=. python3 -m birdseye.dqn --help && \
           PYTHONPATH=. python3 -m birdseye.mcts --help && \
-          PYTHONPATH=. python3 ./run_birdseye.py -h
+          PYTHONPATH=. python3 ./run_birdseye.py -h && \
+          PYTHONPATH=. pytest test/
