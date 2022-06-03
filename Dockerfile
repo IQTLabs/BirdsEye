@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.6.2-base-ubuntu20.04
+FROM nvidia/cuda:11.7.0-base-ubuntu20.04
 LABEL maintainer="Lucas Tindall <ltindall@iqt.org>"
 
 RUN apt-get update && apt-get install -y libjpeg-dev python3 python3-pip
