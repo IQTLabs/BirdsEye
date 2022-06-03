@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 import torch
 import numpy as np
 from flask import Flask
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 import birdseye.sensor
 import birdseye.env
