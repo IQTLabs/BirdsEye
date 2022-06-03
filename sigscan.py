@@ -223,7 +223,7 @@ def main(config=None, debug=False):
     fig = plt.figure(figsize=(10,10))
     ax = fig.subplots()
     time_step = 0
-    if config.get('flask', False) in [True, 'True', 'true']: 
+    if config.get('flask', 'false').lower() == 'true': 
         run_flask(flask_host, flask_port, fig, results, debug)
 
     # Main loop
@@ -248,7 +248,7 @@ def main(config=None, debug=False):
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
-        if config.get('native_plot', False): 
+        if config.get('native_plot', 'false').lower() == 'true': 
             plt.draw()
             plt.pause(0.001)
         plot_end = timer() 
