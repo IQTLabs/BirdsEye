@@ -20,4 +20,4 @@ jobs:
         run: |
           pip3 install -r requirements.txt && \
           pip3 install pytype && \
-          pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye
+          pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye *py telemetry-data/*/*py

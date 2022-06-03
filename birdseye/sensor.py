@@ -509,13 +509,14 @@ class Bearing(Sensor):
             return 0.0001
 
 
-AVAIL_SENSORS = {'drone' : Drone,
-                 'bearing' : Bearing,
-                 'signalstrength': SignalStrength,
-                 'doublerssi': DoubleRSSI,
-                 'doublerssilofi': DoubleRSSILofi,
-                 'singlerssi': SingleRSSI
-                }
+AVAIL_SENSORS = {
+    # 'bearing' : Bearing,
+    # 'drone' : Drone,
+    # 'signalstrength': SignalStrength,
+    'doublerssi': DoubleRSSI,
+    'doublerssilofi': DoubleRSSILofi,
+    'singlerssi': SingleRSSI
+}
 
 def get_sensor(sensor_name=''):
     """Convenience function for retrieving BirdsEye sensor methods
