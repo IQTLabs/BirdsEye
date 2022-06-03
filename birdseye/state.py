@@ -584,9 +584,10 @@ class RFState(State):
         return [d_crs, circ_spd]
 
 
-AVAIL_STATES = {'rfstate' : RFState,
-                'rfmultistate' : RFMultiState
-                }
+AVAIL_STATES = {
+     # 'rfstate' : RFState,
+    'rfmultistate' : RFMultiState
+}
 
 def get_state(state_name=''):
     """Convenience function for retrieving BirdsEye state methods
