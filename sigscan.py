@@ -13,7 +13,7 @@ import paho.mqtt.client as mqtt
 import torch
 import numpy as np
 from flask import Flask
-from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 import birdseye.sensor
 import birdseye.env
@@ -220,10 +220,11 @@ def main(config=None, debug=False):
         planner = MCTSPlanner(env, actions, depth, c, simulations)
 
     # Flask
-    fig = Figure(figsize=(10,10))
+    fig = plt.figure(figsize=(10,10))
     ax = fig.subplots()
     time_step = 0
-    run_flask(flask_host, flask_port, fig, results, debug)
+    if config.get('flask', 'false').lower() == 'true': 
+        run_flask(flask_host, flask_port, fig, results, debug)
 
     # Main loop
     time.sleep(2)
@@ -247,9 +248,12 @@ def main(config=None, debug=False):
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
-        plot_end = timer()
-
-        particle_save_start = timer()
+        if config.get('native_plot', 'false').lower() == 'true': 
+            plt.draw()
+            plt.pause(0.001)
+        plot_end = timer() 
+        
+        particle_save_start = timer() 
         np.save('{}/{}_particles.npy'.format(results.logdir,int(time.time())), env.pf.particles)
         particle_save_end = timer()
 
