@@ -1,4 +1,4 @@
-name: Code health checks
+name: Unit tests
 
 on: [push, pull_request]
 
