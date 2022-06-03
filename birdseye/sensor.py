@@ -3,7 +3,7 @@ import numpy as np
 import csv
 from scipy.constants import speed_of_light
 
-class Sensor(object):
+class Sensor:
     """Common base class for sensor & assoc methods
     """
     def __init__(self):
@@ -69,7 +69,7 @@ def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9)
     """
     Calculate distance between receiver and transmitter based on RSSI.
     """
-    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi - (20*np.log10(f)) + (20*np.log10(speed_of_ligt/(4*np.pi))))/20)
+    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi - (20*np.log10(f)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
     return distance
 
 def dB_to_power(dB):
@@ -83,7 +83,7 @@ class DoubleRSSILofi(Sensor):
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
     def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
-        
+
         self.radiation_pattern = get_radiation_pattern(antenna_filename=antenna_filename)
         self.std_dev = 6
         self.power_tx = power_tx
@@ -92,7 +92,7 @@ class DoubleRSSILofi(Sensor):
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
-    
+
     def weight(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
@@ -109,17 +109,15 @@ class DoubleRSSILofi(Sensor):
         #likelihood = np.prod(weight, axis=1)
         return weight
 
-        return likelihood
-
     def weight3(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs[0]
-        
+
         multiplier = 1
-        expected_diff = multiplier * (expected_rssi[:,0] - expected_rssi[:,1]) 
-        observed_diff = multiplier * (observed_rssi[0] - observed_rssi[1]) 
+        expected_diff = multiplier * (expected_rssi[:,0] - expected_rssi[:,1])
+        observed_diff = multiplier * (observed_rssi[0] - observed_rssi[1])
         print('std = ',np.std(expected_diff))
         lofi_sigma = 0.7* np.std(expected_diff)#np.std(expected_diff)#(1e-11)/observed_diff # 3e-6 #observed_diff/10 #1e-5
         # Gaussian weighting function
@@ -133,10 +131,8 @@ class DoubleRSSILofi(Sensor):
         print('obs = ',observed_diff)
         print('observed = ',observed_rssi)
         print('weight = ',weight)
-        
         return weight
 
-        return likelihood
     def weight2(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
@@ -148,7 +144,7 @@ class DoubleRSSILofi(Sensor):
         expected_front_greater = expected_diff > lofi_sigma
         expected_unsure = np.abs(expected_diff) <= lofi_sigma
         expected_back_greater = expected_diff < (-1*lofi_sigma)
-        
+
         observed_front_greater = observed_diff > lofi_sigma
         observed_unsure = np.abs(observed_diff) <= lofi_sigma
         observed_back_greater = observed_diff < (-1*lofi_sigma)
@@ -200,7 +196,7 @@ class DoubleRSSILofi(Sensor):
         #rssi_front = power_front
         #rssi_back = power_back
 
-        # if np.isnan([rssi_front, rssi_back]).any(): 
+        # if np.isnan([rssi_front, rssi_back]).any():
         #     print([rssi_front, rssi_back])
         #     print(state)
         #     print('fading = ',self.fading_sigma)
@@ -242,7 +238,7 @@ class SingleRSSI(Sensor):
     def observation(self, state):
         # Calculate observation for multiple targets
         power_front = 0
-        
+
         for ts in state: # target_state, particle_state
             distance = ts[0]
             theta_front = ts[1] * np.pi / 180.0
@@ -258,7 +254,7 @@ class SingleRSSI(Sensor):
         return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
 
     def near_state(self, state):
-        return np.array(self.gen_state(self.observation(state)))
+        return np.array(self.gen_state(self.observation(state)[0]))
 
 
 class DoubleRSSI(Sensor):
@@ -513,13 +509,14 @@ class Bearing(Sensor):
             return 0.0001
 
 
-AVAIL_SENSORS = {'drone' : Drone,
-                 'bearing' : Bearing,
-                 'signalstrength': SignalStrength,
-                 'doublerssi': DoubleRSSI,
-                 'doublerssilofi': DoubleRSSILofi, 
-                 'singlerssi': SingleRSSI
-                }
+AVAIL_SENSORS = {
+    # 'bearing' : Bearing,
+    # 'drone' : Drone,
+    # 'signalstrength': SignalStrength,
+    'doublerssi': DoubleRSSI,
+    'doublerssilofi': DoubleRSSILofi,
+    'singlerssi': SingleRSSI
+}
 
 def get_sensor(sensor_name=''):
     """Convenience function for retrieving BirdsEye sensor methods

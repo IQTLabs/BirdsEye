@@ -1,0 +1,27 @@
+name: Unit tests
+
+on: [push, pull_request]
+
+env:
+  CODECHECK_PY_VER: 3.8
+
+jobs:
+  codecheck:
+    name: Code check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Set up python-${{ env.CODECHECK_PY_VER }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ env.CODECHECK_PY_VER }}
+      - name: Smoke tests
+        run: |
+          pip3 install -r requirements.txt && \
+          pip3 install pytest && \
+          PYTHONPATH=. python3 -m birdseye.baseline --help \
+          PYTHONPATH=. python3 -m birdseye.dqn --help && \
+          PYTHONPATH=. python3 -m birdseye.mcts --help && \
+          PYTHONPATH=. python3 ./run_birdseye.py -h && \
+          PYTHONPATH=. pytest test/

@@ -1,0 +1,23 @@
+name: Code health checks
+
+on: [push, pull_request]
+
+env:
+  CODECHECK_PY_VER: 3.8
+
+jobs:
+  codecheck:
+    name: Code check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Set up python-${{ env.CODECHECK_PY_VER }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ env.CODECHECK_PY_VER }}
+      - name: Run pytype
+        run: |
+          pip3 install -r requirements.txt && \
+          pip3 install pytype && \
+          pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye *py telemetry-data/*/*py

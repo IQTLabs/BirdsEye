@@ -1,11 +1,10 @@
 import numpy as np
-import random
 from .utils import pol2cart, particles_mean_belief, particle_swap
 from birdseye.pfrnn.pfrnn import pfrnn
 from pfilter import ParticleFilter, systematic_resample
 from scipy.ndimage.filters import gaussian_filter
 
-class RFMultiEnv(object):
+class RFMultiEnv:
 
     def __init__(self, sensor=None, actions=None, state=None, simulated=True):
         # Sensor definitions
@@ -20,6 +19,7 @@ class RFMultiEnv(object):
         self.pfrnn = pfrnn()
 
         self.last_observation = None
+        self.pf = None
 
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics
@@ -40,7 +40,7 @@ class RFMultiEnv(object):
 
     def particle_noise(self, particles, sigmas=[1,2,2], xp=None):
 
-        for t in range(self.state.n_targets): 
+        for t in range(self.state.n_targets):
             particles[:,[4*t]] += np.random.normal(0,sigmas[0], (len(particles), 1))
             particles[:,[4*t]] = np.clip(particles[:,[4*t]], a_min=1, a_max=None)
             particles[:,[(4*t)+1]] += np.random.normal(0,sigmas[1], (len(particles), 1))
@@ -68,7 +68,7 @@ class RFMultiEnv(object):
         """
 
         self.iters = 0
-        if self.simulated: 
+        if self.simulated:
             self.state.target_state = self.state.init_target_state()
         self.state.sensor_state = self.state.init_sensor_state()
 
@@ -80,7 +80,7 @@ class RFMultiEnv(object):
                         dynamics_fn=self.dynamics,
                         resample_proportion= 0.05, #0.005,
                         #noise_fn=lambda x, **kwargs: x,
-                        noise_fn=lambda x, **kwargs: self.particle_noise(x), 
+                        noise_fn=lambda x, **kwargs: self.particle_noise(x),
                         #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
                         weight_fn=lambda hyp, o, xp=None,**kwargs: self.sensor.weight(hyp, o), #[self.sensor.weight(None, o, state=x) for x in xp],
                         resample_fn=systematic_resample,
@@ -109,8 +109,8 @@ class RFMultiEnv(object):
         reward = self.state.reward_func(state=None, action=action, particles=self.pf.particles)
 
         belief_obs = self.env_observation()
-        
-        self.last_observation = observation 
+
+        self.last_observation = observation
 
         return (belief_obs, reward, observation)
 
@@ -268,7 +268,7 @@ class RFMultiEnv(object):
         return centroid_distance_error
 
 
-class RFEnv(object):
+class RFEnv:
 
     def __init__(self, sensor=None, actions=None, state=None, simulated=False):
         # Sensor definitions
@@ -281,6 +281,7 @@ class RFEnv(object):
         self.simulated = simulated
 
         self.pfrnn = pfrnn()
+        self.pf = None
 
     def dynamics(self, particles, control=None, **kwargs):
         """Helper function for particle filter dynamics

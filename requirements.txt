@@ -1,11 +1,12 @@
 flask==2.1.2
-imageio==2.18.0
-ipython==8.2.0
-matplotlib==3.5.1
-numpy==1.22.3
+imageio==2.19.3
+ipython==8.4.0
+matplotlib==3.5.2
+numpy==1.22.4
 paho-mqtt==1.6.1
 pandas==1.4.2
 pfilter==0.2.4
-scipy==1.8.0
+requests==2.27.1
+scipy==1.8.1
 torch==1.11.0
 tqdm==4.64.0

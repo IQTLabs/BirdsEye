@@ -3,12 +3,10 @@
 
 # Imports
 import random
-import csv
 from datetime import datetime
 from tqdm import tqdm
 import numpy as np
-from .utils import pol2cart, tracking_error, particle_swap
-from pfilter import ParticleFilter, systematic_resample
+from .utils import tracking_error, particle_swap
 import matplotlib.pyplot as plt
 
 ##################################################################
@@ -162,8 +160,8 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
 
-class MCTSRunner(): 
-    def __init__(self, env, depth, c, simulations=1000): 
+class MCTSRunner():
+    def __init__(self, env, depth, c, simulations=1000):
 
         self.env = env
         self.depth = depth
@@ -175,7 +173,7 @@ class MCTSRunner():
 
         self.action = None
 
-    def run(self, belief_heatmap): 
+    def run(self, belief_heatmap):
 
         self.env.reset()
 
@@ -184,7 +182,7 @@ class MCTSRunner():
             self.N = {}
 
         self.Q, self.N, self.action = select_action(self.env, self.Q, self.N, self.env.pf.particles, self.depth, self.c, self.simulations)
-        
+
         return self.action
 
 ##################################################################
@@ -301,7 +299,7 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         #         total_loss += 1
 
         if results is not None and results.plotting:
-            
+
             axs = results.build_multitarget_plots(env, time_step, fig, axs, centroid_distance_error, selected_plots=selected_plots)
 
         # Save results to output arrays
