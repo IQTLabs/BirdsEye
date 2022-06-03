@@ -3,18 +3,15 @@ These functions are adapted from github.com/Officium/RL-Experiments
 
 """
 from datetime import datetime
-import logging
 import configparser
 import argparse
 import math
 import os
-import sys
 import random
 import time
 from collections import deque
 from copy import deepcopy
 import numpy as np
-import pandas as pd
 
 import torch
 import torch.distributions
@@ -25,7 +22,7 @@ from torch.optim import Adam
 from .rl_common.util import scale_ob
 from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
 from .rl_common.logger import init_logger, close_logger
-from .rl_common.models import CNN, MLP, RFPFQnet, SmallRFPFQnet
+from .rl_common.models import SmallRFPFQnet
 
 from .actions import *
 from .sensor import *
@@ -67,9 +64,9 @@ dqn_defaults = {
     'eval_mode': False
 }
 
-def simple_prep(env, device, checkpoint_filename): 
+def simple_prep(env, device, checkpoint_filename):
     policy_dim = len(env.actions.action_space)
-    map_dim = (env.state.n_targets, 300, 300) 
+    map_dim = (env.state.n_targets, 300, 300)
     network = SmallRFPFQnet(env.state.n_targets, map_dim, env.state.state_dim, policy_dim)
     qnet = network.to(device)
     checkpoint = torch.load(checkpoint_filename, map_location=device)
@@ -77,13 +74,13 @@ def simple_prep(env, device, checkpoint_filename):
 
     return qnet
 
-def simple_run(qnet, observation, device): 
+def simple_run(qnet, observation, device):
     with torch.no_grad():
         observation = torch.from_numpy(np.expand_dims(observation, 0).astype(np.float32)).to(device)
         q_values = qnet(observation)
         action = q_values.argmax(1).cpu().numpy()[0]
 
-        return action 
+        return action
 
 
 def run_dqn(env, config, global_start_time):
@@ -194,7 +191,7 @@ def run_dqn(env, config, global_start_time):
 
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
-    map_dim = (env.state.n_targets, 300, 300) # TODO: modify to match multi target 
+    map_dim = (env.state.n_targets, 300, 300) # TODO: modify to match multi target
     #network = CNN(map_dim, policy_dim, atom_num, dueling)
     #  SmallRFPFQnet(n_targets, map_dim, state_dim, policy_dim, atom_num, dueling)
     network = SmallRFPFQnet(env.state.n_targets, map_dim, 4, policy_dim, atom_num, dueling)
@@ -223,11 +220,11 @@ def run_dqn(env, config, global_start_time):
 
     start_ts = time.time()
 
-    if eval_mode in ['True','true',True]: 
+    if eval_mode in ['True','true',True]:
         checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
         qnet.load_state_dict(checkpoint[0])
         evaluate(env, qnet, max_episode_length, device, ob_scale, results)
-        return  
+        return
 
     for n_iter in range(1, number_timesteps + 1):
         if prioritized_replay:
@@ -299,14 +296,14 @@ def run_dqn(env, config, global_start_time):
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
                        os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
-        
+
         if eval_interval and n_iter % eval_interval == 0:
             evaluate(env, qnet, max_episode_length, device, ob_scale, results)
 
     close_logger(logger)
 
-def evaluate(env, qnet, max_episode_length, device, ob_scale, results): 
-    
+def evaluate(env, qnet, max_episode_length, device, ob_scale, results):
+
     trials = 500 #500
     run_data = []
     for i in range(trials):
@@ -362,7 +359,7 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             total_col = np.mean([np.mean(env.pf.particles[:,4*t] < 15) for t in range(env.state.n_targets)])
             total_lost = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
 
-            # for target_state in env.state.target_state: 
+            # for target_state in env.state.target_state:
             #     if target_state[0] < 15:
             #         total_col += 1
 
@@ -472,6 +469,7 @@ def huber_loss(abs_td_error):
 
 def dqn(args=None, env=None):
     defaults = dqn_defaults
+    config = None
 
     if args:
         config = configparser.ConfigParser(defaults)
@@ -516,7 +514,7 @@ def dqn(args=None, env=None):
     parser.add_argument('--save_path', type=str, help='Path for saving')
     parser.add_argument('--log_path', type=str, help='Path for logging output')
     parser.add_argument('--use_gpu', type=bool, help='Flag for using GPU device')
-    args,_ = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
     if not env:
         # Setup environment
@@ -526,11 +524,12 @@ def dqn(args=None, env=None):
         env = RFEnv(sensor, actions, state)
 
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    write_header_log(config, 'dqn', global_start_time)
+    if config:
+        write_header_log(config, 'dqn', global_start_time)
 
     # Run dqn method
     run_dqn(env=env, config=args, global_start_time=global_start_time)
 
 
 if __name__ == '__main__':
-    dqn(args=sys.argv[1:])
+    dqn()

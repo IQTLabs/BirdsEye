@@ -165,7 +165,7 @@ class Localizer(nn.Module):
         pf_out_xy = torch.sigmoid(pf_labels[:, :, :2])
         pf_out_h = torch.sigmoid(pf_labels[:, :, 2:])
         pf_out = torch.cat([pf_out_xy, pf_out_h], dim=2)
-        
+
         return y_out, pf_out
 
     def step(self, map_in, obs_in, act_in, gt_pos, args):

@@ -4,7 +4,7 @@ from scipy.ndimage.filters import gaussian_filter
 from .utils import pol2cart
 
 
-class State(object):
+class State:
     """Common base class for state & assoc methods
     """
     def __init__(self):
@@ -31,7 +31,7 @@ class RFMultiState(State):
     def __init__(self, n_targets=1, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None, simulated=True):
 
         self.state_dim = 4
-        ### Target Settings 
+        ### Target Settings
         # Transition probability
         self.prob_target_change_crs = prob
         # Target speed
@@ -44,11 +44,11 @@ class RFMultiState(State):
         self.target_start = int(target_start) if target_start is not None else 150
         # Number of targets
         self.n_targets = int(n_targets) if n_targets is not None else 1
-        
+
         ### Target & sensor states
         # Setup an initial random state
         self.target_state = None
-        if simulated: 
+        if simulated:
             self.target_state = self.init_target_state()
         # Setup an initial sensor state
         self.sensor_state = self.init_sensor_state()
@@ -66,7 +66,7 @@ class RFMultiState(State):
         elif reward in ['entropy_collision_reward', 'heuristic_reward']:
             self.belief_mdp = True
 
-    def __str__(self): 
+    def __str__(self):
         print_str = ''
         print_str += 'RF Multi State Information\n'
         print_str += '# of targets: {}\n'.format(self.n_targets)
@@ -146,13 +146,13 @@ class RFMultiState(State):
 
         # Set reward to 0/. as default
         reward_val = 0.
-        if action is not None: 
-            if action[0] != 0: 
+        if action is not None:
+            if action[0] != 0:
                 reward_val += action_penalty
         elif action_idx is not None: # returns reward as a function of range, action, and action penalty
-            if action_idx not in [2,3]: 
+            if action_idx not in [2,3]:
                 reward_val += action_penalty
-            
+
         col = 20
         lost = 150
         collision_rate = np.mean([np.mean(particles[:,4*t] < col) for t in range(self.n_targets)])
@@ -188,11 +188,11 @@ class RFMultiState(State):
         max_state_range = np.max(state_ranges)
         min_state_range = np.min(state_ranges)
 
-        if action is not None: 
-            if action[0] != 0: 
+        if action is not None:
+            if action[0] != 0:
                 reward_val += action_penalty
         elif action_idx is not None: # returns reward as a function of range, action, and action penalty
-            if action_idx not in [2,3]: 
+            if action_idx not in [2,3]:
                 reward_val += action_penalty
 
 
@@ -222,8 +222,8 @@ class RFMultiState(State):
         yedges = np.arange(min_map, max_map+cell_size, cell_size)
 
         H = 0
-        for t in range(self.n_targets): 
-                
+        for t in range(self.n_targets):
+
             pf_r = particles[:,4*t]
             pf_theta = np.radians(particles[:,(4*t)+1])
             pf_x, pf_y = pol2cart(pf_r, pf_theta)
@@ -292,10 +292,10 @@ class RFMultiState(State):
             crs += 360
 
         spd = random.randint(0,1)
-        
+
         # Transform changes to coords to cartesian
         dx, dy = pol2cart(spd, np.radians(crs))
-        if transition_overwrite: 
+        if transition_overwrite:
             dx, dy = transition_overwrite
         pos = [x + dx - control_spd, y + dy]
 
@@ -314,8 +314,8 @@ class RFMultiState(State):
 
         crs = crs % 360
         crs += control[0]
-        if bearing is not None: 
-            crs = bearing 
+        if bearing is not None:
+            crs = bearing
         if crs < 0:
             crs += 360
         crs = crs % 360
@@ -584,9 +584,10 @@ class RFState(State):
         return [d_crs, circ_spd]
 
 
-AVAIL_STATES = {'rfstate' : RFState,
-                'rfmultistate' : RFMultiState
-                }
+AVAIL_STATES = {
+     # 'rfstate' : RFState,
+    'rfmultistate' : RFMultiState
+}
 
 def get_state(state_name=''):
     """Convenience function for retrieving BirdsEye state methods

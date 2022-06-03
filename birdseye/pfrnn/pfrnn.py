@@ -1,7 +1,7 @@
 import argparse
-import numpy as np 
+import numpy as np
 import torch
-import matplotlib.pyplot as plt 
+import matplotlib.pyplot as plt
 from birdseye.pfrnn.model import Localizer
 from birdseye.utils import pol2cart
 
@@ -62,9 +62,9 @@ def parse_args(arg_string=None):
 
     parser.add_argument('--logs_num', type=int, default=0, help='number of logs folder for your trained model')
 
-    if arg_string is not None: 
+    if arg_string is not None:
         args = parser.parse_args(arg_string)
-    else: 
+    else:
         args = parser.parse_args()
     return args
 
@@ -83,16 +83,16 @@ def get_optim(args, model):
 
 
 
-class pfrnn(object): 
-    def __init__(self): 
-        self.args = parse_args(arg_string="")
+class pfrnn:
+    def __init__(self):
+        self.args = parse_args(arg_string=[])
         self.model = Localizer(self.args)
         self.optimizer = get_optim(self.args, self.model)
-        self.particles = None 
+        self.particles = None
 
-    def update(self, observation, absolute_pos, action_index): 
+    def update(self, observation, absolute_pos, action_index):
         # env_map: [batch, *occupancy array (2D)]
-        # obs: sensor observation [batch, sequence, *array] 
+        # obs: sensor observation [batch, sequence, *array]
         # pos: target position [batch, sequence, x, y, theta (radians)]
         # action: [batch, sequence, *one hot vector]
 
@@ -139,7 +139,7 @@ class pfrnn(object):
 
         return (env_map, obs, pos, action)
 
-    def plot_particles(self, particles): 
+    def plot_particles(self, particles):
         plt.figure()
         plt.plot(particles[:,0,0,0], particles[:,0,0,1], 'ro')
         plt.show()
