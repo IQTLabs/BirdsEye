@@ -218,7 +218,7 @@ def main(config=None, debug=False):
     fig = plt.figure(figsize=(10,10))
     ax = fig.subplots()
     time_step = 0
-    if config.get('flask', False): 
+    if config.get('flask', False) in [True, 'True', 'true']: 
         run_flask(flask_host, flask_port, fig, results, debug)
 
     # Main loop 
