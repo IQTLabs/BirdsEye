@@ -475,7 +475,7 @@ class Results(object):
                 fig.texts[0].set_text(textstr[0])
                 fig.texts[1].set_text(textstr[1])
                 fig.texts[2].set_text(pfstats_str[0])
-               
+                
     def build_multitarget_plots(self, env, time_step=None, fig=None, axs=None, centroid_distance_error=None, selected_plots=[1,2,3,4,5], simulated=True, textstr=None):
         xp = env.state.target_state
         belief = env.pf.particles.reshape(len(env.pf.particles), env.state.n_targets, 4)

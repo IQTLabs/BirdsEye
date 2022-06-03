@@ -215,10 +215,11 @@ def main(config=None, debug=False):
         planner = MCTSPlanner(env, actions, depth, c, simulations)
     
     # Flask
-    fig = Figure(figsize=(10,10))
+    fig = plt.figure(figsize=(10,10))
     ax = fig.subplots()
     time_step = 0
-    run_flask(flask_host, flask_port, fig, results, debug)
+    if config.get('flask', False): 
+        run_flask(flask_host, flask_port, fig, results, debug)
 
     # Main loop 
     data = defaultdict(list)
@@ -243,6 +244,11 @@ def main(config=None, debug=False):
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
+        
+        if config.get('native_plot', False): 
+            plt.draw()
+            plt.pause(0.001)
+
         plot_end = timer() 
         
         particle_save_start = timer() 
