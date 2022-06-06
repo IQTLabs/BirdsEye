@@ -1,8 +1,9 @@
 import numpy as np
-from .utils import pol2cart, particles_mean_belief, particle_swap
-from birdseye.pfrnn.pfrnn import pfrnn
-from pfilter import ParticleFilter, systematic_resample
 from scipy.ndimage.filters import gaussian_filter
+from pfilter import ParticleFilter, systematic_resample
+from birdseye.pfrnn.pfrnn import pfrnn
+from .utils import pol2cart, particles_mean_belief, particle_swap
+
 
 class RFMultiEnv:
 
@@ -246,7 +247,6 @@ class RFMultiEnv:
 
         particles_r = particles[:,0]
         particles_theta = np.radians(particles[:,1])
-        particles_heading = particles[:,2]
         particles_x, particles_y = pol2cart(particles_r, particles_theta)
 
         # centroid of particles x,y
@@ -444,7 +444,6 @@ class RFEnv:
 
         particles_r = particles[:,0]
         particles_theta = np.radians(particles[:,1])
-        particles_heading = particles[:,2]
         particles_x, particles_y = pol2cart(particles_r, particles_theta)
 
         # centroid of particles x,y
