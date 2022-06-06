@@ -17,11 +17,11 @@ import matplotlib.pyplot as plt
 
 import birdseye.sensor
 import birdseye.env
-import birdseye.actions
 import birdseye.state
 import birdseye.utils
 import birdseye.dqn
 import birdseye.mcts_utils
+from birdseye.actions import WalkingActions
 from birdseye.planner import MCTSPlanner, DQNPlanner
 from birdseye.utils import get_distance, get_bearing
 
@@ -74,18 +74,6 @@ class GamutRFSensor(birdseye.sensor.SingleRSSI):
             return None
             #return -40
         return data['rssi']
-
-# Human walking action space
-class WalkingActions(birdseye.actions.Actions):
-    """WalkingActions for a human walking
-    """
-    def __init__(self):
-        # change in heading
-        self.del_theta = [-45, 0, 45]
-        # speed
-        self.del_r = [0,1.5]
-        simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
-        super().__init__(action_space=simple_action_space, verbose=False)
 
 # Flask
 def run_flask(flask_host, flask_port, fig, results, debug):
