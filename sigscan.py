@@ -22,6 +22,7 @@ import birdseye.state
 import birdseye.utils
 import birdseye.dqn
 import birdseye.mcts_utils
+from birdseye.planner import MCTSPlanner, DQNPlanner
 from birdseye.utils import get_distance, get_bearing
 
 data = defaultdict(list)
@@ -85,27 +86,6 @@ class WalkingActions(birdseye.actions.Actions):
         self.del_r = [0,1.5]
         simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=False)
-
-# Path Planners
-class PathPlanner():
-    def __init__(self, env, config, device):
-        pass
-    def proposal(self, observation):
-        pass
-
-class MCTSPlanner(PathPlanner):
-    def __init__(self, env, actions, depth, c, simulations):
-        self.runner =  birdseye.mcts_utils.MCTSRunner(env=env, depth=depth, c=c, simulations=simulations)
-        self.actions = actions
-    def proposal(self, observation):
-        return self.actions.action_to_index(self.runner.run(observation))
-
-class DQNPlanner(PathPlanner):
-    def __init__(self, env, device, checkpoint_filename):
-        self.model = birdseye.dqn.simple_prep(env, device, checkpoint_filename)
-        self.device = device
-    def proposal(self, observation):
-        return birdseye.dqn.simple_run(self.model, observation, self.device)
 
 # Flask
 def run_flask(flask_host, flask_port, fig, results, debug):
