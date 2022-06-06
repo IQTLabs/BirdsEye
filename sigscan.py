@@ -56,6 +56,7 @@ def on_message(client, userdata, message):
     data['previous_position'] = json_message['position']
     #print('data: ',data)
 
+
 def on_connect(client, userdata, flags, rc):
     sub_channel = 'gamutrf/rssi'
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
@@ -106,6 +107,7 @@ def run_flask(flask_host, flask_port, fig, results, debug):
     host_name = flask_host #'0.0.0.0'
     port = flask_port #4999
     threading.Thread(target=lambda: app.run(host=host_name, port=port, debug=True, use_reloader=False)).start()
+
 
 # main loop
 def main(config=None, debug=False):
@@ -248,8 +250,8 @@ def main(config=None, debug=False):
             print('main loop = {:.4f} s'.format(loop_end-loop_start))
             print('=======================================')
 
+
 if __name__ == '__main__':
-    config=None
     config = configparser.ConfigParser()
     config.read('sigscan_config.ini')
     main(config=config['sigscan'], debug=True)
