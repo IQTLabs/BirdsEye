@@ -604,7 +604,6 @@ def get_state(state_name=''):
     if state_name in AVAIL_STATES:
         state_obj = AVAIL_STATES[state_name]
         return state_obj
-    else:
-        raise ValueError('Invalid action method name, {}, entered. Must be '
-                         'in {}'.format(state_name, AVAIL_STATES.keys()))
+    raise ValueError('Invalid action method name, {}, entered. Must be '
+                     'in {}'.format(state_name, AVAIL_STATES.keys()))
 

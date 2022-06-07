@@ -17,11 +17,12 @@ import matplotlib.pyplot as plt
 
 import birdseye.sensor
 import birdseye.env
-import birdseye.actions
 import birdseye.state
 import birdseye.utils
 import birdseye.dqn
 import birdseye.mcts_utils
+from birdseye.actions import WalkingActions
+from birdseye.planner import MCTSPlanner, DQNPlanner
 from birdseye.utils import get_distance, get_bearing
 
 data = defaultdict(list)
@@ -55,6 +56,7 @@ def on_message(client, userdata, message):
     data['previous_position'] = json_message['position']
     #print('data: ',data)
 
+
 def on_connect(client, userdata, flags, rc):
     sub_channel = 'gamutrf/rssi'
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
@@ -73,39 +75,6 @@ class GamutRFSensor(birdseye.sensor.SingleRSSI):
             return None
             #return -40
         return data['rssi']
-
-# Human walking action space
-class WalkingActions(birdseye.actions.Actions):
-    """WalkingActions for a human walking
-    """
-    def __init__(self):
-        # change in heading
-        self.del_theta = [-45, 0, 45]
-        # speed
-        self.del_r = [0,1.5]
-        simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
-        super().__init__(action_space=simple_action_space, verbose=False)
-
-# Path Planners
-class PathPlanner():
-    def __init__(self, env, config, device):
-        pass
-    def proposal(self, observation):
-        pass
-
-class MCTSPlanner(PathPlanner):
-    def __init__(self, env, actions, depth, c, simulations):
-        self.runner =  birdseye.mcts_utils.MCTSRunner(env=env, depth=depth, c=c, simulations=simulations)
-        self.actions = actions
-    def proposal(self, observation):
-        return self.actions.action_to_index(self.runner.run(observation))
-
-class DQNPlanner(PathPlanner):
-    def __init__(self, env, device, checkpoint_filename):
-        self.model = birdseye.dqn.simple_prep(env, device, checkpoint_filename)
-        self.device = device
-    def proposal(self, observation):
-        return birdseye.dqn.simple_run(self.model, observation, self.device)
 
 # Flask
 def run_flask(flask_host, flask_port, fig, results, debug):
@@ -138,6 +107,7 @@ def run_flask(flask_host, flask_port, fig, results, debug):
     host_name = flask_host #'0.0.0.0'
     port = flask_port #4999
     threading.Thread(target=lambda: app.run(host=host_name, port=port, debug=True, use_reloader=False)).start()
+
 
 # main loop
 def main(config=None, debug=False):
@@ -223,7 +193,7 @@ def main(config=None, debug=False):
     fig = plt.figure(figsize=(10,10))
     ax = fig.subplots()
     time_step = 0
-    if config.get('flask', 'false').lower() == 'true': 
+    if config.get('flask', 'false').lower() == 'true':
         run_flask(flask_host, flask_port, fig, results, debug)
 
     # Main loop
@@ -248,12 +218,12 @@ def main(config=None, debug=False):
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
-        if config.get('native_plot', 'false').lower() == 'true': 
+        if config.get('native_plot', 'false').lower() == 'true':
             plt.draw()
             plt.pause(0.001)
-        plot_end = timer() 
-        
-        particle_save_start = timer() 
+        plot_end = timer()
+
+        particle_save_start = timer()
         np.save('{}/{}_particles.npy'.format(results.logdir,int(time.time())), env.pf.particles)
         particle_save_end = timer()
 
@@ -280,8 +250,8 @@ def main(config=None, debug=False):
             print('main loop = {:.4f} s'.format(loop_end-loop_start))
             print('=======================================')
 
+
 if __name__ == '__main__':
-    config=None
     config = configparser.ConfigParser()
     config.read('sigscan_config.ini')
     main(config=config['sigscan'], debug=True)

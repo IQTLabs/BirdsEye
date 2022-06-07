@@ -1,6 +1,6 @@
+import csv
 import random
 import numpy as np
-import csv
 from scipy.constants import speed_of_light
 
 class Sensor:
@@ -59,7 +59,7 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fadin
     )
     # fading
     if fading_sigma:
-        pre = power_rx
+        #pre = power_rx
         #print('power_rx = ',pre)
         power_rx -= np.random.normal(0, fading_sigma)
         #print('fading = ',power_rx - pre)
@@ -98,7 +98,6 @@ class DoubleRSSILofi(Sensor):
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs[0]
-        lofi_sigma = 5
         expected_diff = (expected_rssi[:,0] - expected_rssi[:,1])
         observed_diff = (observed_rssi[0] - observed_rssi[1])
 
@@ -164,17 +163,15 @@ class DoubleRSSILofi(Sensor):
             no_match = (0.1**(1/2)) * expected_front_greater
             likelihood = match + unsure + no_match
         return likelihood
-        ###
-        expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
-        expected_front_greater = expected_rssi[:,0] > expected_rssi[:,1]
-        observed_rssi = obs[0]
-        observed_front_greater = observed_rssi[0] > observed_rssi[1]
-        ###
-        match = 0.9 * (observed_front_greater == expected_front_greater)
-        no_match = 0.1 * (observed_front_greater != expected_front_greater)
-        likelihood = match+no_match
 
-        return likelihood
+        # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        # expected_front_greater = expected_rssi[:,0] > expected_rssi[:,1]
+        # observed_rssi = obs[0]
+        # observed_front_greater = observed_rssi[0] > observed_rssi[1]
+        # match = 0.9 * (observed_front_greater == expected_front_greater)
+        # no_match = 0.1 * (observed_front_greater != expected_front_greater)
+        # likelihood = match+no_match
+        # return likelihood
 
     # samples observation given state
     def observation(self, state):
@@ -376,10 +373,9 @@ class Drone(Sensor):
         rel_bearing = state[1]
         if -60 <= rel_bearing <= 60:
             return 0.9
-        elif 120 <= rel_bearing <= 240:
+        if 120 <= rel_bearing <= 240:
             return 0.1
-        else:
-            return 0.5
+        return 0.5
 
     # sample state from observation
     def gen_state(self, obs):
@@ -458,10 +454,9 @@ class Bearing(Sensor):
             rel_brg += 360
         if ((60 < rel_brg < 90) or (270 < rel_brg < 300)) and (state_range < self.sensor_range/2):
             return 1
-        elif ((60 < rel_brg < 90) or (270 < rel_brg < 300)) and (state_range < self.sensor_range):
+        if ((60 < rel_brg < 90) or (270 < rel_brg < 300)) and (state_range < self.sensor_range):
             return 2-2*state_range/self.sensor_range
-        else:
-            return 0.0001
+        return 0.0001
 
     def obs2(self, state):
         #rel_brg = state[1] - state[3]
@@ -471,10 +466,9 @@ class Bearing(Sensor):
             rel_brg += 360
         if ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (state_range < self.sensor_range/2):
             return 1
-        elif ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (state_range < self.sensor_range):
+        if ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (state_range < self.sensor_range):
             return 2-2*state_range/self.sensor_range
-        else:
-            return 0.0001
+        return 0.0001
 
     def obs3(self, state):
         #rel_brg = state[1] - state[3]
@@ -484,10 +478,9 @@ class Bearing(Sensor):
             rel_brg += 360
         if (120 <= rel_brg <= 240) and (state_range < self.sensor_range/2):
             return 1
-        elif (120 <= rel_brg <= 240) and (state_range < self.sensor_range):
+        if (120 <= rel_brg <= 240) and (state_range < self.sensor_range):
             return 2-2*state_range/self.sensor_range
-        else:
-            return 0.0001
+        return 0.0001
 
     def obs0(self, state):
         #rel_brg = state[1] - state[3]
@@ -499,14 +492,13 @@ class Bearing(Sensor):
             return 1
         if (not(self.obs1(state) > 0) and not(self.obs2(state) > 0) and not(self.obs3(state) > 0)):
             return 1
-        elif (120 <= rel_brg <= 240) and (self.sensor_range/2 < state_range < self.sensor_range):
+        if (120 <= rel_brg <= 240) and (self.sensor_range/2 < state_range < self.sensor_range):
             return 2*state_range/self.sensor_range - 1
-        elif ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (self.sensor_range/2 < state_range < self.sensor_range):
+        if ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (self.sensor_range/2 < state_range < self.sensor_range):
             return 2*state_range/self.sensor_range -1
-        elif ((60 <= rel_brg < 90) or (270 < rel_brg <= 300)) and (self.sensor_range/2 < state_range < self.sensor_range):
+        if ((60 <= rel_brg < 90) or (270 < rel_brg <= 300)) and (self.sensor_range/2 < state_range < self.sensor_range):
             return 2*state_range/self.sensor_range - 1
-        else:
-            return 0.0001
+        return 0.0001
 
 
 AVAIL_SENSORS = {
@@ -532,7 +524,6 @@ def get_sensor(sensor_name=''):
     if sensor_name in AVAIL_SENSORS:
         sensor_obj = AVAIL_SENSORS[sensor_name]
         return sensor_obj
-    else:
-        raise ValueError('Invalid sensor method name, {}, entered. Must be '
-                         'in {}'.format(sensor_name, AVAIL_SENSORS.keys()))
+    raise ValueError('Invalid sensor method name, {}, entered. Must be '
+                     'in {}'.format(sensor_name, AVAIL_SENSORS.keys()))
 
