@@ -50,18 +50,33 @@ def on_message(client, userdata, message):
         if data.get('previous_bearing', None) is not None:
             delta_bearing = data['bearing'] - data['previous_bearing']
             data['action'] = (delta_bearing, data['distance'])
-            print('bearing = ',data['bearing'])
-            print('delta_bearing = ',delta_bearing)
         data['previous_bearing'] = data['bearing']
     data['previous_position'] = json_message['position']
     #print('data: ',data)
-
 
 def on_connect(client, userdata, flags, rc):
     sub_channel = 'gamutrf/rssi'
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
     client.subscribe(sub_channel)
 
+# Replay data from file 
+def replay_handler(replay_data):
+    global data
+    data['rssi'] = replay_data.get('rssi', None)
+    data['position'] = replay_data.get('position', None)
+    data['drone_position'] = replay_data.get('drone_position', None)
+    
+    if data.get('position', None) is not None:
+        if data.get('previous_position', None) is not None:
+            data['bearing'] = get_bearing(data['previous_position'], data['position'])
+            data['distance'] = get_distance(data['previous_position'], data['position'])
+            if data.get('previous_bearing', None) is not None:
+                delta_bearing = data['bearing'] - data['previous_bearing']
+                data['action'] = (delta_bearing, data['distance'])
+            data['previous_bearing'] = data['bearing']
+        data['previous_position'] = data['position']
+    else:
+        data['action'] = (0,0)
 
 # GamutRF Sensor
 class GamutRFSensor(birdseye.sensor.SingleRSSI):
@@ -113,6 +128,8 @@ def run_flask(flask_host, flask_port, fig, results, debug):
 def main(config=None, debug=False):
     global data
 
+    replay_file = config.get('replay_file', None)
+
     mqtt_host = config.get('mqtt_host', 'localhost')
     mqtt_port = int(config.get('mqtt_port', str(1883)))
 
@@ -124,7 +141,7 @@ def main(config=None, debug=False):
     planner_method = config.get('planner_method', 'dqn')
     power_tx = float(config.get('power_tx', str(26)))
     directivity_tx = float(config.get('directivity_tx', str(1)))
-    f = float(config.get('f', str(5.7e9)))
+    freq = float(config.get('f', str(5.7e9)))
     fading_sigma = float(config.get('fading_sigma', str(8)))
     threshold = float(config.get('threshold', str(-120)))
     reward = config.get('reward', 'heuristic_reward')
@@ -141,11 +158,16 @@ def main(config=None, debug=False):
             dqn_checkpoint = 'checkpoints/double_directional_entropy_walking_1target.checkpoint'
 
     # MQTT
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(mqtt_host, mqtt_port, 60)
-    client.loop_start()
+    if replay_file is None:
+        client = mqtt.Client()
+        client.on_connect = on_connect
+        client.on_message = on_message
+        client.connect(mqtt_host, mqtt_port, 60)
+        client.loop_start()
+    else:
+        with open(replay_file, 'r') as open_file:
+            replay_data = json.load(open_file)
+            replay_ts = sorted(replay_data.keys())
 
     # BirdsEye
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
@@ -164,7 +186,7 @@ def main(config=None, debug=False):
         antenna_filename=antenna_filename,
         power_tx=power_tx,
         directivity_tx=directivity_tx,
-        f=f,
+        f=freq,
         fading_sigma=fading_sigma,
         threshold=threshold) # fading sigm = 8dB, threshold = -120dB
 
@@ -173,7 +195,6 @@ def main(config=None, debug=False):
     actions.print_action_info()
 
     # State managment
-    #reward='entropy_collision_reward'
     state = birdseye.state.RFMultiState(n_targets=n_targets, reward=reward, simulated=False)
 
     # Environment
@@ -181,13 +202,17 @@ def main(config=None, debug=False):
     belief = env.reset()
 
     # Motion planner
-    if planner_method in ['dqn', 'DQN']:
-        planner = DQNPlanner(env, device, dqn_checkpoint)
+    if config.get('use_planner', 'false').lower() != 'true':
+        planner = None
+    elif planner_method in ['dqn', 'DQN']:
+        planner = DQNPlanner(env, actions, device, dqn_checkpoint)
     elif planner_method in ['mcts','MCTS']:
         depth=10
         c=20
         simulations=100
         planner = MCTSPlanner(env, actions, depth, c, simulations)
+    else: 
+        raise ValueError('planner_method not valid')
 
     # Flask
     fig = plt.figure(figsize=(10,10))
@@ -200,11 +225,14 @@ def main(config=None, debug=False):
     time.sleep(2)
     while True:
         loop_start = timer()
+        time_step += 1
+
+        if replay_file is not None:
+            # load data from saved file
+            replay_handler(replay_data[replay_ts[time_step-1]])
 
         action_start = timer()
-        time_step += 1
-        action_proposal = actions.index_to_action(planner.proposal(belief))
-        #action_proposal = [0,0]
+        action_proposal = planner.proposal(belief) if planner else [None,None]
         action_taken = data.get('action', (0,0))
         action_end = timer()
 
@@ -214,7 +242,7 @@ def main(config=None, debug=False):
         step_end = timer()
 
         #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
+        textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {} deg\nSpeed = {} m/s'.format(action_proposal[0],action_proposal[1])]
 
         plot_start = timer()
         results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)

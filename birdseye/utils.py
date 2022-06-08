@@ -389,7 +389,7 @@ class Results:
 
     def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, simulated=True, textstr=None):
 
-        if self.openstreetmap is None and data['position'] is not None:
+        if self.openstreetmap is None and data['position'] is not None and data['bearing'] is not None:
             self.openstreetmap = GPSVis(
               position = data['position']
               #map_path='map_delta_park.png',  # Path to map downloaded from the OSM.
