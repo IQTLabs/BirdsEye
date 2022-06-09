@@ -340,8 +340,8 @@ class Results:
                 self.plotting = True
             else:
                 self.plotting = False
-        self.native_plot = config.get('native_plot', 'false').lower()
-        self.make_gif = config.get('make_gif', 'false').lower()
+        self.native_plot = config.get('native_plot', 'false').lower() if config else None
+        self.make_gif = config.get('make_gif', 'false').lower() if config else None 
 
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
         self.plot_dir = config.get('plot_dir', '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time))
@@ -412,6 +412,11 @@ class Results:
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
+
+        if data['position'] is not None and data['drone_position'] is not None and data['bearing'] is not None: 
+            target_bearing = get_bearing(data['position'], data['drone_position'])
+            target_relative_bearing = data['bearing'] - target_bearing
+            target_distance = get_distance(data['position'], data['drone_position'])
         
         ax.clear()
         if self.openstreetmap is not None:
