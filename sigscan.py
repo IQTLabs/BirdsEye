@@ -117,7 +117,7 @@ def run_flask(flask_host, flask_port, fig, results, debug):
             print('=======================================')
             print('Flask Timing')
             print('time step = ',results.time_step)
-            print('buffer size = {:.2f} MB'.format(buf.getbuffer().nbytes/1e6))
+            print('buffer size = {:.2f} MB'.format(len(buf.getbuffer())/1e6))
             print('Duration = {:.4f} s'.format(flask_end_time - flask_start_time))
             print('=======================================')
         return f'<html><head><meta http-equiv="refresh" content="0.5"></head><body><img src="data:image/png;base64,{data}"/></body></html>'
