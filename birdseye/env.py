@@ -104,7 +104,7 @@ class RFMultiEnv:
 
         # Update particle filter
         self.pf.update(observation, xp=self.pf.particles, control=action)
-        particle_swap(self)
+        #particle_swap(self)
 
         # Calculate reward based on updated state & action
         reward = self.state.reward_func(state=None, action=action, particles=self.pf.particles)

@@ -62,9 +62,13 @@ def on_connect(client, userdata, flags, rc):
 # Replay data from file 
 def replay_handler(replay_data):
     global data
+    if data.get('position') is not None:
+        data['previous_position'] = data['position']
     data['rssi'] = replay_data.get('rssi', None)
     data['position'] = replay_data.get('position', None)
     data['drone_position'] = replay_data.get('drone_position', None)
+    if data['drone_position']:
+        data['drone_position'] = [data['drone_position'][1], data['drone_position'][0]]
     
     if data.get('position', None) is not None:
         if data.get('previous_position', None) is not None:
@@ -74,7 +78,7 @@ def replay_handler(replay_data):
                 delta_bearing = data['bearing'] - data['previous_bearing']
                 data['action'] = (delta_bearing, data['distance'])
             data['previous_bearing'] = data['bearing']
-        data['previous_position'] = data['position']
+        #data['previous_position'] = data['position']
     else:
         data['action'] = (0,0)
 

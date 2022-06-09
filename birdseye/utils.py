@@ -150,7 +150,7 @@ class GPSVis:
         elif self.position is not None:
             self.zoom = 17
             self.TILE_SIZE = 256
-            distance = 200
+            distance = 100
 
             #coord = [45.598915, -122.679929]
             coord = self.position
@@ -441,16 +441,17 @@ class Results:
             sensor_x += self.transform[0]
             sensor_y += self.transform[1]
         if len(self.sensor_hist) > 1:
-            ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=4.0, color='mediumorchid', zorder=3, markersize=12)
-        line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
+            ax.arrow(sensor_x[-2], sensor_y[-2], 4*(sensor_x[-1]-sensor_x[-2]), 4*(sensor_y[-1]-sensor_y[-2]), width=1.5, color='blue', edgecolor='black', zorder=4)
+            ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=3.0, color='blue', markeredgecolor='black', markersize=4, zorder=4)
+        line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='blue', label='sensor', markersize=16, zorder=4)
         lines.extend([line4])
 
         if self.openstreetmap and data.get('drone_position', None) is not None:
             self.target_hist.append(self.openstreetmap.scale_to_img(data['drone_position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
             target_np = np.array(self.target_hist)
             if len(self.target_hist) > 1:
-                ax.plot(target_np[:,0], target_np[:,1], linewidth=4.0, color='mediumorchid', zorder=3, markersize=12)
-            line5, = ax.plot(target_np[-1,0], target_np[-1,1], '^', color='mediumorchid', markeredgecolor='black', label='target', markersize=20, zorder=3)
+                ax.plot(target_np[:,0], target_np[:,1], linewidth=3.0, color='maroon', zorder=3, markersize=4)
+            line5, = ax.plot(target_np[-1,0], target_np[-1,1], 'o', color='maroon', markeredgecolor='black', label='target', markersize=20, zorder=3)
             lines.extend([line5])
 
         # Legend

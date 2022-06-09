@@ -107,7 +107,8 @@ class RFMultiState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
+        #return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
+        return np.array([random.randint(5,100), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
 
     def random_state(self):
         """Function to initialize a random state
