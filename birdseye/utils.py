@@ -330,7 +330,7 @@ class Results:
     Results class for saving run results
     to file with common format.
     '''
-    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config=None):
+    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config={}):
         self.num_iters = num_iters
         self.method_name = method_name
         self.global_start_time = global_start_time
@@ -340,11 +340,11 @@ class Results:
                 self.plotting = True
             else:
                 self.plotting = False
-        self.native_plot = config.get('native_plot', 'false').lower() if config else None
-        self.make_gif = config.get('make_gif', 'false').lower() if config else None 
+        self.native_plot = config.get('native_plot', 'false').lower() 
+        self.make_gif = config.get('make_gif', 'false').lower() 
 
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
-        self.plot_dir = config.get('plot_dir', '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time))
+        self.plot_dir = config.get('plot_dir', '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)) 
         self.logdir = '{}/{}/{}_logs/'.format(RUN_DIR, method_name, global_start_time)
         if self.make_gif == 'true': 
             Path(self.plot_dir+'/png/').mkdir(parents=True, exist_ok=True)
