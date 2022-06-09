@@ -1,5 +1,4 @@
 import base64
-import itertools
 import json
 import threading
 import time
@@ -176,9 +175,10 @@ def main(config=None, debug=False):
     # BirdsEye
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    results = birdseye.utils.Results(method_name=planner_method,
-                        global_start_time=global_start_time,
-                        config=config)
+    results = birdseye.utils.Results(
+        method_name=planner_method,
+        global_start_time=global_start_time,
+        config=config)
 
     # Sensor
     if antenna_type in ['directional', 'yagi', 'logp']:
@@ -219,7 +219,7 @@ def main(config=None, debug=False):
         raise ValueError('planner_method not valid')
 
     # Flask
-    fig = plt.figure(figsize=(10,10))
+    fig = plt.figure(figsize=(6,6), dpi=50)
     ax = fig.subplots()
     time_step = 0
     if config.get('flask', 'false').lower() == 'true':
@@ -233,6 +233,8 @@ def main(config=None, debug=False):
 
         if replay_file is not None:
             # load data from saved file
+            if time_step-1 == len(replay_ts):
+                break
             replay_handler(replay_data[replay_ts[time_step-1]])
 
         action_start = timer()
@@ -249,10 +251,7 @@ def main(config=None, debug=False):
         textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {} deg\nSpeed = {} m/s'.format(action_proposal[0],action_proposal[1])]
 
         plot_start = timer()
-        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
-        if config.get('native_plot', 'false').lower() == 'true':
-            plt.draw()
-            plt.pause(0.001)
+        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, textstr=textstr)
         plot_end = timer()
 
         particle_save_start = timer()
@@ -282,6 +281,8 @@ def main(config=None, debug=False):
             print('main loop = {:.4f} s'.format(loop_end-loop_start))
             print('=======================================')
 
+    if config.get('make_gif', 'false').lower() == 'true': 
+        results.save_gif('tracking')
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
