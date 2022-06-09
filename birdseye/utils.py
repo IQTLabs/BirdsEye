@@ -408,7 +408,7 @@ class Results:
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
-
+        
         ax.clear()
         if self.openstreetmap is not None:
             self.openstreetmap.plot_map(axis1=ax)
@@ -444,6 +444,14 @@ class Results:
             ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=4.0, color='mediumorchid', zorder=3, markersize=12)
         line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
         lines.extend([line4])
+
+        if self.openstreetmap and data.get('drone_position', None) is not None:
+            self.target_hist.append(self.openstreetmap.scale_to_img(data['drone_position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
+            target_np = np.array(self.target_hist)
+            if len(self.target_hist) > 1:
+                ax.plot(target_np[:,0], target_np[:,1], linewidth=4.0, color='mediumorchid', zorder=3, markersize=12)
+            line5, = ax.plot(target_np[-1,0], target_np[-1,1], '^', color='mediumorchid', markeredgecolor='black', label='target', markersize=20, zorder=3)
+            lines.extend([line5])
 
         # Legend
         ax.legend(handles=lines, loc='upper center', bbox_to_anchor=(0.5,-0.05), fancybox=True, shadow=True,ncol=2)
