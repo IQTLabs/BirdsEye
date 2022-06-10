@@ -1,5 +1,4 @@
 import base64
-import itertools
 import json
 import threading
 import time
@@ -23,45 +22,47 @@ import birdseye.dqn
 import birdseye.mcts_utils
 from birdseye.actions import WalkingActions
 from birdseye.planner import MCTSPlanner, DQNPlanner
-from birdseye.utils import get_distance, get_bearing
+from birdseye.utils import get_distance, get_bearing, is_float
 
-data = defaultdict(list)
+data = {} #defaultdict(list)
 data.update({
     'rssi': None,
     'position': None,
     'distance': None,
     'previous_position': None,
-    'bearing': 0,
-    'previous_bearing': 0,
-    'action_proposal': [],
-    'action_taken': [],
-    'reward': [],
+    'bearing': None,
+    'previous_bearing': None,
+    'action_proposal': None,
+    'action_taken': None,
+    'reward': None,
 })
 
-# MQTT
-def on_message(client, userdata, message):
+# Generic data processor 
+def data_handler(message_data):
     global data
-    json_message = json.loads(message.payload)
-    data['rssi'] = json_message['rssi']
-    data['position'] = json_message['position']
-    if data.get('previous_position', None) is not None:
-        data['bearing'] = get_bearing(data['previous_position'], data['position'])
-        data['distance'] = get_distance(data['previous_position'], data['position'])
-        if data.get('previous_bearing', None) is not None:
-            delta_bearing = data['bearing'] - data['previous_bearing']
-            data['action'] = (delta_bearing, data['distance'])
-            print('bearing = ',data['bearing'])
-            print('delta_bearing = ',delta_bearing)
-        data['previous_bearing'] = data['bearing']
-    data['previous_position'] = json_message['position']
-    #print('data: ',data)
+    data['previous_position'] = data.get('position', None)
+    data['previous_bearing'] = data.get('bearing', None)
 
+    data['rssi'] = message_data.get('rssi', None)
+    data['position'] = message_data.get('position', None)
+    data['bearing'] = -float(message_data.get('bearing', None))+90 if is_float(message_data.get('bearing', None)) else get_bearing(data['previous_position'], data['position'])
+    data['distance'] = get_distance(data['previous_position'], data['position'])
+    delta_bearing = (data['bearing'] - data['previous_bearing']) if data['bearing'] and data['previous_bearing'] else None
+    data['action_taken'] = (delta_bearing, data['distance']) if delta_bearing and data['distance'] else (0,0)
+
+    data['drone_position'] = message_data.get('drone_position', None)
+    if data['drone_position']:
+        data['drone_position'] = [data['drone_position'][1], data['drone_position'][0]] # swap lon,lat 
+
+# MQTT
+def on_message(client, userdata, json_message):
+    json_data = json.loads(json_message.payload)
+    data_handler(json_data)
 
 def on_connect(client, userdata, flags, rc):
     sub_channel = 'gamutrf/rssi'
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
     client.subscribe(sub_channel)
-
 
 # GamutRF Sensor
 class GamutRFSensor(birdseye.sensor.SingleRSSI):
@@ -99,7 +100,7 @@ def run_flask(flask_host, flask_port, fig, results, debug):
             print('=======================================')
             print('Flask Timing')
             print('time step = ',results.time_step)
-            print('buffer size = {:.2f} MB'.format(buf.getbuffer().nbytes/1e6))
+            print('buffer size = {:.2f} MB'.format(len(buf.getbuffer())/1e6))
             print('Duration = {:.4f} s'.format(flask_end_time - flask_start_time))
             print('=======================================')
         return f'<html><head><meta http-equiv="refresh" content="0.5"></head><body><img src="data:image/png;base64,{data}"/></body></html>'
@@ -113,6 +114,8 @@ def run_flask(flask_host, flask_port, fig, results, debug):
 def main(config=None, debug=False):
     global data
 
+    replay_file = config.get('replay_file', None)
+
     mqtt_host = config.get('mqtt_host', 'localhost')
     mqtt_port = int(config.get('mqtt_port', str(1883)))
 
@@ -124,7 +127,7 @@ def main(config=None, debug=False):
     planner_method = config.get('planner_method', 'dqn')
     power_tx = float(config.get('power_tx', str(26)))
     directivity_tx = float(config.get('directivity_tx', str(1)))
-    f = float(config.get('f', str(5.7e9)))
+    freq = float(config.get('f', str(5.7e9)))
     fading_sigma = float(config.get('fading_sigma', str(8)))
     threshold = float(config.get('threshold', str(-120)))
     reward = config.get('reward', 'heuristic_reward')
@@ -141,18 +144,24 @@ def main(config=None, debug=False):
             dqn_checkpoint = 'checkpoints/double_directional_entropy_walking_1target.checkpoint'
 
     # MQTT
-    client = mqtt.Client()
-    client.on_connect = on_connect
-    client.on_message = on_message
-    client.connect(mqtt_host, mqtt_port, 60)
-    client.loop_start()
+    if replay_file is None:
+        client = mqtt.Client()
+        client.on_connect = on_connect
+        client.on_message = on_message
+        client.connect(mqtt_host, mqtt_port, 60)
+        client.loop_start()
+    else:
+        with open(replay_file, 'r') as open_file:
+            replay_data = json.load(open_file)
+            replay_ts = sorted(replay_data.keys())
 
     # BirdsEye
     global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    results = birdseye.utils.Results(method_name=planner_method,
-                        global_start_time=global_start_time,
-                        config=config)
+    results = birdseye.utils.Results(
+        method_name=planner_method,
+        global_start_time=global_start_time,
+        config=config)
 
     # Sensor
     if antenna_type in ['directional', 'yagi', 'logp']:
@@ -164,7 +173,7 @@ def main(config=None, debug=False):
         antenna_filename=antenna_filename,
         power_tx=power_tx,
         directivity_tx=directivity_tx,
-        f=f,
+        f=freq,
         fading_sigma=fading_sigma,
         threshold=threshold) # fading sigm = 8dB, threshold = -120dB
 
@@ -173,7 +182,6 @@ def main(config=None, debug=False):
     actions.print_action_info()
 
     # State managment
-    #reward='entropy_collision_reward'
     state = birdseye.state.RFMultiState(n_targets=n_targets, reward=reward, simulated=False)
 
     # Environment
@@ -181,16 +189,20 @@ def main(config=None, debug=False):
     belief = env.reset()
 
     # Motion planner
-    if planner_method in ['dqn', 'DQN']:
-        planner = DQNPlanner(env, device, dqn_checkpoint)
+    if config.get('use_planner', 'false').lower() != 'true':
+        planner = None
+    elif planner_method in ['dqn', 'DQN']:
+        planner = DQNPlanner(env, actions, device, dqn_checkpoint)
     elif planner_method in ['mcts','MCTS']:
         depth=10
         c=20
         simulations=100
         planner = MCTSPlanner(env, actions, depth, c, simulations)
+    else: 
+        raise ValueError('planner_method not valid')
 
     # Flask
-    fig = plt.figure(figsize=(10,10))
+    fig = plt.figure(figsize=(8,8), dpi=40)
     ax = fig.subplots()
     time_step = 0
     if config.get('flask', 'false').lower() == 'true':
@@ -200,27 +212,25 @@ def main(config=None, debug=False):
     time.sleep(2)
     while True:
         loop_start = timer()
+        time_step += 1
+
+        if replay_file is not None:
+            # load data from saved file
+            if time_step-1 == len(replay_ts):
+                break
+            data_handler(replay_data[replay_ts[time_step-1]])
 
         action_start = timer()
-        time_step += 1
-        action_proposal = actions.index_to_action(planner.proposal(belief))
-        #action_proposal = [0,0]
-        action_taken = data.get('action', (0,0))
+        data['action_proposal'] = planner.proposal(belief) if planner else [None,None]
         action_end = timer()
 
         step_start = timer()
         # update belief based on action and sensor observation (sensor is read inside)
-        belief, reward, observation = env.real_step(action_taken, data.get('bearing', None))
+        belief, reward, observation = env.real_step(data.get('action_taken', (0,0)), data.get('bearing', None))
         step_end = timer()
 
-        #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-
         plot_start = timer()
-        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, simulated=False, textstr=textstr)
-        if config.get('native_plot', 'false').lower() == 'true':
-            plt.draw()
-            plt.pause(0.001)
+        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data)
         plot_end = timer()
 
         particle_save_start = timer()
@@ -228,12 +238,12 @@ def main(config=None, debug=False):
         particle_save_end = timer()
 
         data_start = timer()
-        data['action_proposal'].append(action_proposal)
-        data['action_taken'].append(action_taken)
-        data['reward'].append(reward)
-        data['observation'].append(observation)
-        for key in data:
-            np.save('{}/{}.npy'.format(results.logdir, key), data[key])
+        # data['action_proposal'].append(action_proposal)
+        # data['action_taken'].append(action_taken)
+        # data['reward'].append(reward)
+        # data['observation'].append(observation)
+        # for key in data:
+        #     np.save('{}/{}.npy'.format(results.logdir, key), data[key])
         data_end = timer()
 
         loop_end = timer()
@@ -250,6 +260,8 @@ def main(config=None, debug=False):
             print('main loop = {:.4f} s'.format(loop_end-loop_start))
             print('=======================================')
 
+    if config.get('make_gif', 'false').lower() == 'true': 
+        results.save_gif('tracking')
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()

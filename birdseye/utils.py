@@ -92,6 +92,9 @@ def cart2pol(x, y):
 # helper functions for lat/lon
 ##################################################################
 def get_distance(coord1, coord2):
+    if (coord1 is None) or (coord2 is None):
+        return None
+
     lat1, long1 = coord1
     lat2, long2 = coord2
     # approximate radius of earth in km
@@ -114,6 +117,9 @@ def get_distance(coord1, coord2):
 
 
 def get_bearing(coord1, coord2):
+    if (coord1 is None) or (coord2 is None):
+        return None
+
     lat1, long1 = coord1
     lat2, long2 = coord2
     dLon = (long2 - long1)
@@ -123,6 +129,13 @@ def get_bearing(coord1, coord2):
     brng = np.degrees(brng)
 
     return -brng + 90
+
+def is_float(element):
+    try:
+        float(element)
+        return True
+    except (ValueError, TypeError):
+        return False
 
 class GPSVis:
     """
@@ -150,7 +163,7 @@ class GPSVis:
         elif self.position is not None:
             self.zoom = 17
             self.TILE_SIZE = 256
-            distance = 200
+            distance = 100
 
             #coord = [45.598915, -122.679929]
             coord = self.position
@@ -330,7 +343,7 @@ class Results:
     Results class for saving run results
     to file with common format.
     '''
-    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config=None, experiment_name=None):
+    def __init__(self, method_name='', global_start_time='', num_iters=0, plotting=False, config={}):
         self.num_iters = num_iters
         self.method_name = method_name
         self.global_start_time = global_start_time
@@ -340,12 +353,15 @@ class Results:
                 self.plotting = True
             else:
                 self.plotting = False
-        self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
-        self.gif_dir = '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)
-        self.logdir = '{}/{}/{}_logs/'.format(RUN_DIR, method_name, global_start_time)
+        self.native_plot = config.get('native_plot', 'false').lower() 
+        self.make_gif = config.get('make_gif', 'false').lower() 
 
-        Path(self.gif_dir+'/png/').mkdir(parents=True, exist_ok=True)
-        Path(self.gif_dir+'/gif/').mkdir(parents=True, exist_ok=True)
+        self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
+        self.plot_dir = config.get('plot_dir', '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time)) 
+        self.logdir = '{}/{}/{}_logs/'.format(RUN_DIR, method_name, global_start_time)
+        if self.make_gif == 'true': 
+            Path(self.plot_dir+'/png/').mkdir(parents=True, exist_ok=True)
+            Path(self.plot_dir+'/gif/').mkdir(parents=True, exist_ok=True)
         Path(self.logdir).mkdir(parents=True, exist_ok=True)
         self.col_names =['time', 'run_time', 'target_state', 'sensor_state',
                          'action', 'observation', 'reward', 'collisions', 'lost',
@@ -356,11 +372,13 @@ class Results:
         self.abs_sensor_hist = []
         self.target_hist = []
         self.sensor_hist = []
+        self.sensor_gps_hist = []
         self.history_length = 50
         self.time_step = 0
         self.texts = []
         self.openstreetmap = None
         self.transform = None
+        self.expected_target_rssi = None
 
         if config:
             write_header_log(config, self.method_name, self.global_start_time)
@@ -378,18 +396,18 @@ class Results:
     def save_gif(self, run, sub_run=None):
         filename = run if sub_run is None else '{}_{}'.format(run, sub_run)
         # Build GIF
-        with imageio.get_writer('{}/gif/{}.gif'.format(self.gif_dir, filename), mode='I', fps=5) as writer:
-            for png_filename in sorted(os.listdir(self.gif_dir+'/png/'), key = lambda x: (len (x), x)):
-                image = imageio.imread(self.gif_dir+'/png/'+png_filename)
+        with imageio.get_writer('{}/gif/{}.gif'.format(self.plot_dir, filename), mode='I', fps=5) as writer:
+            for png_filename in sorted(os.listdir(self.plot_dir+'/png/'), key = lambda x: (len (x), x)):
+                image = imageio.imread(self.plot_dir+'/png/'+png_filename)
                 writer.append_data(image)
 
     ##################################################################
     # Plotting
     ##################################################################
 
-    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, simulated=True, textstr=None):
+    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None):
 
-        if self.openstreetmap is None and data['position'] is not None:
+        if self.openstreetmap is None and data.get('position', None) is not None and data.get('bearing', None) is not None:
             self.openstreetmap = GPSVis(
               position = data['position']
               #map_path='map_delta_park.png',  # Path to map downloaded from the OSM.
@@ -408,6 +426,15 @@ class Results:
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
+
+        target_bearing = None
+        target_relative_bearing = None
+
+        if data.get('position', None) is not None and data.get('drone_position', None) is not None and data.get('bearing', None) is not None: 
+            target_bearing = get_bearing(data['position'], data['drone_position'])
+            target_relative_bearing = target_bearing - data['bearing']
+            target_distance = get_distance(data['position'], data['drone_position'])
+            self.expected_target_rssi = env.sensor.observation([[target_distance, target_relative_bearing, None, None]])[0]
 
         ax.clear()
         if self.openstreetmap is not None:
@@ -441,9 +468,26 @@ class Results:
             sensor_x += self.transform[0]
             sensor_y += self.transform[1]
         if len(self.sensor_hist) > 1:
-            ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=4.0, color='mediumorchid', zorder=3, markersize=12)
-        line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
+            ax.arrow(sensor_x[-2], sensor_y[-2], 4*(sensor_x[-1]-sensor_x[-2]), 4*(sensor_y[-1]-sensor_y[-2]), width=1.5, color='blue', zorder=4)
+            ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=3.0, color='blue', markeredgecolor='black', markersize=4, zorder=4)
+        line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='blue', label='sensor', markersize=10, zorder=4)
         lines.extend([line4])
+
+        # if self.openstreetmap and data.get('position', None) is not None:
+        #     self.sensor_gps_hist.append(self.openstreetmap.scale_to_img(data['position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
+        #     sensor_gps_hist_np = np.array(self.sensor_gps_hist)
+        #     if len(self.sensor_gps_hist) > 1:
+        #         ax.plot(sensor_gps_hist_np[:,0], sensor_gps_hist_np[:,1], linewidth=3.0, color='turquoise', zorder=3, markersize=4)
+        #     line5, = ax.plot(sensor_gps_hist_np[-1,0], sensor_gps_hist_np[-1,1], 'o', color='turquoise', markeredgecolor='black', label='sensor_gps', markersize=10, zorder=3)
+        #     lines.extend([line5])
+        
+        if self.openstreetmap and data.get('drone_position', None) is not None:
+            self.target_hist.append(self.openstreetmap.scale_to_img(data['drone_position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
+            target_np = np.array(self.target_hist)
+            if len(self.target_hist) > 1:
+                ax.plot(target_np[:,0], target_np[:,1], linewidth=3.0, color='maroon', zorder=3, markersize=4)
+            line5, = ax.plot(target_np[-1,0], target_np[-1,1], 'o', color='maroon', markeredgecolor='black', label='target', markersize=10, zorder=3)
+            lines.extend([line5])
 
         # Legend
         ax.legend(handles=lines, loc='upper center', bbox_to_anchor=(0.5,-0.05), fancybox=True, shadow=True,ncol=2)
@@ -457,22 +501,46 @@ class Results:
             ax.set_ylim(min_map, max_map)
 
         # Sidebar Text
-        if textstr:
-            last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
-            last_map_hyp  = self.pf_stats['map_hypothesis'][-1][0]
+        
+        actual_str = 'Actual\n'
+        actual_str += 'Bearing = {:.0f} deg\n'.format(data.get('bearing',None)) if data.get('bearing', None) else 'Bearing = unknown\n'
+        actual_str += 'Speed = {:.2f} m/s'.format(data.get('action_taken', None)[1]) if data.get('action_taken', None) else 'Speed = unknown\n'
 
-            pfstats_str = ['Observed RSSI = {} dB\nML estimated RSSI =  {:.1f} dB\nMAP estimated RSSI = {:.1f} dB'.format(env.last_observation, last_mean_hyp, last_map_hyp)]
-            if len(fig.texts) == 0:
-                props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
-                text = fig.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-                props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
-                text = fig.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-                props = dict(boxstyle='round', facecolor='khaki', alpha=0.5)
-                text = fig.text(1.04, 0.25, pfstats_str[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-            else:
-                fig.texts[0].set_text(textstr[0])
-                fig.texts[1].set_text(textstr[1])
-                fig.texts[2].set_text(pfstats_str[0])
+        proposal_str = 'Proposed\n'
+        proposal_str += 'Bearing = {:.0f} deg\n'.format(data.get('action_proposal', None)[0]) if all(data.get('action_proposal', None)) else 'Bearing = unknown\n'
+        proposal_str += 'Speed = {:.2f} m/s'.format(data.get('action_proposal', None)[1]) if all(data.get('action_proposal', None)) else 'Speed = unknown\n'
+
+        last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
+        last_map_hyp  = self.pf_stats['map_hypothesis'][-1][0]
+
+        rssi_str = 'RSSI\n'
+        rssi_str += 'Observed = {:.1f} dB\n'.format(env.last_observation) if env.last_observation else 'Observed = unknown\n'
+        rssi_str += 'Expected = {:.1f} dB\n'.format(self.expected_target_rssi) if self.expected_target_rssi else 'Expected = unknown\n'
+        rssi_str += 'Difference = {:.1f} dB\n'.format(env.last_observation - self.expected_target_rssi) if (env.last_observation and self.expected_target_rssi) else ''
+        #rssi_str += 'Target bearing = {} \n'.format(target_bearing) if target_bearing else ''
+        #rssi_str += 'Target relative bearing = {} \n'.format(target_relative_bearing) if target_relative_bearing else ''
+        rssi_str += 'MLE estimate = {:.1f} dB\n'.format(last_mean_hyp)
+        rssi_str += 'MAP estimate = {:.1f} dB'.format(last_map_hyp)
+
+        if len(fig.texts) == 0:
+            props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
+            text = fig.text(1.04, 0.75, actual_str, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
+            text = fig.text(1.04, 0.5, proposal_str, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            props = dict(boxstyle='round', facecolor='khaki', alpha=0.5)
+            text = fig.text(1.04, 0.25, rssi_str, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+        else:
+            fig.texts[0].set_text(actual_str)
+            fig.texts[1].set_text(proposal_str)
+            fig.texts[2].set_text(rssi_str)
+        
+        if self.native_plot == 'true':
+            plt.draw()
+            plt.pause(0.001)
+        if self.make_gif == 'true': 
+            png_filename = '{}/png/{}.png'.format(self.plot_dir, time_step)
+            print('saving plots in {}'.format(png_filename))
+            plt.savefig(png_filename, bbox_inches='tight')
 
     def build_multitarget_plots(self, env, time_step=None, fig=None, axs=None, centroid_distance_error=None, selected_plots=[1,2,3,4,5], simulated=True, textstr=None):
         xp = env.state.target_state
@@ -917,7 +985,7 @@ class Results:
                 ax.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
             #ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
 
-        png_filename = '{}/png/{}.png'.format(self.gif_dir, time_step)
+        png_filename = '{}/png/{}.png'.format(self.plot_dir, time_step)
         #print('saving plots in {}'.format(png_filename))
         #plt.savefig(png_filename, bbox_inches='tight')
         #plt.close(fig)
@@ -1079,7 +1147,7 @@ class Results:
         #print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
         #    r_error, theta_error, heading_error, centroid_distance_error, rmse))
 
-        png_filename = '{}/png/{}.png'.format(self.gif_dir, time_step)
+        png_filename = '{}/png/{}.png'.format(self.plot_dir, time_step)
         print('saving plots in {}'.format(png_filename))
         plt.savefig(png_filename)
         plt.close(fig)
