@@ -22,64 +22,47 @@ import birdseye.dqn
 import birdseye.mcts_utils
 from birdseye.actions import WalkingActions
 from birdseye.planner import MCTSPlanner, DQNPlanner
-from birdseye.utils import get_distance, get_bearing
+from birdseye.utils import get_distance, get_bearing, is_float
 
-data = defaultdict(list)
+data = {} #defaultdict(list)
 data.update({
     'rssi': None,
     'position': None,
     'distance': None,
     'previous_position': None,
-    'bearing': 0,
-    'previous_bearing': 0,
-    'action_proposal': [],
-    'action_taken': [],
-    'reward': [],
+    'bearing': None,
+    'previous_bearing': None,
+    'action_proposal': None,
+    'action_taken': None,
+    'reward': None,
 })
 
-# MQTT
-def on_message(client, userdata, message):
+# Generic data processor 
+def data_handler(message_data):
     global data
-    json_message = json.loads(message.payload)
-    data['rssi'] = json_message['rssi']
-    data['position'] = json_message['position']
-    if data.get('previous_position', None) is not None:
-        data['bearing'] = get_bearing(data['previous_position'], data['position'])
-        data['distance'] = get_distance(data['previous_position'], data['position'])
-        if data.get('previous_bearing', None) is not None:
-            delta_bearing = data['bearing'] - data['previous_bearing']
-            data['action'] = (delta_bearing, data['distance'])
-        data['previous_bearing'] = data['bearing']
-    data['previous_position'] = json_message['position']
-    #print('data: ',data)
+    data['previous_position'] = data.get('position', None)
+    data['previous_bearing'] = data.get('bearing', None)
+
+    data['rssi'] = message_data.get('rssi', None)
+    data['position'] = message_data.get('position', None)
+    data['bearing'] = float(message_data.get('bearing', None)) if is_float(message_data.get('bearing', None)) else get_bearing(data['previous_position'], data['position'])
+    data['distance'] = get_distance(data['previous_position'], data['position'])
+    delta_bearing = (data['bearing'] - data['previous_bearing']) if data['bearing'] and data['previous_bearing'] else None
+    data['action_taken'] = (delta_bearing, data['distance']) if delta_bearing and data['distance'] else (0,0)
+
+    data['drone_position'] = message_data.get('drone_position', None)
+    if data['drone_position']:
+        data['drone_position'] = [data['drone_position'][1], data['drone_position'][0]] # swap lon,lat 
+
+# MQTT
+def on_message(client, userdata, json_message):
+    json_data = json.loads(json_message.payload)
+    data_handler(json_data)
 
 def on_connect(client, userdata, flags, rc):
     sub_channel = 'gamutrf/rssi'
     print('Connected to {} with result code {}'.format(sub_channel,str(rc)))
     client.subscribe(sub_channel)
-
-# Replay data from file 
-def replay_handler(replay_data):
-    global data
-    if data.get('position') is not None:
-        data['previous_position'] = data['position']
-    data['rssi'] = replay_data.get('rssi', None)
-    data['position'] = replay_data.get('position', None)
-    data['drone_position'] = replay_data.get('drone_position', None)
-    if data['drone_position']:
-        data['drone_position'] = [data['drone_position'][1], data['drone_position'][0]]
-    
-    if data.get('position', None) is not None:
-        if data.get('previous_position', None) is not None:
-            data['bearing'] = get_bearing(data['previous_position'], data['position'])
-            data['distance'] = get_distance(data['previous_position'], data['position'])
-            if data.get('previous_bearing', None) is not None:
-                delta_bearing = data['bearing'] - data['previous_bearing']
-                data['action'] = (delta_bearing, data['distance'])
-            data['previous_bearing'] = data['bearing']
-        #data['previous_position'] = data['position']
-    else:
-        data['action'] = (0,0)
 
 # GamutRF Sensor
 class GamutRFSensor(birdseye.sensor.SingleRSSI):
@@ -235,23 +218,19 @@ def main(config=None, debug=False):
             # load data from saved file
             if time_step-1 == len(replay_ts):
                 break
-            replay_handler(replay_data[replay_ts[time_step-1]])
+            data_handler(replay_data[replay_ts[time_step-1]])
 
         action_start = timer()
-        action_proposal = planner.proposal(belief) if planner else [None,None]
-        action_taken = data.get('action', (0,0))
+        data['action_proposal'] = planner.proposal(belief) if planner else [None,None]
         action_end = timer()
 
         step_start = timer()
         # update belief based on action and sensor observation (sensor is read inside)
-        belief, reward, observation = env.real_step(action_taken, data.get('bearing', None))
+        belief, reward, observation = env.real_step(data.get('action_taken', (0,0)), data.get('bearing', None))
         step_end = timer()
 
-        #textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),data.get('distance', 0)), 'Proposed\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing',0)+action_proposal[0],action_proposal[1])]
-        textstr = ['Actual\nBearing = {:.0f} deg\nSpeed = {:.2f} m/s'.format(data.get('bearing', 0),action_taken[1]), 'Proposed\nBearing = {} deg\nSpeed = {} m/s'.format(action_proposal[0],action_proposal[1])]
-
         plot_start = timer()
-        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data, textstr=textstr)
+        results.live_plot(env=env, time_step=time_step, fig=fig, ax=ax, data=data)
         plot_end = timer()
 
         particle_save_start = timer()
@@ -259,12 +238,12 @@ def main(config=None, debug=False):
         particle_save_end = timer()
 
         data_start = timer()
-        data['action_proposal'].append(action_proposal)
-        data['action_taken'].append(action_taken)
-        data['reward'].append(reward)
-        data['observation'].append(observation)
-        for key in data:
-            np.save('{}/{}.npy'.format(results.logdir, key), data[key])
+        # data['action_proposal'].append(action_proposal)
+        # data['action_taken'].append(action_taken)
+        # data['reward'].append(reward)
+        # data['observation'].append(observation)
+        # for key in data:
+        #     np.save('{}/{}.npy'.format(results.logdir, key), data[key])
         data_end = timer()
 
         loop_end = timer()
