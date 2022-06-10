@@ -219,7 +219,7 @@ def main(config=None, debug=False):
         raise ValueError('planner_method not valid')
 
     # Flask
-    fig = plt.figure(figsize=(6,6), dpi=50)
+    fig = plt.figure(figsize=(8,8), dpi=40)
     ax = fig.subplots()
     time_step = 0
     if config.get('flask', 'false').lower() == 'true':

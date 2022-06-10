@@ -365,6 +365,7 @@ class Results:
         self.texts = []
         self.openstreetmap = None
         self.transform = None
+        self.expected_target_rssi = None
 
         if config:
             write_header_log(config, self.method_name, self.global_start_time)
@@ -413,11 +414,15 @@ class Results:
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
 
+        target_bearing = None
+        target_relative_bearing = None
+
         if data['position'] is not None and data['drone_position'] is not None and data['bearing'] is not None: 
             target_bearing = get_bearing(data['position'], data['drone_position'])
-            target_relative_bearing = data['bearing'] - target_bearing
+            target_relative_bearing = target_bearing - data['bearing']
             target_distance = get_distance(data['position'], data['drone_position'])
-        
+            self.expected_target_rssi = env.sensor.observation([[target_distance, target_relative_bearing, None, None]])[0]
+
         ax.clear()
         if self.openstreetmap is not None:
             self.openstreetmap.plot_map(axis1=ax)
@@ -450,18 +455,18 @@ class Results:
             sensor_x += self.transform[0]
             sensor_y += self.transform[1]
         if len(self.sensor_hist) > 1:
-            ax.arrow(sensor_x[-2], sensor_y[-2], 4*(sensor_x[-1]-sensor_x[-2]), 4*(sensor_y[-1]-sensor_y[-2]), width=1.5, color='blue', edgecolor='black', zorder=4)
+            ax.arrow(sensor_x[-2], sensor_y[-2], 4*(sensor_x[-1]-sensor_x[-2]), 4*(sensor_y[-1]-sensor_y[-2]), width=1.5, color='blue', zorder=4)
             ax.plot(sensor_x[:-1], sensor_y[:-1], linewidth=3.0, color='blue', markeredgecolor='black', markersize=4, zorder=4)
         line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='blue', label='sensor', markersize=10, zorder=4)
         lines.extend([line4])
 
-        if self.openstreetmap and data.get('position', None) is not None:
-            self.sensor_gps_hist.append(self.openstreetmap.scale_to_img(data['position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
-            sensor_gps_hist_np = np.array(self.sensor_gps_hist)
-            if len(self.sensor_gps_hist) > 1:
-                ax.plot(sensor_gps_hist_np[:,0], sensor_gps_hist_np[:,1], linewidth=3.0, color='turquoise', zorder=3, markersize=4)
-            line5, = ax.plot(sensor_gps_hist_np[-1,0], sensor_gps_hist_np[-1,1], 'o', color='turquoise', markeredgecolor='black', label='sensor_gps', markersize=10, zorder=3)
-            lines.extend([line5])
+        # if self.openstreetmap and data.get('position', None) is not None:
+        #     self.sensor_gps_hist.append(self.openstreetmap.scale_to_img(data['position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
+        #     sensor_gps_hist_np = np.array(self.sensor_gps_hist)
+        #     if len(self.sensor_gps_hist) > 1:
+        #         ax.plot(sensor_gps_hist_np[:,0], sensor_gps_hist_np[:,1], linewidth=3.0, color='turquoise', zorder=3, markersize=4)
+        #     line5, = ax.plot(sensor_gps_hist_np[-1,0], sensor_gps_hist_np[-1,1], 'o', color='turquoise', markeredgecolor='black', label='sensor_gps', markersize=10, zorder=3)
+        #     lines.extend([line5])
         
         if self.openstreetmap and data.get('drone_position', None) is not None:
             self.target_hist.append(self.openstreetmap.scale_to_img(data['drone_position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
@@ -487,18 +492,26 @@ class Results:
             last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
             last_map_hyp  = self.pf_stats['map_hypothesis'][-1][0]
 
-            pfstats_str = ['Observed RSSI = {} dB\nML estimated RSSI =  {:.1f} dB\nMAP estimated RSSI = {:.1f} dB'.format(env.last_observation, last_mean_hyp, last_map_hyp)]
+            rssi_str = 'RSSI\n'
+            rssi_str += 'Observed = {:.1f} dB\n'.format(env.last_observation) if env.last_observation else 'Observed = unknown\n'
+            rssi_str += 'Expected = {:.1f} dB\n'.format(self.expected_target_rssi) if self.expected_target_rssi else 'Expected = unknown\n'
+            rssi_str += 'Difference = {:.1f} dB\n'.format(env.last_observation - self.expected_target_rssi) if (env.last_observation and self.expected_target_rssi) else ''
+            #rssi_str += 'Target bearing = {} \n'.format(target_bearing) if target_bearing else ''
+            #rssi_str += 'Target relative bearing = {} \n'.format(target_relative_bearing) if target_relative_bearing else ''
+            rssi_str += 'MLE estimate = {:.1f} dB\n'.format(last_mean_hyp)
+            rssi_str += 'MAP estimate = {:.1f} dB'.format(last_map_hyp)
+
             if len(fig.texts) == 0:
                 props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
                 text = fig.text(1.04, 0.75, textstr[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
                 props = dict(boxstyle='round', facecolor='paleturquoise', alpha=0.5)
                 text = fig.text(1.04, 0.5, textstr[1], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
                 props = dict(boxstyle='round', facecolor='khaki', alpha=0.5)
-                text = fig.text(1.04, 0.25, pfstats_str[0], transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+                text = fig.text(1.04, 0.25, rssi_str, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
             else:
                 fig.texts[0].set_text(textstr[0])
                 fig.texts[1].set_text(textstr[1])
-                fig.texts[2].set_text(pfstats_str[0])
+                fig.texts[2].set_text(rssi_str)
         
         if self.native_plot == 'true':
             plt.draw()
