@@ -204,7 +204,7 @@ class GPSVis:
         axis1.set_xlabel('Longitude')
         axis1.set_ylabel('Latitude')
         axis1.set_xticks(np.linspace(0,int(self.width_meters),num=8))
-        axis1.set_xticklabels(self.x_ticks)
+        axis1.set_xticklabels(self.x_ticks, rotation=30, ha='center')
         axis1.set_yticks(np.linspace(0,int(self.height_meters),num=8))
         axis1.set_yticklabels(self.y_ticks)
         axis1.grid()
@@ -324,10 +324,10 @@ class GPSVis:
         :return:
         """
         self.x_ticks = map(
-            lambda x: round(x, 6),
+            lambda x: round(x, 4),
             np.linspace(self.bounds[1], self.bounds[3], num=8))
         self.y_ticks = map(
-            lambda x: round(x, 6),
+            lambda x: round(x, 4),
             np.linspace(self.bounds[2], self.bounds[0], num=8))
         # Ticks must be reversed because the orientation of the image in the matplotlib.
         # image - (0, 0) in upper left corner; coordinate system - (0, 0) in lower left corner
@@ -490,7 +490,7 @@ class Results:
             lines.extend([line5])
 
         # Legend
-        ax.legend(handles=lines, loc='upper center', bbox_to_anchor=(0.5,-0.05), fancybox=True, shadow=True,ncol=2)
+        ax.legend(handles=lines, loc='upper left', bbox_to_anchor=(1.04, 1.0), fancybox=True, shadow=True, ncol=1)
 
         # X/Y Limits
         if self.openstreetmap is None:
@@ -502,10 +502,12 @@ class Results:
 
         # Sidebar Text
         
+        #actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
         actual_str = 'Actual\n'
         actual_str += 'Bearing = {:.0f} deg\n'.format(data.get('bearing',None)) if data.get('bearing', None) else 'Bearing = unknown\n'
         actual_str += 'Speed = {:.2f} m/s'.format(data.get('action_taken', None)[1]) if data.get('action_taken', None) else 'Speed = unknown\n'
 
+        #proposal_str = r'$\bf{Proposed}$''\n'
         proposal_str = 'Proposed\n'
         proposal_str += 'Bearing = {:.0f} deg\n'.format(data.get('action_proposal', None)[0]) if all(data.get('action_proposal', None)) else 'Bearing = unknown\n'
         proposal_str += 'Speed = {:.2f} m/s'.format(data.get('action_proposal', None)[1]) if all(data.get('action_proposal', None)) else 'Speed = unknown\n'
@@ -513,6 +515,7 @@ class Results:
         last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
         last_map_hyp  = self.pf_stats['map_hypothesis'][-1][0]
 
+        #rssi_str = r'$\bf{RSSI}$''\n'
         rssi_str = 'RSSI\n'
         rssi_str += 'Observed = {:.1f} dB\n'.format(env.last_observation) if env.last_observation else 'Observed = unknown\n'
         rssi_str += 'Expected = {:.1f} dB\n'.format(self.expected_target_rssi) if self.expected_target_rssi else 'Expected = unknown\n'

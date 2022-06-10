@@ -202,7 +202,7 @@ def main(config=None, debug=False):
         raise ValueError('planner_method not valid')
 
     # Flask
-    fig = plt.figure(figsize=(8,8), dpi=40)
+    fig = plt.figure(figsize=(18,10), dpi=50)
     ax = fig.subplots()
     time_step = 0
     if config.get('flask', 'false').lower() == 'true':
@@ -226,7 +226,7 @@ def main(config=None, debug=False):
 
         step_start = timer()
         # update belief based on action and sensor observation (sensor is read inside)
-        belief, reward, observation = env.real_step(data.get('action_taken', (0,0)), data.get('bearing', None))
+        belief, reward, observation = env.real_step(data['action_taken'] if data.get('action_taken', None) else (0,0), data.get('bearing', None))
         step_end = timer()
 
         plot_start = timer()
