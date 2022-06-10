@@ -45,7 +45,7 @@ def data_handler(message_data):
 
     data['rssi'] = message_data.get('rssi', None)
     data['position'] = message_data.get('position', None)
-    data['bearing'] = float(message_data.get('bearing', None)) if is_float(message_data.get('bearing', None)) else get_bearing(data['previous_position'], data['position'])
+    data['bearing'] = -float(message_data.get('bearing', None))+90 if is_float(message_data.get('bearing', None)) else get_bearing(data['previous_position'], data['position'])
     data['distance'] = get_distance(data['previous_position'], data['position'])
     delta_bearing = (data['bearing'] - data['previous_bearing']) if data['bearing'] and data['previous_bearing'] else None
     data['action_taken'] = (delta_bearing, data['distance']) if delta_bearing and data['distance'] else (0,0)
