@@ -32,6 +32,7 @@ data.update({
     'previous_position': None,
     'bearing': None,
     'previous_bearing': None,
+    'course': None,
     'action_proposal': None,
     'action_taken': None,
     'reward': None,
@@ -40,19 +41,22 @@ data.update({
 # Generic data processor 
 def data_handler(message_data):
     global data
-    data['previous_position'] = data.get('position', None)
-    data['previous_bearing'] = data.get('bearing', None)
+    data['previous_position'] = data.get('position', None) if data.get('set_previous', False) else data.get('previous_position', None)
+    data['previous_bearing'] = data.get('bearing', None) if data.get('set_previous', False) else data.get('previous_bearing', None)
 
     data['rssi'] = message_data.get('rssi', None)
     data['position'] = message_data.get('position', None)
-    data['bearing'] = -float(message_data.get('bearing', None))+90 if is_float(message_data.get('bearing', None)) else get_bearing(data['previous_position'], data['position'])
+    data['course'] = get_bearing(data['previous_position'], data['position'])
+    data['bearing'] = -float(message_data.get('bearing', None))+90 if is_float(message_data.get('bearing', None)) else data['course']
     data['distance'] = get_distance(data['previous_position'], data['position'])
     delta_bearing = (data['bearing'] - data['previous_bearing']) if data['bearing'] and data['previous_bearing'] else None
     data['action_taken'] = (delta_bearing, data['distance']) if delta_bearing and data['distance'] else (0,0)
 
     data['drone_position'] = message_data.get('drone_position', None)
     if data['drone_position']:
-        data['drone_position'] = [data['drone_position'][1], data['drone_position'][0]] # swap lon,lat 
+        data['drone_position'] = [data['drone_position'][1], data['drone_position'][0]] # swap lon,lat
+    
+    data['set_previous'] = False
 
 # MQTT
 def on_message(client, userdata, json_message):
@@ -204,6 +208,7 @@ def main(config=None, debug=False):
     # Flask
     fig = plt.figure(figsize=(18,10), dpi=50)
     ax = fig.subplots()
+    fig.set_tight_layout(True)
     time_step = 0
     if config.get('flask', 'false').lower() == 'true':
         run_flask(flask_host, flask_port, fig, results, debug)
@@ -226,7 +231,8 @@ def main(config=None, debug=False):
 
         step_start = timer()
         # update belief based on action and sensor observation (sensor is read inside)
-        belief, reward, observation = env.real_step(data['action_taken'] if data.get('action_taken', None) else (0,0), data.get('bearing', None))
+        belief, reward, observation = env.real_step(data)
+        data['set_previous'] = True
         step_end = timer()
 
         plot_start = timer()

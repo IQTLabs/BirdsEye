@@ -1,7 +1,7 @@
 import random
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
-from .utils import pol2cart
+from .utils import pol2cart, cart2pol
 
 
 class State:
@@ -49,7 +49,10 @@ class RFMultiState(State):
         # Setup an initial random state
         self.target_state = None
         if simulated:
+            self.update_state = self.update_sim_state
             self.target_state = self.init_target_state()
+        else: 
+            self.update_state = self.update_real_state
         # Setup an initial sensor state
         self.sensor_state = self.init_sensor_state()
 
@@ -241,7 +244,7 @@ class RFMultiState(State):
 
 
     # returns new state given last state and action (control)
-    def update_state(self, state, control, target_update=False, transition_overwrite=None):
+    def update_sim_state(self, state, control=None, transition_overwrite=None, **kwargs):
         """Update state based on state and action
 
         Parameters
@@ -258,6 +261,9 @@ class RFMultiState(State):
         """
         # Get current state vars
         r, theta, crs, spd = state
+
+        spd = random.randint(0,1)
+
         control_spd = control[1]
 
         theta = theta % 360
@@ -276,23 +282,11 @@ class RFMultiState(State):
         x, y = pol2cart(r, np.radians(theta))
 
         # Generate next course given current course
-        if target_update:
-            spd = random.choice(self.target_speed_range)
-            if self.target_movement == 'circular':
-                d_crs, circ_spd = self.circular_control(50)
-                crs += d_crs
-                spd = circ_spd
-            else:
-                if random.random() >= self.prob_target_change_crs:
-                    crs += random.choice([-1, 1]) * 30
-        else:
-            if random.random() >= self.prob_target_change_crs:
-                crs += random.choice([-1, 1]) * 30
+        if random.random() >= self.prob_target_change_crs:
+            crs += random.choice([-1, 1]) * 30
         crs %= 360
         if crs < 0:
             crs += 360
-
-        spd = random.randint(0,1)
 
         # Transform changes to coords to cartesian
         dx, dy = pol2cart(spd, np.radians(crs))
@@ -308,8 +302,81 @@ class RFMultiState(State):
 
         return [r, theta, crs, spd]
 
+    # returns new state given last state and action (control)
+    def update_real_state(self, state, distance=None, course=None, heading=None, **kwargs):
+        """Update state based on state and action
+
+        Parameters
+        ----------
+        state_vars : list
+            List of current state variables
+        control : action (tuple)
+            Action tuple
+
+        Returns
+        -------
+        State (array_like)
+            Updated state values array
+        """
+        if distance is None:
+            distance = 0
+        if course is None:
+            course = 0
+        if heading is None:
+            heading = self.sensor_state[2]
+
+        # Get current state vars
+        r, theta_deg, crs, spd = state
+        if random.random() >= self.prob_target_change_crs:
+            crs += random.choice([-1, 1]) * 30
+        spd = random.randint(0,1)
+        control_spd = distance
+        control_course = course % 360
+        control_delta_heading = (heading - self.sensor_state[2]) % 360
+        
+        # polar -> cartesian
+        x, y = pol2cart(r, np.radians(theta_deg))
+        
+        # translate sensor movement
+        dx, dy = pol2cart(control_spd, np.radians(control_course))
+        pos = [x - dx, y - dy]
+        
+        # translate target movement 
+        dx, dy = pol2cart(spd, np.radians(crs))
+        pos = [pos[0] + dx, pos[1] + dy]
+        
+        # cartesian -> polar
+        r, theta = cart2pol(pos[0], pos[1])
+        theta_deg = np.degrees(theta)
+        
+        # rotation
+        theta_deg -= control_delta_heading
+        theta_deg %= 360
+        crs -= control_delta_heading
+        crs %= 360
+
+        return [r, theta_deg, crs, spd]
+
+    def update_real_sensor(self, distance, course, heading):
+        
+        r, theta_deg, prev_heading, spd = self.sensor_state
+        heading = heading if heading else prev_heading
+
+        if distance and course:
+            spd = distance
+            crs = course % 360
+            dx, dy = pol2cart(spd, np.radians(crs))
+            x, y = pol2cart(r, np.radians(theta_deg))
+            pos = [x + dx, y + dy]
+
+            r = np.sqrt(pos[0]**2 + pos[1]**2)
+            theta_deg = np.degrees(np.arctan2(pos[1], pos[0]))
+            theta_deg %= 360
+
+        self.sensor_state = np.array([r, theta_deg, heading, spd])
+
     def update_sensor(self, control, bearing=None):
-        r, theta_deg, crs, spd = self.sensor_state
+        r, theta_deg, crs, old_spd = self.sensor_state
 
         spd = control[1]
 

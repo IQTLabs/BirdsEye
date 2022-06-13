@@ -22,7 +22,7 @@ class RFMultiEnv:
         self.last_observation = None
         self.pf = None
 
-    def dynamics(self, particles, control=None, **kwargs):
+    def dynamics(self, particles, control=None, distance=None, course=None, heading=None, **kwargs):
         """Helper function for particle filter dynamics
 
         Returns
@@ -34,7 +34,7 @@ class RFMultiEnv:
         for p in particles:
             new_p = []
             for t in range(self.state.n_targets):
-                new_p += self.state.update_state(p[4*t:4*(t+1)], control)
+                new_p += self.state.update_state(p[4*t:4*(t+1)], control=control, distance=distance, course=course, heading=heading)
             #new_p = np.array([self.state.update_state(target_state, control) for target_state in p])
             updated_particles.append(new_p)
         return np.array(updated_particles)
@@ -92,22 +92,24 @@ class RFMultiEnv:
         return env_obs
 
     # returns observation, reward, done, info
-    def real_step(self, action, bearing):
-        #action = self.actions.index_to_action(action_idx)
+    def real_step(self, data):
+        #action = data['action_taken'] if data.get('action_taken', None) else (0,0)
 
         # Update position of sensor
-        self.state.update_sensor(action, bearing=bearing)
+        self.state.update_real_sensor(data.get('distance', None), data.get('course', None), data.get('bearing', None))
 
         # Get sensor observation
         observation = self.sensor.real_observation()
         observation = np.array(observation) if observation is not None else None
 
         # Update particle filter
-        self.pf.update(observation, xp=self.pf.particles, control=action)
+        self.pf.update(observation, xp=self.pf.particles, distance=data.get('distance', None), course=data.get('course', None), heading=data.get('bearing', None))
         #particle_swap(self)
 
         # Calculate reward based on updated state & action
-        reward = self.state.reward_func(state=None, action=action, particles=self.pf.particles)
+        control_heading = data['bearing'] if data.get('bearing', None) else self.state.sensor_state[2]
+        control_delta_heading = (control_heading - self.state.sensor_state[2]) % 360
+        reward = self.state.reward_func(state=None, action=(control_delta_heading,data.get('distance',0)), particles=self.pf.particles)
 
         belief_obs = self.env_observation()
 
