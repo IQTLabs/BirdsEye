@@ -177,7 +177,9 @@ class GPSVis:
 
             self.img = self.create_image_from_position()
         self.get_ticks()
-
+        self.cell_size = 1
+        self.xedges = np.arange(0, self.width_meters+self.cell_size, self.cell_size)
+        self.yedges = np.arange(0, self.height_meters+self.cell_size, self.cell_size)
 
     def plot_map(self, axis1=None, output=None, save_as='resultMap.png'):
         """
@@ -191,7 +193,7 @@ class GPSVis:
             fig, axis1 = plt.subplots(figsize=(10, 13))
 
         # Plot background map
-        axis1.imshow(np.flipud(self.img), alpha=0.6, origin='lower')# , extent=[-122.68450, -122.67505, 45.59494, 45.60311], aspect='auto')
+        axis1.imshow(np.flipud(self.img), alpha=0.7, origin='lower')# , extent=[-122.68450, -122.67505, 45.59494, 45.60311], aspect='auto')
 
         # Plot points
         # img_points = np.array(img_points)
@@ -282,7 +284,6 @@ class GPSVis:
         self.height_meters = get_distance((self.bounds[0],self.bounds[1]),(self.bounds[2],self.bounds[1]))
         img = img.resize((int(self.width_meters),int(self.height_meters)))
         print('background image size (pixels) = ',img.size)
-
 
         # if self.data_path:
         #     data = pd.read_csv(self.data_path, names=['LATITUDE', 'LONGITUDE'], sep=',')
@@ -451,15 +452,21 @@ class Results:
             if self.transform is not None:
                 particles_x += self.transform[0]
                 particles_y += self.transform[1]
-
-            # centroid_x = np.mean(particles_x)
-            # centroid_y = np.mean(particles_y)
-            # centroid_r, centroid_theta = cart2pol(centroid_x, centroid_y)
-            #ax.plot(centroid_theta, centroid_r, '*', color=color_array[t][1],markeredgecolor='white', label='centroid', markersize=12, zorder=2)
             line1, = ax.plot(particles_x, particles_y, 'o', color=color_array[t][0], markersize=4, markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
+            
+            if self.openstreetmap: 
+                heatmap, xedges, yedges = np.histogram2d(particles_x, particles_y, bins=(self.openstreetmap.xedges, self.openstreetmap.yedges))
+                heatmap = gaussian_filter(heatmap, sigma=8)
+                extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+                im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='jet', interpolation='nearest', alpha=0.2)
+                #plt.colorbar(im)
+
+            centroid_x = np.mean(particles_x)
+            centroid_y = np.mean(particles_y)
+            line2, = ax.plot(centroid_x, centroid_y, '*', color='magenta', markeredgecolor='black', label='centroid', markersize=12, zorder=2)
 
             if t == 0:
-                lines.extend([line1])
+                lines.extend([line1, line2])
             else:
                 lines.extend([])
 
