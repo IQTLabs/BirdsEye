@@ -517,8 +517,8 @@ class Results:
 
         #proposal_str = r'$\bf{Proposed}$''\n'
         proposal_str = 'Proposed\n'
-        proposal_str += 'Bearing = {:.0f} deg\n'.format(data.get('action_proposal', None)[0]) if all(data.get('action_proposal', None)) else 'Bearing = unknown\n'
-        proposal_str += 'Speed = {:.2f} m/s'.format(data.get('action_proposal', None)[1]) if all(data.get('action_proposal', None)) else 'Speed = unknown\n'
+        proposal_str += 'Bearing = {:.0f} deg\n'.format(data.get('action_proposal', None)[0]) if None not in data.get('action_proposal', (None,None)) else 'Bearing = unknown\n'
+        proposal_str += 'Speed = {:.2f} m/s'.format(data.get('action_proposal', None)[1]) if None not in data.get('action_proposal', (None,None)) else 'Speed = unknown\n'
 
         last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
         last_map_hyp  = self.pf_stats['map_hypothesis'][-1][0]

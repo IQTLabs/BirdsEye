@@ -65,7 +65,7 @@ def rollout_random(env, state, depth):
     #print([state[4*t:4*(t+1)] for t in range(env.state.n_targets)])
     # generate next state and reward with random action; observation doesn't matter
     #state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)])
-    state_prime = np.array([env.state.update_state(s, action) for s in state])
+    state_prime = np.array([env.state.update_sim_state(s, action) for s in state])
     reward = env.state.reward_func(state=state_prime, action_idx=action_index, particles=env.pf.particles)
 
     return reward + lambda_arg * rollout_random(env, state_prime, depth-1)
@@ -102,7 +102,7 @@ def simulate(env, Q, N, state, history, depth, c, belief):
 
     # take action; get new state, observation, and reward
     #state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)]) # env.state.update_state(state, action)
-    state_prime = np.array([env.state.update_state(s, action) for s in state])
+    state_prime = np.array([env.state.update_sim_state(s, action) for s in state])
     observation = env.sensor.observation(state_prime)
 
     if env.state.belief_mdp:
@@ -142,7 +142,8 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     original_particles = np.copy(env.pf.particles)
     original_n_particles = env.pf.n_particles
     original_weights = env.pf.weights
-    env.pf.n_particles = 200
+    n_particle_downsample = 100
+    env.pf.n_particles = n_particle_downsample
     env.pf.weights = np.ones(env.pf.n_particles) / env.pf.n_particles
     while counter < iterations:
 
@@ -150,7 +151,7 @@ def select_action(env, Q, N, belief, depth, c, iterations):
         state = random.choice(belief)
         converted_state = state.reshape(env.state.n_targets, 4)
         # simulate
-        simulate(env, Q, N, converted_state.astype(float), history, depth, c, np.copy(original_particles)[random.sample(range(len(original_particles)), 200)])
+        simulate(env, Q, N, converted_state.astype(float), history, depth, c, np.copy(original_particles)[random.sample(range(len(original_particles)), n_particle_downsample)])
 
         counter += 1
     env.pf.n_particles = original_n_particles
