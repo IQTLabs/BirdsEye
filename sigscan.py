@@ -41,8 +41,8 @@ data.update({
 # Generic data processor 
 def data_handler(message_data):
     global data
-    data['previous_position'] = data.get('position', None) if data.get('set_previous', False) else data.get('previous_position', None)
-    data['previous_bearing'] = data.get('bearing', None) if data.get('set_previous', False) else data.get('previous_bearing', None)
+    data['previous_position'] = data.get('position', None) if not data.get('needs_processing', True) else data.get('previous_position', None)
+    data['previous_bearing'] = data.get('bearing', None) if not data.get('needs_processing', True) else data.get('previous_bearing', None)
 
     data['rssi'] = message_data.get('rssi', None)
     data['position'] = message_data.get('position', None)
@@ -56,7 +56,7 @@ def data_handler(message_data):
     if data['drone_position']:
         data['drone_position'] = [data['drone_position'][1], data['drone_position'][0]] # swap lon,lat
     
-    data['set_previous'] = False
+    data['needs_processing'] = True
 
 # MQTT
 def on_message(client, userdata, json_message):
@@ -160,7 +160,7 @@ def main(config=None, debug=False):
             replay_ts = sorted(replay_data.keys())
 
     # BirdsEye
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    global_start_time = datetime.utcnow().timestamp() #datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     results = birdseye.utils.Results(
         method_name=planner_method,
@@ -217,6 +217,7 @@ def main(config=None, debug=False):
     time.sleep(2)
     while True:
         loop_start = timer()
+        data['utc_time'] = datetime.utcnow().timestamp()
         time_step += 1
 
         if replay_file is not None:
@@ -231,8 +232,9 @@ def main(config=None, debug=False):
 
         step_start = timer()
         # update belief based on action and sensor observation (sensor is read inside)
-        belief, reward, observation = env.real_step(data)
-        data['set_previous'] = True
+        if data.get('needs_processing', False):
+            belief, reward, observation = env.real_step(data)
+            data['needs_processing'] = False
         step_end = timer()
 
         plot_start = timer()
@@ -240,16 +242,13 @@ def main(config=None, debug=False):
         plot_end = timer()
 
         particle_save_start = timer()
-        np.save('{}/{}_particles.npy'.format(results.logdir,int(time.time())), env.pf.particles)
+        np.save('{}/{}_particles.npy'.format(results.logdir,data['utc_time']), env.pf.particles)
         particle_save_end = timer()
 
         data_start = timer()
-        # data['action_proposal'].append(action_proposal)
-        # data['action_taken'].append(action_taken)
-        # data['reward'].append(reward)
-        # data['observation'].append(observation)
-        # for key in data:
-        #     np.save('{}/{}.npy'.format(results.logdir, key), data[key])
+        with open('{}/birdseye-{}.log'.format(results.logdir, global_start_time), 'a') as outfile:
+            json.dump(data, outfile)
+            outfile.write('\n')
         data_end = timer()
 
         loop_end = timer()
