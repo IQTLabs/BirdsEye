@@ -354,6 +354,7 @@ class Results:
             else:
                 self.plotting = False
         self.native_plot = config.get('native_plot', 'false').lower() 
+        self.plot_every_n = int(config.get('plot_every_n', 1))
         self.make_gif = config.get('make_gif', 'false').lower() 
 
         self.namefile = '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, global_start_time)
@@ -418,10 +419,10 @@ class Results:
 
 
         self.time_step = time_step
-        self.pf_stats['mean_hypothesis'].append(env.pf.mean_hypothesis)
-        self.pf_stats['map_hypothesis'].append(env.pf.map_hypothesis)
-        self.pf_stats['mean_state'].append(env.pf.mean_state)
-        self.pf_stats['map_state'].append(env.pf.map_state)
+        self.pf_stats['mean_hypothesis'].append(env.pf.mean_hypothesis if hasattr(env.pf, 'mean_hypothesis') else [None])
+        self.pf_stats['map_hypothesis'].append(env.pf.map_hypothesis if hasattr(env.pf, 'map_hypothesis') else [None])
+        self.pf_stats['mean_state'].append(env.pf.mean_state if hasattr(env.pf, 'mean_state') else [None])
+        self.pf_stats['map_state'].append(env.pf.map_state if hasattr(env.pf, 'map_state') else [None])
 
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
@@ -522,8 +523,8 @@ class Results:
         rssi_str += 'Difference = {:.1f} dB\n'.format(env.last_observation - self.expected_target_rssi) if (env.last_observation and self.expected_target_rssi) else ''
         #rssi_str += 'Target bearing = {} \n'.format(target_bearing) if target_bearing else ''
         #rssi_str += 'Target relative bearing = {} \n'.format(target_relative_bearing) if target_relative_bearing else ''
-        rssi_str += 'MLE estimate = {:.1f} dB\n'.format(last_mean_hyp)
-        rssi_str += 'MAP estimate = {:.1f} dB'.format(last_map_hyp)
+        rssi_str += 'MLE estimate = {:.1f} dB\n'.format(last_mean_hyp) if last_mean_hyp else 'MLE estimate = unknown'
+        rssi_str += 'MAP estimate = {:.1f} dB'.format(last_map_hyp) if last_map_hyp else 'MAP estimate = unknown'
 
         if len(fig.texts) == 0:
             props = dict(boxstyle='round', facecolor='palegreen', alpha=0.5)
@@ -537,6 +538,7 @@ class Results:
             fig.texts[1].set_text(proposal_str)
             fig.texts[2].set_text(rssi_str)
         
+        self.native_plot = 'true' if time_step%self.plot_every_n == 0 else 'false'
         if self.native_plot == 'true':
             plt.draw()
             plt.pause(0.001)
