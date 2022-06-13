@@ -134,17 +134,19 @@ def main(config=None, debug=False):
     freq = float(config.get('f', str(5.7e9)))
     fading_sigma = float(config.get('fading_sigma', str(8)))
     threshold = float(config.get('threshold', str(-120)))
-    reward = config.get('reward', 'heuristic_reward')
+    reward_func = config.get('reward', 'heuristic_reward')
     n_targets = int(config.get('n_targets', str(2)))
     dqn_checkpoint = config.get('dqn_checkpoint', None)
     if planner_method in ['dqn', 'DQN'] and dqn_checkpoint is None:
-        if n_antennas == 1 and antenna_type == 'directional':
+        if n_antennas == 1 and antenna_type == 'directional' and n_targets == 2:
             dqn_checkpoint = 'checkpoints/single_directional_entropy_walking.checkpoint'
         elif n_antennas == 1 and antenna_type == 'omni':
             dqn_checkpoint = 'checkpoints/single_omni_entropy_walking.checkpoint'
         elif n_antennas == 2 and antenna_type == 'directional' and n_targets == 2:
             dqn_checkpoint = 'checkpoints/double_directional_entropy_walking.checkpoint'
         elif n_antennas == 2 and antenna_type == 'directional' and n_targets == 1:
+            dqn_checkpoint = 'checkpoints/double_directional_entropy_walking_1target.checkpoint'
+        elif n_antennas == 1 and antenna_type == 'directional' and n_targets == 1:
             dqn_checkpoint = 'checkpoints/double_directional_entropy_walking_1target.checkpoint'
 
     # MQTT
@@ -186,7 +188,7 @@ def main(config=None, debug=False):
     actions.print_action_info()
 
     # State managment
-    state = birdseye.state.RFMultiState(n_targets=n_targets, reward=reward, simulated=False)
+    state = birdseye.state.RFMultiState(n_targets=n_targets, reward=reward_func, simulated=False)
 
     # Environment
     env = birdseye.env.RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=False)
@@ -198,9 +200,9 @@ def main(config=None, debug=False):
     elif planner_method in ['dqn', 'DQN']:
         planner = DQNPlanner(env, actions, device, dqn_checkpoint)
     elif planner_method in ['mcts','MCTS']:
-        depth=10
+        depth=2
         c=20
-        simulations=100
+        simulations=50
         planner = MCTSPlanner(env, actions, depth, c, simulations)
     else: 
         raise ValueError('planner_method not valid')
@@ -234,6 +236,7 @@ def main(config=None, debug=False):
         # update belief based on action and sensor observation (sensor is read inside)
         if data.get('needs_processing', False):
             belief, reward, observation = env.real_step(data)
+            data['reward'] = reward
             data['needs_processing'] = False
         step_end = timer()
 
