@@ -1,35 +1,35 @@
 [Methods]
 env : RFMultiEnv
 method : mcts
-state : rfmultistate 
+state : rfmultistate
 
-# Action space 
+# Action space
 action : walkingactions
 #action : simpleactions
 
-# Sensor 
+# Sensor
 #sensor : doublerssi
 sensor : singlerssi
 #antenna_filename: radiation_pattern_yagi_5.csv
 antenna_filename: radiation_pattern_monopole.csv
 
-# Reward 
+# Reward
 reward: range_reward
 #reward: heuristic_reward
 #reward: entropy_collision_reward
 
-# Target settings 
+# Target settings
 n_targets: 2
 fading_sigma: 8.0
 target_speed: 1.0
 target_start: 100
 
-# Particle filter settings 
+# Particle filter settings
 particle_resample: 0.01
 particle_min: 10
 particle_max: 200
 
-# Other 
+# Other
 # version: paper
 
 [Defaults]

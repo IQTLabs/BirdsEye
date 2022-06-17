@@ -8,22 +8,22 @@
  * Copyright (c) 1995 - 2001 Kungliga Tekniska Högskolan
  * (Royal Institute of Technology, Stockholm, Sweden).
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright
  *    notice, this list of conditions and the following disclaimer.
- * 
+ *
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * 3. Neither the name of the Institute nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE INSTITUTE AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -120,7 +120,7 @@ static inline void mavlink_sha256_calc(mavlink_sha256_ctx *m, uint32_t *in)
     for (i = 0; i < 16; ++i)
 	data[i] = in[i];
     for (i = 16; i < 64; ++i)
-	data[i] = sigma1(data[i-2]) + data[i-7] + 
+	data[i] = sigma1(data[i-2]) + data[i-7] +
 	    sigma0(data[i-15]) + data[i - 16];
 
     for (i = 0; i < 64; i++) {
@@ -128,7 +128,7 @@ static inline void mavlink_sha256_calc(mavlink_sha256_ctx *m, uint32_t *in)
 
 	T1 = HH + Sigma1(EE) + Ch(EE, FF, GG) + mavlink_sha256_constant_256[i] + data[i];
 	T2 = Sigma0(AA) + Maj(AA,BB,CC);
-			     
+
 	HH = GG;
 	GG = FF;
 	FF = EE;
@@ -195,7 +195,7 @@ MAVLINK_HELPER void mavlink_sha256_final_48(mavlink_sha256_ctx *m, uint8_t resul
     unsigned offset = (m->sz[0] / 8) % 64;
     unsigned int dstart = (120 - offset - 1) % 64 + 1;
     uint8_t *p = (uint8_t *)&m->counter[0];
-    
+
     *zeros = 0x80;
     memset (zeros + 1, 0, sizeof(zeros) - 1);
     zeros[dstart+7] = (m->sz[0] >> 0) & 0xff;

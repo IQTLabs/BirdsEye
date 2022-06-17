@@ -2,12 +2,9 @@
 These functions are adapted from github.com/Officium/RL-Experiments
 
 """
-
-
 import numpy as np
 import torch
 import torch.nn as nn
-
 
 
 def scale_ob(array, device, scale):

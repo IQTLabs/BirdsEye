@@ -1,11 +1,14 @@
 import csv
 import random
+
 import numpy as np
 from scipy.constants import speed_of_light
+
 
 class Sensor:
     """Common base class for sensor & assoc methods
     """
+
     def __init__(self):
         pass
 
@@ -25,6 +28,7 @@ class Sensor:
            detector acceptance pattern
         """
         pass
+
 
 def get_radiation_pattern(antenna_filename=None):
     radiation_pattern = []
@@ -50,12 +54,12 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fadin
     Calculate the received signal strength at a receiver in dB
     """
     power_rx = (
-               power_tx +
-               directivity_rx +
-               directivity_tx +
+        power_tx +
+        directivity_rx +
+        directivity_tx +
                (20*np.log10(speed_of_light/(4*np.pi))) +
-               -20*np.log10(distance) +
-               -20*np.log10(f)
+        -20*np.log10(distance) +
+        -20*np.log10(f)
     )
     # fading
     if fading_sigma:
@@ -65,26 +69,33 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fadin
         #print('fading = ',power_rx - pre)
     return power_rx
 
+
 def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
     """
     Calculate distance between receiver and transmitter based on RSSI.
     """
-    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi - (20*np.log10(f)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
+    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi -
+                     (20*np.log10(f)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
     return distance
+
 
 def dB_to_power(dB):
     return 10**(dB/10)
 
+
 def power_to_dB(power):
     return 10*np.log10(power)
+
 
 class DoubleRSSILofi(Sensor):
     """
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
+
     def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
 
-        self.radiation_pattern = get_radiation_pattern(antenna_filename=antenna_filename)
+        self.radiation_pattern = get_radiation_pattern(
+            antenna_filename=antenna_filename)
         self.std_dev = 6
         self.power_tx = power_tx
         self.directivity_tx = directivity_tx
@@ -98,13 +109,13 @@ class DoubleRSSILofi(Sensor):
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs[0]
-        expected_diff = (expected_rssi[:,0] - expected_rssi[:,1])
+        expected_diff = (expected_rssi[:, 0] - expected_rssi[:, 1])
         observed_diff = (observed_rssi[0] - observed_rssi[1])
 
         # Gaussian weighting function
         numerator = np.power(expected_diff - observed_diff, 2.)
         denominator = 2 * np.power(self.std_dev, 2.)
-        weight = np.exp( - numerator / denominator) #+ 0.000000001
+        weight = np.exp(- numerator / denominator)  # + 0.000000001
         #likelihood = np.prod(weight, axis=1)
         return weight
 
@@ -115,29 +126,32 @@ class DoubleRSSILofi(Sensor):
         observed_rssi = obs[0]
 
         multiplier = 1
-        expected_diff = multiplier * (expected_rssi[:,0] - expected_rssi[:,1])
+        expected_diff = multiplier * \
+            (expected_rssi[:, 0] - expected_rssi[:, 1])
         observed_diff = multiplier * (observed_rssi[0] - observed_rssi[1])
-        print('std = ',np.std(expected_diff))
-        lofi_sigma = 0.7* np.std(expected_diff)#np.std(expected_diff)#(1e-11)/observed_diff # 3e-6 #observed_diff/10 #1e-5
+        print('std = ', np.std(expected_diff))
+        # np.std(expected_diff)#(1e-11)/observed_diff # 3e-6 #observed_diff/10 #1e-5
+        lofi_sigma = 0.7 * np.std(expected_diff)
         # Gaussian weighting function
         numerator = np.power(expected_diff - observed_diff, 2.)
-        print('numerator = ',numerator)
+        print('numerator = ', numerator)
         denominator = 2 * np.power(lofi_sigma, 2.)
-        print('denominator = ',denominator)
-        weight = np.exp( - numerator / denominator) + 0.001#* (1/(lofi_sigma*np.sqrt(2*np.pi))) + 0.001
+        print('denominator = ', denominator)
+        # * (1/(lofi_sigma*np.sqrt(2*np.pi))) + 0.001
+        weight = np.exp(- numerator / denominator) + 0.001
         #likelihood = np.prod(weight, axis=1)
-        print('expect = ',expected_diff)
-        print('obs = ',observed_diff)
-        print('observed = ',observed_rssi)
-        print('weight = ',weight)
+        print('expect = ', expected_diff)
+        print('obs = ', observed_diff)
+        print('observed = ', observed_rssi)
+        print('weight = ', weight)
         return weight
 
     def weight2(self, hyp, obs):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
-        lofi_sigma = 1e-8#5
-        expected_diff = expected_rssi[:,0] - expected_rssi[:,1]
+        lofi_sigma = 1e-8  # 5
+        expected_diff = expected_rssi[:, 0] - expected_rssi[:, 1]
         observed_rssi = obs[0]
         observed_diff = observed_rssi[0] - observed_rssi[1]
         expected_front_greater = expected_diff > lofi_sigma
@@ -153,12 +167,12 @@ class DoubleRSSILofi(Sensor):
             no_match = (0.1**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
         elif observed_unsure:
-            match =  (0.90**(1/2)) * expected_unsure
+            match = (0.90**(1/2)) * expected_unsure
             unsure = (0.10**(1/2)) * expected_front_greater
             no_match = (0.10**(1/2)) * expected_back_greater
             likelihood = match + unsure + no_match
         elif observed_back_greater:
-            match =  (0.9**(1/2)) * expected_back_greater
+            match = (0.9**(1/2)) * expected_back_greater
             unsure = (0.5**(1/2)) * expected_unsure
             no_match = (0.1**(1/2)) * expected_front_greater
             likelihood = match + unsure + no_match
@@ -176,17 +190,21 @@ class DoubleRSSILofi(Sensor):
     # samples observation given state
     def observation(self, state):
         # Calculate observation for multiple targets
-        #if len(state) > 1: #state.n_targets > 1:
+        # if len(state) > 1: #state.n_targets > 1:
         power_front = 0
         power_back = 0
-        for ts in state: # target_state, particle_state
+        for ts in state:  # target_state, particle_state
             distance = ts[0]
             theta_front = ts[1] * np.pi / 180.0
             theta_back = theta_front + np.pi
-            directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
-            directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
-            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
-            power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            directivity_rx_front = get_directivity(
+                self.radiation_pattern, theta_front)
+            directivity_rx_back = get_directivity(
+                self.radiation_pattern, theta_back)
+            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx,
+                                       directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx,
+                                      directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
         rssi_front = power_to_dB(power_front)
         rssi_back = power_to_dB(power_back)
         #print('rssi_front = {}, rssi_back = {}'.format(rssi_front, rssi_back))
@@ -205,12 +223,15 @@ class DoubleRSSILofi(Sensor):
         #     print('power_back = ',power_back)
         return [rssi_front, rssi_back]
 
+
 class SingleRSSI(Sensor):
     """
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
+
     def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
-        self.radiation_pattern = get_radiation_pattern(antenna_filename=antenna_filename)
+        self.radiation_pattern = get_radiation_pattern(
+            antenna_filename=antenna_filename)
         self.std_dev = 15
 
         self.power_tx = power_tx
@@ -222,12 +243,13 @@ class SingleRSSI(Sensor):
             self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
-        expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        expected_rssi = hyp
         observed_rssi = obs
         # Gaussian weighting function
         numerator = np.power(expected_rssi - observed_rssi, 2.)
         denominator = 2 * np.power(self.std_dev, 2.)
-        weight = np.exp( - numerator / denominator) #+ 0.000000001
+        weight = np.exp(- numerator / denominator)  # + 0.000000001
         likelihood = np.prod(weight, axis=1)
         return likelihood
 
@@ -236,19 +258,21 @@ class SingleRSSI(Sensor):
         # Calculate observation for multiple targets
         power_front = 0
 
-        for ts in state: # target_state, particle_state
+        for ts in state:  # target_state, particle_state
             distance = ts[0]
             theta_front = ts[1] * np.pi / 180.0
-            directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
-            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            directivity_rx_front = get_directivity(
+                self.radiation_pattern, theta_front)
+            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx,
+                                       directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
         rssi_front = power_to_dB(power_front)
         return [rssi_front]
 
     # sample state from observation
     def gen_state(self, obs):
         r_dist = np.sqrt(1/obs)
-        #return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
-        return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
+        # return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
+        return [r_dist, random.randint(0, 359), random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)[0]))
@@ -258,8 +282,10 @@ class DoubleRSSI(Sensor):
     """
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
+
     def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
-        self.radiation_pattern = get_radiation_pattern(antenna_filename=antenna_filename)
+        self.radiation_pattern = get_radiation_pattern(
+            antenna_filename=antenna_filename)
         self.std_dev = 15
         self.power_tx = power_tx
         self.directivity_tx = directivity_tx
@@ -269,12 +295,13 @@ class DoubleRSSI(Sensor):
             self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
-        expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        expected_rssi = hyp
         observed_rssi = obs
         # Gaussian weighting function
         numerator = np.power(expected_rssi - observed_rssi, 2.)
         denominator = 2 * np.power(self.std_dev, 2.)
-        weight = np.exp( - numerator / denominator) #+ 0.000000001
+        weight = np.exp(- numerator / denominator)  # + 0.000000001
         likelihood = np.prod(weight, axis=1)
         return likelihood
 
@@ -282,14 +309,18 @@ class DoubleRSSI(Sensor):
     def observation(self, state):
         power_front = 0
         power_back = 0
-        for ts in state: # target_state, particle_state
+        for ts in state:  # target_state, particle_state
             distance = ts[0]
             theta_front = ts[1] * np.pi / 180.0
             theta_back = theta_front + np.pi
-            directivity_rx_front = get_directivity(self.radiation_pattern, theta_front)
-            directivity_rx_back = get_directivity(self.radiation_pattern, theta_back)
-            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
-            power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx, directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            directivity_rx_front = get_directivity(
+                self.radiation_pattern, theta_front)
+            directivity_rx_back = get_directivity(
+                self.radiation_pattern, theta_back)
+            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx,
+                                       directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx,
+                                      directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
         rssi_front = power_to_dB(power_front)
         rssi_back = power_to_dB(power_back)
         return [rssi_front, rssi_back]
@@ -297,16 +328,18 @@ class DoubleRSSI(Sensor):
     # sample state from observation
     def gen_state(self, obs):
         r_dist = np.sqrt(1/obs)
-        #return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
-        return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
+        # return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
+        return [r_dist, random.randint(0, 359), random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
+
 
 class SignalStrength(Sensor):
     """
     Uses signal strength as observation
     """
+
     def __init__(self):
         self.num_avail_obs = 1
         self.std_dev = 10
@@ -317,18 +350,18 @@ class SignalStrength(Sensor):
         # Gaussian weighting function
         numer_fact = np.power(expected_r - obs_r, 2.)
         denom_fact = 2 * np.power(self.std_dev, 2.)
-        weight = np.exp( - numer_fact / denom_fact) + 0.000000001
+        weight = np.exp(- numer_fact / denom_fact) + 0.000000001
         return weight
 
     # samples observation given state
     def observation(self, state):
-        return 1/ ((np.random.normal(state[0], self.std_dev)) ** 2)
+        return 1 / ((np.random.normal(state[0], self.std_dev)) ** 2)
 
     # sample state from observation
     def gen_state(self, obs):
         r_dist = np.sqrt(1/obs)
-        #return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
-        return [r_dist, random.randint(0,359), random.randint(0,11)*30, 1]
+        # return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
+        return [r_dist, random.randint(0, 359), random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
@@ -337,6 +370,7 @@ class SignalStrength(Sensor):
 class Drone(Sensor):
     """Drone sensor
     """
+
     def __init__(self):
         self.num_avail_obs = 2
 
@@ -352,7 +386,7 @@ class Drone(Sensor):
         elif obs == 0:
             obs_weight *= 1-self.obs1_prob(state)
         else:
-            raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
+            raise ValueError('Observation number ({}) outside acceptable int values: 0-{}'
                              .format(obs, self.num_avail_obs-1))
 
         return obs_weight
@@ -381,21 +415,21 @@ class Drone(Sensor):
     def gen_state(self, obs):
 
         if obs == 1:
-            bearing = random.randint(-60,60)
+            bearing = random.randint(-60, 60)
         elif obs == 0:
             bearing = random.randint(120, 240)
 
         if bearing < 0:
             bearing += 360
 
-        return [random.randint(10,150), bearing, random.randint(0,11)*30, 1]
+        return [random.randint(10, 150), bearing, random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
 
 
 class Bearing(Sensor):
-    def __init__(self, sensor_range = 150):
+    def __init__(self, sensor_range=150):
         self.sensor_range = sensor_range
         self.num_avail_obs = 4
 
@@ -415,7 +449,7 @@ class Bearing(Sensor):
         elif obs == 3:
             obs_weight *= self.obs3(state)
         else:
-            raise ValueError("Observation number ({}) outside acceptable int values: 0-{}"\
+            raise ValueError('Observation number ({}) outside acceptable int values: 0-{}'
                              .format(obs, self.num_avail_obs-1))
 
         return obs_weight
@@ -425,7 +459,8 @@ class Bearing(Sensor):
 
     # samples observation given state
     def observation(self, state):
-        weights = [self.obs0(state), self.obs1(state), self.obs2(state), self.obs3(state)]
+        weights = [self.obs0(state), self.obs1(
+            state), self.obs2(state), self.obs3(state)]
         obsers = [0, 1, 2, 3]
         return random.choices(obsers, weights)[0]
 
@@ -433,18 +468,20 @@ class Bearing(Sensor):
     def gen_state(self, obs):
 
         if obs == 0:
-            bearing = random.randint(-60,60)
+            bearing = random.randint(-60, 60)
         elif obs == 1:
-            bearing = random.choice([random.randint(60,90), random.randint(270, 300)])
+            bearing = random.choice(
+                [random.randint(60, 90), random.randint(270, 300)])
         elif obs == 2:
-            bearing = random.choice([random.randint(90,120), random.randint(240,270)])
+            bearing = random.choice(
+                [random.randint(90, 120), random.randint(240, 270)])
         elif obs == 3:
             bearing = random.randint(120, 240)
 
         if bearing < 0:
             bearing += 360
 
-        return [random.randint(25,100), bearing, random.randint(0,11)*30, 1]
+        return [random.randint(25, 100), bearing, random.randint(0, 11)*30, 1]
 
     def obs1(self, state):
         #rel_brg = state[1] - state[3]
@@ -488,14 +525,14 @@ class Bearing(Sensor):
         state_range = state[0]
         if rel_brg < 0:
             rel_brg += 360
-        if (rel_brg <= 60) or (rel_brg >=300) or (state_range >= self.sensor_range):
+        if (rel_brg <= 60) or (rel_brg >= 300) or (state_range >= self.sensor_range):
             return 1
         if (not(self.obs1(state) > 0) and not(self.obs2(state) > 0) and not(self.obs3(state) > 0)):
             return 1
         if (120 <= rel_brg <= 240) and (self.sensor_range/2 < state_range < self.sensor_range):
             return 2*state_range/self.sensor_range - 1
         if ((90 <= rel_brg < 120) or (240 < rel_brg <= 270)) and (self.sensor_range/2 < state_range < self.sensor_range):
-            return 2*state_range/self.sensor_range -1
+            return 2*state_range/self.sensor_range - 1
         if ((60 <= rel_brg < 90) or (270 < rel_brg <= 300)) and (self.sensor_range/2 < state_range < self.sensor_range):
             return 2*state_range/self.sensor_range - 1
         return 0.0001
@@ -509,6 +546,7 @@ AVAIL_SENSORS = {
     'doublerssilofi': DoubleRSSILofi,
     'singlerssi': SingleRSSI
 }
+
 
 def get_sensor(sensor_name=''):
     """Convenience function for retrieving BirdsEye sensor methods
@@ -526,4 +564,3 @@ def get_sensor(sensor_name=''):
         return sensor_obj
     raise ValueError('Invalid sensor method name, {}, entered. Must be '
                      'in {}'.format(sensor_name, AVAIL_SENSORS.keys()))
-

@@ -9,6 +9,7 @@ from torch.optim import Adam
 
 from birdseye.rl_common.util import Flatten
 
+
 class SmallRFPFQnet(nn.Module):
     def __init__(self, n_targets, map_dim, state_dim, policy_dim, atom_num=1, dueling=True):
         super().__init__()
@@ -59,13 +60,15 @@ class SmallRFPFQnet(nn.Module):
 
     def forward(self, x):
         mean_belief_state_idxs = int(self.n_targets * self.state_dim)
-        state = x[:,:mean_belief_state_idxs]
-        pf_map = x[:,mean_belief_state_idxs:].view(x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
+        state = x[:, :mean_belief_state_idxs]
+        pf_map = x[:, mean_belief_state_idxs:].view(
+            x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
         assert state.size(0) == pf_map.size(0)
         batch_size = state.size(0)
         map_latent = self.map_feature(pf_map)
         state_latent = self.state_feature(state)
-        joint_latent = self.joint_feature(torch.cat((state_latent, map_latent), dim=1))
+        joint_latent = self.joint_feature(
+            torch.cat((state_latent, map_latent), dim=1))
         qvalue = self.q(joint_latent)
 
         if self.atom_num == 1:
@@ -80,6 +83,7 @@ class SmallRFPFQnet(nn.Module):
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             logprobs = log_softmax(qvalue, -1)
             return logprobs
+
 
 class RFPFQnet(nn.Module):
     def __init__(self, map_dim, state_dim, policy_dim, atom_num, dueling):
@@ -130,13 +134,15 @@ class RFPFQnet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        state = x[:,:self.state_dim]
-        pf_map = x[:,self.state_dim:].view(x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
+        state = x[:, :self.state_dim]
+        pf_map = x[:, self.state_dim:].view(
+            x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
         assert state.size(0) == pf_map.size(0)
         batch_size = state.size(0)
         map_latent = self.map_feature(pf_map)
         state_latent = self.state_feature(state)
-        joint_latent = self.joint_feature(torch.cat((state_latent, map_latent), dim=1))
+        joint_latent = self.joint_feature(
+            torch.cat((state_latent, map_latent), dim=1))
         qvalue = self.q(joint_latent)
 
         if self.atom_num == 1:
@@ -151,7 +157,6 @@ class RFPFQnet(nn.Module):
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             logprobs = log_softmax(qvalue, -1)
             return logprobs
-
 
 
 class CNN(nn.Module):

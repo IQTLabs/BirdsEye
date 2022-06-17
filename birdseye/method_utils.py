@@ -1,12 +1,12 @@
-
-from .mcts import mcts
-from .dqn import dqn
 from .baseline import baseline
+from .dqn import dqn
+from .mcts import mcts
 
 
-AVAIL_METHODS = {'mcts' : mcts,
-                 'dqn' : dqn,
-                 'baseline' : baseline}
+AVAIL_METHODS = {'mcts': mcts,
+                 'dqn': dqn,
+                 'baseline': baseline}
+
 
 def get_method(method_name=''):
     """Convenience function for retrieving BirdsEye methods
@@ -26,5 +26,3 @@ def get_method(method_name=''):
     else:
         raise ValueError('Invalid method name, {}, entered. Must be '
                          'in {}'.format(method_name, AVAIL_METHODS.keys()))
-
-

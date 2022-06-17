@@ -1,17 +1,19 @@
 # mcts_utils.py
-
-
 # Imports
 import random
 from datetime import datetime
-from tqdm import tqdm
-import numpy as np
-from .utils import tracking_error, particle_swap
+
 import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import tqdm
+
+from .utils import particle_swap
+from .utils import tracking_error
 
 ##################################################################
 # MCTS Algorithm
 ##################################################################
+
 
 def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
 
@@ -59,14 +61,16 @@ def rollout_random(env, state, depth):
     if depth == 0:
         return 0
 
-    ## random action
+    # random action
     action, action_index = env.actions.get_random_action()
 
     #print([state[4*t:4*(t+1)] for t in range(env.state.n_targets)])
     # generate next state and reward with random action; observation doesn't matter
     #state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)])
-    state_prime = np.array([env.state.update_sim_state(s, action) for s in state])
-    reward = env.state.reward_func(state=state_prime, action_idx=action_index, particles=env.pf.particles)
+    state_prime = np.array(
+        [env.state.update_sim_state(s, action) for s in state])
+    reward = env.state.reward_func(
+        state=state_prime, action_idx=action_index, particles=env.pf.particles)
 
     return reward + lambda_arg * rollout_random(env, state_prime, depth-1)
 
@@ -82,7 +86,6 @@ def simulate(env, Q, N, state, history, depth, c, belief):
     # expansion
     test_index = history.copy()
     test_index.append(1)
-
 
     if tuple(test_index) not in Q:
 
@@ -101,8 +104,9 @@ def simulate(env, Q, N, state, history, depth, c, belief):
     action = env.actions.index_to_action(search_action_index)
 
     # take action; get new state, observation, and reward
-    #state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)]) # env.state.update_state(state, action)
-    state_prime = np.array([env.state.update_sim_state(s, action) for s in state])
+    # state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)]) # env.state.update_state(state, action)
+    state_prime = np.array(
+        [env.state.update_sim_state(s, action) for s in state])
     observation = env.sensor.observation(state_prime)
 
     if env.state.belief_mdp:
@@ -110,20 +114,23 @@ def simulate(env, Q, N, state, history, depth, c, belief):
         env.pf.update(np.array(observation), xp=belief, control=action)
         belief = env.pf.particles
 
-    reward = env.state.reward_func(state=state_prime, action_idx=search_action_index, particles=belief)
+    reward = env.state.reward_func(
+        state=state_prime, action_idx=search_action_index, particles=belief)
 
     # recursive call after taking action and getting observation
     new_history = history.copy()
     new_history.append(search_action_index)
     new_history.append(tuple([int(o) for o in observation]))
-    (Q, N, successor_reward) = simulate(env, Q, N, state_prime, new_history, depth-1, c, belief)
+    (Q, N, successor_reward) = simulate(env, Q, N,
+                                        state_prime, new_history, depth-1, c, belief)
     q = reward + lambda_arg * successor_reward
 
     # update counts and values
     update_index = history.copy()
     update_index.append(search_action_index)
     N[tuple(update_index)] += 1
-    Q[tuple(update_index)] += ((q - Q[tuple(update_index)]) / N[tuple(update_index)])
+    Q[tuple(update_index)] += ((q - Q[tuple(update_index)]) /
+                               N[tuple(update_index)])
 
     return (Q, N, q)
 
@@ -151,7 +158,8 @@ def select_action(env, Q, N, belief, depth, c, iterations):
         state = random.choice(belief)
         converted_state = state.reshape(env.state.n_targets, 4)
         # simulate
-        simulate(env, Q, N, converted_state.astype(float), history, depth, c, np.copy(original_particles)[random.sample(range(len(original_particles)), n_particle_downsample)])
+        simulate(env, Q, N, converted_state.astype(float), history, depth, c, np.copy(
+            original_particles)[random.sample(range(len(original_particles)), n_particle_downsample)])
 
         counter += 1
     env.pf.n_particles = original_n_particles
@@ -160,6 +168,7 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     best_action_index = arg_max_action(env.actions, Q, N, history)
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
+
 
 class MCTSRunner():
     def __init__(self, env, depth, c, simulations=1000):
@@ -182,14 +191,18 @@ class MCTSRunner():
             self.Q = {}
             self.N = {}
 
-        self.Q, self.N, self.action = select_action(self.env, self.Q, self.N, self.env.pf.particles, self.depth, self.c, self.simulations)
+        self.Q, self.N, self.action = select_action(
+            self.env, self.Q, self.N, self.env.pf.particles, self.depth, self.c, self.simulations)
 
         return self.action
+
 
 ##################################################################
 # Trial
 ##################################################################
 lambda_arg = 0.95
+
+
 def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=None, ax=None, results=None):
 
     # Initialize true state and belief state (particle filter);
@@ -201,9 +214,9 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     belief = env.pf.particles
 
     # global Q and N dictionaries, indexed by history (and optionally action to follow all in same array; using ints)
-    ##Q = Dict{Array{Int64,1},Float64}()
+    # Q = Dict{Array{Int64,1},Float64}()
     Q = {}
-    ##N = Dict{Array{Int64,1},Float64}()
+    # N = Dict{Array{Int64,1},Float64}()
     N = {}
 
     # experimenting with different parameter values
@@ -215,7 +228,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     # don't need to modify history tree at first time step
     action = None
     observation = None
-
 
     total_col = 0
     total_loss = 0
@@ -237,7 +249,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     all_inference_times = np.zeros(num_iters)
     all_pf_cov = [None]*num_iters
 
-
     abs_particle_hist = []
     abs_target_hist = []
 
@@ -249,9 +260,9 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
     for time_step in tqdm(range(num_iters)):
 
-        #if time_step % 100 == 0
+        # if time_step % 100 == 0
         #    @show time_step
-        #end
+        # end
 
         # NOTE: we found restarting history tree at each time step yielded better results
         # if action taken, modify history tree
@@ -263,10 +274,12 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
         inference_start_time = datetime.now()
 
         (Q, N, action) = select_action(env, Q, N, belief, depth, c, simulations)
-        inference_time = (datetime.now() - inference_start_time).total_seconds()
+        inference_time = (
+            datetime.now() - inference_start_time).total_seconds()
         # take action; get next true state, obs, and reward
         #next_state = env.state.update_state(env.state.target_state, action, target_update=True)
-        next_state = np.array([env.state.update_state(target_state, action) for target_state in env.state.target_state])
+        next_state = np.array([env.state.update_state(
+            target_state, action) for target_state in env.state.target_state])
         #next_state = env.state.update_state(env.state.target_state, action, target_control=env.state.circular_control(time_step, size=5))
         # Update absolute position of sensor
         env.state.update_sensor(action)
@@ -278,19 +291,23 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         # update belief state (particle filter)
         env.pf.update(np.array(observation), xp=belief, control=action)
-        #print(env.pf.particles.shape)
+        # print(env.pf.particles.shape)
         particle_swap(env)
         belief = env.pf.particles
 
-        reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(action), particles=env.pf.particles)
+        reward = env.state.reward_func(state=next_state, action_idx=env.actions.action_to_index(
+            action), particles=env.pf.particles)
         env.state.target_state = next_state
 
         # error metrics
-        r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
+        r_error, theta_error, heading_error, centroid_distance_error, rmse, mae = tracking_error(
+            env.state.target_state, env.pf.particles)
 
         #r_error, theta_error, heading_error, centroid_distance_error, rmse  = tracking_error(env.get_absolute_target(), env.get_absolute_particles())
-        total_col = np.mean([np.mean(env.pf.particles[:,4*t] < 15) for t in range(env.state.n_targets)])
-        total_loss = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
+        total_col = np.mean([np.mean(env.pf.particles[:, 4*t] < 15)
+                            for t in range(env.state.n_targets)])
+        total_loss = np.mean([np.mean(env.pf.particles[:, 4*t] > 150)
+                             for t in range(env.state.n_targets)])
 
         # for target_state in env.state.target_state:
         #     if target_state[0] < 15:
@@ -301,7 +318,8 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
 
         if results is not None and results.plotting:
 
-            axs = results.build_multitarget_plots(env, time_step, fig, axs, centroid_distance_error, selected_plots=selected_plots)
+            axs = results.build_multitarget_plots(
+                env, time_step, fig, axs, centroid_distance_error, selected_plots=selected_plots)
 
         # Save results to output arrays
         all_target_states[time_step] = env.state.target_state

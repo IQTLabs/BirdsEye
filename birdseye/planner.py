@@ -1,5 +1,5 @@
-
-from .dqn import simple_prep, simple_run
+from .dqn import simple_prep
+from .dqn import simple_run
 from .mcts_utils import MCTSRunner
 
 
@@ -15,7 +15,8 @@ class PathPlanner():
 class MCTSPlanner(PathPlanner):
 
     def __init__(self, env, actions, depth, c, simulations):
-        self.runner = MCTSRunner(env=env, depth=depth, c=c, simulations=simulations)
+        self.runner = MCTSRunner(env=env, depth=depth,
+                                 c=c, simulations=simulations)
         self.actions = actions
 
     def proposal(self, observation):

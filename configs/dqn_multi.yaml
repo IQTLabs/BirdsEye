@@ -1,36 +1,36 @@
 [Methods]
 env : RFMultiEnv
 method : dqn
-state : rfmultistate 
+state : rfmultistate
 
-# Action space 
+# Action space
 action : walkingactions
 #action : simpleactions
 
-# Sensor and antenna 
+# Sensor and antenna
 #sensor : doublerssi
 sensor : singlerssi
 #antenna_filename: radiation_pattern_yagi_5.csv
 antenna_filename: radiation_pattern_monopole.csv
 
-# Target settings 
+# Target settings
 n_targets: 2
 fading_sigma: 8.0
 target_speed: 1.0
 target_start: 100
 
-# Reward 
+# Reward
 #reward: range_reward
 #reward: heuristic_reward
 reward: entropy_collision_reward
 
-# Particle filter settings 
+# Particle filter settings
 particle_resample: 0.01
 particle_min: 10
 particle_max: 200
 delta_col: 15
 
-# Other 
+# Other
 model: small
 version: single_omni_entropy_walking
 
@@ -43,7 +43,7 @@ exploration_fraction : 0.2
 exploration_final_eps : 0.1
 batch_size : 64
 train_freq : 4
-# was 4 
+# was 4
 learning_starts : 100
 target_network_update_freq : 600
 # was 100

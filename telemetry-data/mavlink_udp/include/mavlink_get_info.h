@@ -67,5 +67,3 @@ MAVLINK_HELPER const mavlink_message_info_t *mavlink_get_message_info_by_name(co
         return NULL;
 }
 #endif // MAVLINK_USE_MESSAGE_INFO
-
-

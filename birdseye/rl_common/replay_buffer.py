@@ -1,4 +1,3 @@
-
 """
 These functions are adapted from github.com/Officium/RL-Experiments
 
@@ -38,7 +37,7 @@ class SegmentTree:
             for max and 0 for sum.
         """
         assert capacity > 0 and capacity & (capacity - 1) == 0, \
-            "capacity must be positive and a power of 2."
+            'capacity must be positive and a power of 2.'
         self._capacity = capacity
         self._value = [neutral_element for _ in range(2 * capacity)]
         self._operation = operation

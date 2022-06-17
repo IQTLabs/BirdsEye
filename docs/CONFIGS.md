@@ -1,4 +1,4 @@
-# Configurations Documentation 
+# Configurations Documentation
 
 1. [Experiment Parameter Definitions](#1-experiment-parameters)
 2. [MCTS Parameters](#2-mcts-specific-defaults-parameters)
@@ -9,9 +9,9 @@
 ___
 
 
-All configuration files (.yaml) must contain `[Methods]` and `[Defaults]` sections.  
-The `[Methods]` section contains general experiment settings.   
-The `[Defaults]` section contains settings specific to the motion planning method. 
+All configuration files (.yaml) must contain `[Methods]` and `[Defaults]` sections.
+The `[Methods]` section contains general experiment settings.
+The `[Defaults]` section contains settings specific to the motion planning method.
 ``` yaml
 [Methods]
 ...
@@ -19,7 +19,7 @@ The `[Defaults]` section contains settings specific to the motion planning metho
 [Defaults]
 ...
 ```
-## 1. Experiment Parameters 
+## 1. Experiment Parameters
 ``` yaml
 [Methods]
 method : string
@@ -35,10 +35,10 @@ target_start : float
 resample_proportion: float
     Ratio of particles to resample from the prior at every particle filter update
 action : simpleactions
-state : rfstate 
+state : rfstate
 ```
 
-## 2. MCTS specific `[Defaults]` Parameters 
+## 2. MCTS specific `[Defaults]` Parameters
 ``` yaml
 [Defaults]
 simulations : int
@@ -59,7 +59,7 @@ plotting : bool
     Flag to plot or not
 ```
 
-## 3. DQN specific `[Defaults]` parameters 
+## 3. DQN specific `[Defaults]` parameters
 ``` yaml
 [Defaults]
 log_path : string
@@ -120,7 +120,7 @@ plotting : bool
 method : mcts
 action : simpleactions
 sensor : drone
-state : rfstate 
+state : rfstate
 target_speed: 1.0
 target_start: 100
 resample_proportion: 0.005
@@ -137,13 +137,13 @@ trials : 500
 iterations : 150
 ```
 
-## 5. Example [DQN config file](configs/dqn.yaml) 
+## 5. Example [DQN config file](configs/dqn.yaml)
 ``` yaml
 [Methods]
 method : dqn
 action : simpleactions
 sensor : drone
-state : rfstate 
+state : rfstate
 target_speed: 1.0
 target_start: 100
 resample_proportion: 0.1

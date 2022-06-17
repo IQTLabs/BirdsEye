@@ -2,81 +2,88 @@
 These functions are adapted from github.com/Officium/RL-Experiments
 
 """
-from datetime import datetime
-import configparser
 import argparse
+import configparser
 import math
 import os
 import random
 import time
 from collections import deque
 from copy import deepcopy
-import numpy as np
+from datetime import datetime
 
-import torch
+import numpy as np
 import torch.distributions
 import torch.nn as nn
-from torch.nn.functional import softmax, log_softmax
+from torch.nn.functional import log_softmax
+from torch.nn.functional import softmax
 from torch.optim import Adam
 
-from .rl_common.util import scale_ob
-from .rl_common.replay_buffer import ReplayBuffer, PrioritizedReplayBuffer
-from .rl_common.logger import init_logger, close_logger
-from .rl_common.models import SmallRFPFQnet
-
 from .actions import *
-from .sensor import *
-from .state import *
 from .definitions import *
 from .env import RFEnv
-from .utils import tracking_error, write_header_log, Results
+from .rl_common.logger import close_logger
+from .rl_common.logger import init_logger
+from .rl_common.models import SmallRFPFQnet
+from .rl_common.replay_buffer import PrioritizedReplayBuffer
+from .rl_common.replay_buffer import ReplayBuffer
+from .rl_common.util import scale_ob
+from .sensor import *
+from .state import *
+from .utils import Results
+from .utils import tracking_error
+from .utils import write_header_log
 
 
 # Default DQN inputs
 dqn_defaults = {
-    'number_timesteps' : 10000,
-    'dueling' : False,
-    'double_q' : False,
-    'param_noise' : True,
-    'exploration_fraction' : 0.2,
-    'exploration_final_eps' : 0.1,
-    'batch_size' : 100,
-    'train_freq' : 4,
-    'learning_starts' : 100,
-    'target_network_update_freq' : 100,
-    'buffer_size' : 10000,
-    'prioritized_replay' : True,
-    'prioritized_replay_alpha' : 0.6,
-    'prioritized_replay_beta0' : 0.4,
-    'min_value' : -10,
-    'max_value' : 10,
-    'max_episode_length' : 500,
-    'atom_num' : 1,
-    'ob_scale' : 1,
-    'gamma' : 0.99,
-    'grad_norm' : 10.0,
-    'save_interval' : 100000,
-    'eval_interval' : 100000,
-    'save_path' : 'checkpoints',
-    'log_path' : 'rl_log',
-    'use_gpu' : True,
+    'number_timesteps': 10000,
+    'dueling': False,
+    'double_q': False,
+    'param_noise': True,
+    'exploration_fraction': 0.2,
+    'exploration_final_eps': 0.1,
+    'batch_size': 100,
+    'train_freq': 4,
+    'learning_starts': 100,
+    'target_network_update_freq': 100,
+    'buffer_size': 10000,
+    'prioritized_replay': True,
+    'prioritized_replay_alpha': 0.6,
+    'prioritized_replay_beta0': 0.4,
+    'min_value': -10,
+    'max_value': 10,
+    'max_episode_length': 500,
+    'atom_num': 1,
+    'ob_scale': 1,
+    'gamma': 0.99,
+    'grad_norm': 10.0,
+    'save_interval': 100000,
+    'eval_interval': 100000,
+    'save_path': 'checkpoints',
+    'log_path': 'rl_log',
+    'use_gpu': True,
     'plotting': False,
     'eval_mode': False
 }
 
+
 def simple_prep(env, device, checkpoint_filename):
     policy_dim = len(env.actions.action_space)
     map_dim = (env.state.n_targets, 300, 300)
-    network = SmallRFPFQnet(env.state.n_targets, map_dim, env.state.state_dim, policy_dim)
+    network = SmallRFPFQnet(env.state.n_targets, map_dim,
+                            env.state.state_dim, policy_dim)
     qnet = network.to(device)
     checkpoint = torch.load(checkpoint_filename, map_location=device)
     qnet.load_state_dict(checkpoint[0])
 
     return qnet
 
+
 def simple_run(qnet, observation, device):
     with torch.no_grad():
-        observation = torch.from_numpy(np.expand_dims(observation, 0).astype(np.float32)).to(device)
+        observation = torch.from_numpy(np.expand_dims(
+            observation, 0).astype(np.float32)).to(device)
         q_values = qnet(observation)
         action = q_values.argmax(1).cpu().numpy()[0]
 
@@ -179,22 +186,25 @@ def run_dqn(env, config, global_start_time):
 
     # Results instance for saving results to file
     results = Results(method_name='dqn',
-                        global_start_time=global_start_time,
-                        num_iters=number_timesteps,
-                        plotting=plotting)
+                      global_start_time=global_start_time,
+                      num_iters=number_timesteps,
+                      plotting=plotting)
 
     # Setup logging
     logger = init_logger(log_path)
 
     # Access requested device
-    device = torch.device('cuda' if (use_gpu and torch.cuda.is_available()) else 'cpu')
+    device = torch.device('cuda' if (
+        use_gpu and torch.cuda.is_available()) else 'cpu')
 
     # Define network & training optimizer
     policy_dim = len(env.actions.action_space)
-    map_dim = (env.state.n_targets, 300, 300) # TODO: modify to match multi target
+    # TODO: modify to match multi target
+    map_dim = (env.state.n_targets, 300, 300)
     #network = CNN(map_dim, policy_dim, atom_num, dueling)
     #  SmallRFPFQnet(n_targets, map_dim, state_dim, policy_dim, atom_num, dueling)
-    network = SmallRFPFQnet(env.state.n_targets, map_dim, 4, policy_dim, atom_num, dueling)
+    network = SmallRFPFQnet(env.state.n_targets, map_dim,
+                            4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
 
     qnet = network.to(device)
@@ -220,8 +230,9 @@ def run_dqn(env, config, global_start_time):
 
     start_ts = time.time()
 
-    if eval_mode in ['True','true',True]:
-        checkpoint = torch.load('checkpoints/dqn_doublerssi.checkpoint', map_location=device)
+    if eval_mode in ['True', 'true', True]:
+        checkpoint = torch.load(
+            'checkpoints/dqn_doublerssi.checkpoint', map_location=device)
         qnet.load_state_dict(checkpoint[0])
         evaluate(env, qnet, max_episode_length, device, ob_scale, results)
         return
@@ -302,9 +313,10 @@ def run_dqn(env, config, global_start_time):
 
     close_logger(logger)
 
+
 def evaluate(env, qnet, max_episode_length, device, ob_scale, results):
 
-    trials = 500 #500
+    trials = 500  # 500
     run_data = []
     for i in range(trials):
         run_start_time = datetime.now()
@@ -348,16 +360,20 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             inference_start_time = datetime.now()
             q = qnet(ob)
             a = q.argmax(1).cpu().numpy()[0]
-            inference_time = (datetime.now() - inference_start_time).total_seconds()
+            inference_time = (
+                datetime.now() - inference_start_time).total_seconds()
 
             # take action in env
             o, r, done, info = env.step(a)
 
             # error metrics
-            r_error, theta_error, heading_error, centroid_distance_error, rmse, mae  = tracking_error(env.state.target_state, env.pf.particles)
+            r_error, theta_error, heading_error, centroid_distance_error, rmse, mae = tracking_error(
+                env.state.target_state, env.pf.particles)
 
-            total_col = np.mean([np.mean(env.pf.particles[:,4*t] < 15) for t in range(env.state.n_targets)])
-            total_lost = np.mean([np.mean(env.pf.particles[:,4*t] > 150) for t in range(env.state.n_targets)])
+            total_col = np.mean([np.mean(env.pf.particles[:, 4*t] < 15)
+                                for t in range(env.state.n_targets)])
+            total_lost = np.mean([np.mean(env.pf.particles[:, 4*t] > 150)
+                                 for t in range(env.state.n_targets)])
 
             # for target_state in env.state.target_state:
             #     if target_state[0] < 15:
@@ -385,8 +401,8 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
 
             if results is not None and results.plotting:
                 #results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
-                results.build_multitarget_plots(env=env, time_step=n, centroid_distance_error=centroid_distance_error, selected_plots=[4])
-
+                results.build_multitarget_plots(
+                    env=env, time_step=n, centroid_distance_error=centroid_distance_error, selected_plots=[4])
 
     return [all_target_states, all_sensor_states, all_actions,
             all_obs, all_reward, all_col, all_loss, all_r_err,
@@ -473,47 +489,71 @@ def dqn(args=None, env=None):
 
     if args:
         config = configparser.ConfigParser(defaults)
-        config.read_dict({section: dict(args[section]) for section in args.sections()})
+        config.read_dict({section: dict(args[section])
+                         for section in args.sections()})
         defaults = dict(config.items('Defaults'))
         # Fix for boolean args
         defaults['param_noise'] = config.getboolean('Defaults', 'param_noise')
         defaults['dueling'] = config.getboolean('Defaults', 'dueling')
         defaults['double_q'] = config.getboolean('Defaults', 'double_q')
-        defaults['prioritized_replay'] = config.getboolean('Defaults', 'prioritized_replay')
+        defaults['prioritized_replay'] = config.getboolean(
+            'Defaults', 'prioritized_replay')
         defaults['use_gpu'] = config.getboolean('Defaults', 'use_gpu')
         defaults['eval_mode'] = config.getboolean('Defaults', 'eval_mode')
 
     parser = argparse.ArgumentParser(description='DQN',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
-    parser.add_argument('--number_timesteps', type=int, help='Number of timesteps')
-    parser.add_argument('--dueling', type=bool, help='lag: if True dueling value estimation will be used')
-    parser.add_argument('--double_q', type=bool, help='Flag: if True double DQN will be used')
-    parser.add_argument('--param_noise', type=bool, help='Flag: whether or not to use parameter space noise')
+    parser.add_argument('--number_timesteps', type=int,
+                        help='Number of timesteps')
+    parser.add_argument('--dueling', type=bool,
+                        help='lag: if True dueling value estimation will be used')
+    parser.add_argument('--double_q', type=bool,
+                        help='Flag: if True double DQN will be used')
+    parser.add_argument('--param_noise', type=bool,
+                        help='Flag: whether or not to use parameter space noise')
 
-    parser.add_argument('--exploration_fraction', type=float, help='Fraction of entire training period over which the exploration rate is annealed')
-    parser.add_argument('--exploration_final_eps', type=float, help='Final value of random action probability')
-    parser.add_argument('--batch_size', type=int, help='Size of a batched sampled from replay buffer for training')
-    parser.add_argument('--train_freq', type=int, help='Update the model every `train_freq` steps')
-    parser.add_argument('--learning_starts', type=int, help='How many steps of the model to collect transitions for before learning starts')
-    parser.add_argument('--target_network_update_freq', type=int, help='Update the target network every `target_network_update_freq` steps')
-    parser.add_argument('--buffer_size', type=int, help='Size of the replay buffer')
-    parser.add_argument('--prioritized_replay', type=bool, help='Flag: if True prioritized replay buffer will be used.')
-    parser.add_argument('--prioritized_replay_alpha', type=float, help='Alpha parameter for prioritized replay')
-    parser.add_argument('--prioritized_replay_beta0', type=float, help='Beta parameter for prioritized replay')
-    parser.add_argument('--min_value', type=int, help='Min value in distributional RL')
-    parser.add_argument('--max_value', type=int, help='Max value in distributional RL')
-    parser.add_argument('--max_episode_length', type=int, help='Max episode length')
+    parser.add_argument('--exploration_fraction', type=float,
+                        help='Fraction of entire training period over which the exploration rate is annealed')
+    parser.add_argument('--exploration_final_eps', type=float,
+                        help='Final value of random action probability')
+    parser.add_argument('--batch_size', type=int,
+                        help='Size of a batched sampled from replay buffer for training')
+    parser.add_argument('--train_freq', type=int,
+                        help='Update the model every `train_freq` steps')
+    parser.add_argument('--learning_starts', type=int,
+                        help='How many steps of the model to collect transitions for before learning starts')
+    parser.add_argument('--target_network_update_freq', type=int,
+                        help='Update the target network every `target_network_update_freq` steps')
+    parser.add_argument('--buffer_size', type=int,
+                        help='Size of the replay buffer')
+    parser.add_argument('--prioritized_replay', type=bool,
+                        help='Flag: if True prioritized replay buffer will be used.')
+    parser.add_argument('--prioritized_replay_alpha', type=float,
+                        help='Alpha parameter for prioritized replay')
+    parser.add_argument('--prioritized_replay_beta0', type=float,
+                        help='Beta parameter for prioritized replay')
+    parser.add_argument('--min_value', type=int,
+                        help='Min value in distributional RL')
+    parser.add_argument('--max_value', type=int,
+                        help='Max value in distributional RL')
+    parser.add_argument('--max_episode_length', type=int,
+                        help='Max episode length')
 
-    parser.add_argument('--atom_num', type=int, help='Atom number in distributional RL for atom_num > 1')
+    parser.add_argument('--atom_num', type=int,
+                        help='Atom number in distributional RL for atom_num > 1')
     parser.add_argument('--ob_scale', type=int, help='Scale for observation')
     parser.add_argument('--gamma', type=float, help='Gamma input value')
-    parser.add_argument('--grad_norm', type=float, help='Max norm value of the gradients to be used in gradient clipping')
-    parser.add_argument('--save_interval', type=int, help='Interval for saving output values')
-    parser.add_argument('--eval_interval', type=int, help='Interval for evaluating model')
+    parser.add_argument('--grad_norm', type=float,
+                        help='Max norm value of the gradients to be used in gradient clipping')
+    parser.add_argument('--save_interval', type=int,
+                        help='Interval for saving output values')
+    parser.add_argument('--eval_interval', type=int,
+                        help='Interval for evaluating model')
     parser.add_argument('--save_path', type=str, help='Path for saving')
     parser.add_argument('--log_path', type=str, help='Path for logging output')
-    parser.add_argument('--use_gpu', type=bool, help='Flag for using GPU device')
+    parser.add_argument('--use_gpu', type=bool,
+                        help='Flag for using GPU device')
     args, _ = parser.parse_known_args()
 
     if not env:
@@ -523,7 +563,7 @@ def dqn(args=None, env=None):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    global_start_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     if config:
         write_header_log(config, 'dqn', global_start_time)
 

@@ -6,11 +6,10 @@ These functions are adapted from github.com/Officium/RL-Experiments
 Logger singleton wrapper
 Default logger folder is `os.path.join(__file__, '..', '..', 'logs')`
 """
-import logging
+
+
 import logging.handlers
 import os
-
-
 __all__ = ['init_logger']
 
 
@@ -38,9 +37,9 @@ def init_logger(log_dir):
 
     return logger
 
+
 def close_logger(logger):
     handlers = logger.handlers[:]
     for handler in handlers:
         handler.close()
         logger.removeHandler(handler)
-

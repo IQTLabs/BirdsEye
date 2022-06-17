@@ -22,4 +22,3 @@ jobs:
           export PYTHONPATH=$PWD/birdseye:$PYTHONPATH && \
           pylint --fail-under=5 *py tests/*py birdseye/*py && \
           pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye *py telemetry-data/*/*py
-

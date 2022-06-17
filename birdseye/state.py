@@ -1,12 +1,16 @@
 import random
+
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
-from .utils import pol2cart, cart2pol
+
+from .utils import cart2pol
+from .utils import pol2cart
 
 
 class State:
     """Common base class for state & assoc methods
     """
+
     def __init__(self):
         pass
 
@@ -25,44 +29,49 @@ class State:
         """
         pass
 
+
 class RFMultiState(State):
     """RF Multi Target State
     """
+
     def __init__(self, n_targets=1, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None, simulated=True):
 
         self.state_dim = 4
-        ### Target Settings
+        # Target Settings
         # Transition probability
         self.prob_target_change_crs = prob
         # Target speed
-        self.target_speed = float(target_speed) if target_speed is not None else 1.
-        self.target_speed_range = [float(t) for t in target_speed_range.strip("'[]").split(',')] if target_speed_range is not None else [self.target_speed]
+        self.target_speed = float(
+            target_speed) if target_speed is not None else 1.
+        self.target_speed_range = [float(t) for t in target_speed_range.strip(
+            "'[]").split(',')] if target_speed_range is not None else [self.target_speed]
         # Target movement pattern
         self.target_movement = target_movement if target_movement is not None else 'random'
         self.target_move_iter = 0
         # Target start distance
-        self.target_start = int(target_start) if target_start is not None else 150
+        self.target_start = int(
+            target_start) if target_start is not None else 150
         # Number of targets
         self.n_targets = int(n_targets) if n_targets is not None else 1
 
-        ### Target & sensor states
+        # Target & sensor states
         # Setup an initial random state
         self.target_state = None
         if simulated:
             self.update_state = self.update_sim_state
             self.target_state = self.init_target_state()
-        else: 
+        else:
             self.update_state = self.update_real_state
         # Setup an initial sensor state
         self.sensor_state = self.init_sensor_state()
 
-        ### Reward
+        # Reward
         # Setup reward
         reward = 'range_reward' if reward is None else reward
-        self.AVAIL_REWARDS = {'range_reward' : self.range_reward,
+        self.AVAIL_REWARDS = {'range_reward': self.range_reward,
                               'entropy_collision_reward': self.entropy_collision_reward,
                               'heuristic_reward': self.heuristic_reward,
-                }
+                              }
         self.reward_func = self.AVAIL_REWARDS[reward]
         if reward == 'range_reward':
             self.belief_mdp = False
@@ -86,7 +95,7 @@ class RFMultiState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        #return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        # return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
         return [self.random_state() for _ in range(self.n_targets)]
 
     def init_particle_state(self):
@@ -98,7 +107,7 @@ class RFMultiState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        #return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        # return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
         return [self.random_particle_state() for _ in range(self.n_targets)]
 
     def random_particle_state(self):
@@ -110,8 +119,8 @@ class RFMultiState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        #return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
-        return np.array([random.randint(5,100), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
+        # return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
+        return np.array([random.randint(5, 100), random.randint(0, 359), random.randint(0, 11)*30, random.randint(0, 1)])
 
     def random_state(self):
         """Function to initialize a random state
@@ -122,12 +131,11 @@ class RFMultiState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(50,self.target_start+25), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
-
+        return np.array([random.randint(50, self.target_start+25), random.randint(0, 359), random.randint(0, 11)*30, self.target_speed])
 
     def init_sensor_state(self):
         # state is [range, bearing, relative course, own speed]
-        return np.array([0,0,0,0])
+        return np.array([0, 0, 0, 0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
     def heuristic_reward(self, state, action=None, action_idx=None, particles=None, action_penalty=-1.0, delta=20):
@@ -153,17 +161,20 @@ class RFMultiState(State):
         if action is not None:
             if action[0] != 0:
                 reward_val += action_penalty
-        elif action_idx is not None: # returns reward as a function of range, action, and action penalty
-            if action_idx not in [2,3]:
+        elif action_idx is not None:  # returns reward as a function of range, action, and action penalty
+            if action_idx not in [2, 3]:
                 reward_val += action_penalty
 
         col = 20
         lost = 150
-        collision_rate = np.mean([np.mean(particles[:,4*t] < col) for t in range(self.n_targets)])
-        lost_rate = np.mean([np.mean(particles[:,4*t] > lost) for t in range(self.n_targets)])
+        collision_rate = np.mean([np.mean(particles[:, 4*t] < col)
+                                 for t in range(self.n_targets)])
+        lost_rate = np.mean([np.mean(particles[:, 4*t] > lost)
+                            for t in range(self.n_targets)])
         collision_weight = -20
         lost_weight = -10
-        reward_val += (collision_weight * collision_rate) + (lost_weight * lost_rate)
+        reward_val += (collision_weight * collision_rate) + \
+            (lost_weight * lost_rate)
 
         return reward_val
 
@@ -188,29 +199,29 @@ class RFMultiState(State):
 
         # Set reward to 0/. as default
         reward_val = 0.
-        state_ranges = [state[t,0] for t in range(self.n_targets)] #  state_range = state[0]
+        state_ranges = [state[t, 0]
+                        for t in range(self.n_targets)]  # state_range = state[0]
         max_state_range = np.max(state_ranges)
         min_state_range = np.min(state_ranges)
 
         if action is not None:
             if action[0] != 0:
                 reward_val += action_penalty
-        elif action_idx is not None: # returns reward as a function of range, action, and action penalty
-            if action_idx not in [2,3]:
+        elif action_idx is not None:  # returns reward as a function of range, action, and action penalty
+            if action_idx not in [2, 3]:
                 reward_val += action_penalty
 
-
             if min_state_range >= 150:
-                reward_val = -2 # reward to not lose track of contact
+                reward_val = -2  # reward to not lose track of contact
             elif min_state_range <= 15:
-                reward_val = -20 # collision avoidance
+                reward_val = -20  # collision avoidance
             else:
-                reward_val = 0.1 # being in "sweet spot" maximizes reward
-        else: # returns reward as a function of range only
+                reward_val = 0.1  # being in "sweet spot" maximizes reward
+        else:  # returns reward as a function of range only
             if min_state_range >= 150:
-                reward_val = -2 # reward to not lose track of contact
+                reward_val = -2  # reward to not lose track of contact
             elif min_state_range <= 15:
-                reward_val = -200 # collision avoidance
+                reward_val = -200  # collision avoidance
             else:
                 reward_val = 0.1
         return reward_val
@@ -228,22 +239,23 @@ class RFMultiState(State):
         H = 0
         for t in range(self.n_targets):
 
-            pf_r = particles[:,4*t]
-            pf_theta = np.radians(particles[:,(4*t)+1])
+            pf_r = particles[:, 4*t]
+            pf_theta = np.radians(particles[:, (4*t)+1])
             pf_x, pf_y = pol2cart(pf_r, pf_theta)
-            b,_,_ = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
+            b, _, _ = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
             b = gaussian_filter(b, sigma=8)
             b += 0.0000001
             b /= np.sum(b)
             H += -1. * np.sum([b * np.log(b)])
 
-        collision_rate = np.mean([np.mean(particles[:,4*t] < delta) for t in range(self.n_targets)])
+        collision_rate = np.mean(
+            [np.mean(particles[:, 4*t] < delta) for t in range(self.n_targets)])
         cost = H + collision_weight * collision_rate
 
         return -1. * cost
 
-
     # returns new state given last state and action (control)
+
     def update_sim_state(self, state, control=None, transition_overwrite=None, **kwargs):
         """Update state based on state and action
 
@@ -262,7 +274,7 @@ class RFMultiState(State):
         # Get current state vars
         r, theta, crs, spd = state
 
-        spd = random.randint(0,1)
+        spd = random.randint(0, 1)
 
         control_spd = control[1]
 
@@ -329,26 +341,26 @@ class RFMultiState(State):
         r, theta_deg, crs, spd = state
         if random.random() >= self.prob_target_change_crs:
             crs += random.choice([-1, 1]) * 30
-        spd = random.randint(0,1)
+        spd = random.randint(0, 1)
         control_spd = distance
         control_course = course % 360
         control_delta_heading = (heading - self.sensor_state[2]) % 360
-        
+
         # polar -> cartesian
         x, y = pol2cart(r, np.radians(theta_deg))
-        
+
         # translate sensor movement
         dx, dy = pol2cart(control_spd, np.radians(control_course))
         pos = [x - dx, y - dy]
-        
-        # translate target movement 
+
+        # translate target movement
         dx, dy = pol2cart(spd, np.radians(crs))
         pos = [pos[0] + dx, pos[1] + dy]
-        
+
         # cartesian -> polar
         r, theta = cart2pol(pos[0], pos[1])
         theta_deg = np.degrees(theta)
-        
+
         # rotation
         theta_deg -= control_delta_heading
         theta_deg %= 360
@@ -358,7 +370,7 @@ class RFMultiState(State):
         return [r, theta_deg, crs, spd]
 
     def update_real_sensor(self, distance, course, heading):
-        
+
         r, theta_deg, prev_heading, spd = self.sensor_state
         heading = heading if heading else prev_heading
 
@@ -423,36 +435,40 @@ class RFMultiState(State):
         circ_spd = (6.5*size)/(360/self.target_speed)
         return [d_crs, circ_spd]
 
+
 class RFState(State):
     """RF State
     """
+
     def __init__(self, prob=0.9, target_speed=None, target_speed_range=None, target_movement=None, target_start=None, reward=None):
 
         # Transition probability
         self.prob_target_change_crs = prob
         # Target speed
-        self.target_speed = float(target_speed) if target_speed is not None else 1.
-        self.target_speed_range = [float(t) for t in target_speed_range.strip("'[]").split(',')] if target_speed_range is not None else [self.target_speed]
+        self.target_speed = float(
+            target_speed) if target_speed is not None else 1.
+        self.target_speed_range = [float(t) for t in target_speed_range.strip(
+            "'[]").split(',')] if target_speed_range is not None else [self.target_speed]
         # Target movement pattern
         self.target_movement = target_movement if target_movement is not None else 'random'
         self.target_move_iter = 0
         # Target start distance
-        self.target_start = int(target_start) if target_start is not None else 75
+        self.target_start = int(
+            target_start) if target_start is not None else 75
         # Setup an initial random state
         self.target_state = self.init_target_state()
         # Setup an initial sensor state
         self.sensor_state = self.init_sensor_state()
         # Setup reward
         reward = 'range_reward' if reward is None else reward
-        self.AVAIL_REWARDS = {'range_reward' : self.range_reward,
+        self.AVAIL_REWARDS = {'range_reward': self.range_reward,
                               'entropy_collision_reward': self.entropy_collision_reward,
-                }
+                              }
         self.reward_func = self.AVAIL_REWARDS[reward]
         if reward == 'range_reward':
             self.belief_mdp = False
         elif reward == 'entropy_collision_reward':
             self.belief_mdp = True
-
 
     def init_target_state(self):
         """Function to initialize a random state
@@ -463,8 +479,8 @@ class RFState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        #return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
-        return np.array([random.randint(self.target_start-25,self.target_start+25), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        # return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
+        return np.array([random.randint(self.target_start-25, self.target_start+25), random.randint(0, 359), random.randint(0, 11)*30, self.target_speed])
 
     def random_state(self):
         """Function to initialize a random state
@@ -475,12 +491,11 @@ class RFState(State):
             Randomly generated state variable array
         """
         # state is [range, bearing, relative course, own speed]
-        return np.array([random.randint(10,200), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
-
+        return np.array([random.randint(10, 200), random.randint(0, 359), random.randint(0, 11)*30, self.target_speed])
 
     def init_sensor_state(self):
         # state is [range, bearing, relative course, own speed]
-        return np.array([0,0,0,0])
+        return np.array([0, 0, 0, 0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
     def range_reward(self, state, action_idx=None, particles=None, action_penalty=-.05):
@@ -505,43 +520,43 @@ class RFState(State):
         reward_val = 0.
         state_range = state[0]
 
-        if action_idx is not None: # returns reward as a function of range, action, and action penalty
+        if action_idx is not None:  # returns reward as a function of range, action, and action penalty
             if (1 < action_idx < 4):
                 action_penalty = 0
 
             if state_range >= 150:
-                reward_val = -2 + action_penalty # reward to not lose track of contact
+                reward_val = -2 + action_penalty  # reward to not lose track of contact
             elif state_range <= 10:
-                reward_val = -2 + action_penalty # collision avoidance
+                reward_val = -2 + action_penalty  # collision avoidance
             else:
-                reward_val = 0.1 + action_penalty # being in "sweet spot" maximizes reward
-        else: # returns reward as a function of range only
+                reward_val = 0.1 + action_penalty  # being in "sweet spot" maximizes reward
+        else:  # returns reward as a function of range only
             if state_range >= 150:
-                reward_val = -2 # reward to not lose track of contact
+                reward_val = -2  # reward to not lose track of contact
             elif state_range <= 10:
-                reward_val = -200 # collision avoidance
+                reward_val = -200  # collision avoidance
             else:
                 reward_val = 0.1
         return reward_val
 
     def entropy_collision_reward(self, state, action_idx=None, particles=None, delta=10, collision_weight=1):
-        pf_r = particles[:,0]
-        pf_theta = np.radians(particles[:,1])
+        pf_r = particles[:, 0]
+        pf_theta = np.radians(particles[:, 1])
         pf_x, pf_y = pol2cart(pf_r, pf_theta)
         xedges = np.arange(-150, 153, 3)
         yedges = np.arange(-150, 153, 3)
-        b,_,_ = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
+        b, _, _ = np.histogram2d(pf_x, pf_y, bins=(xedges, yedges))
 
         b += 0.0000001
         b /= np.sum(b)
         H = -1. * np.sum([b * np.log(b)])
-        collision_rate = np.mean(particles[:,0] < delta)
+        collision_rate = np.mean(particles[:, 0] < delta)
         cost = H + collision_weight * collision_rate
 
         return -1. * cost
 
-
     # returns new state given last state and action (control)
+
     def update_state(self, state, control, target_update=False):
         """Update state based on state and action
 
@@ -653,9 +668,10 @@ class RFState(State):
 
 
 AVAIL_STATES = {
-     # 'rfstate' : RFState,
-    'rfmultistate' : RFMultiState
+    # 'rfstate' : RFState,
+    'rfmultistate': RFMultiState
 }
+
 
 def get_state(state_name=''):
     """Convenience function for retrieving BirdsEye state methods
@@ -674,4 +690,3 @@ def get_state(state_name=''):
         return state_obj
     raise ValueError('Invalid action method name, {}, entered. Must be '
                      'in {}'.format(state_name, AVAIL_STATES.keys()))
-

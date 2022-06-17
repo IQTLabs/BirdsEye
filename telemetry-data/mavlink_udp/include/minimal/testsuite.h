@@ -47,8 +47,8 @@ static void mavlink_test_heartbeat(uint8_t system_id, uint8_t component_id, mavl
         packet1.base_mode = packet_in.base_mode;
         packet1.system_status = packet_in.system_status;
         packet1.mavlink_version = packet_in.mavlink_version;
-        
-        
+
+
 #ifdef MAVLINK_STATUS_FLAG_OUT_MAVLINK1
         if (status->flags & MAVLINK_STATUS_FLAG_OUT_MAVLINK1) {
            // cope with extensions
@@ -77,7 +77,7 @@ static void mavlink_test_heartbeat(uint8_t system_id, uint8_t component_id, mavl
         }
     mavlink_msg_heartbeat_decode(last_msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
-        
+
         memset(&packet2, 0, sizeof(packet2));
     mavlink_msg_heartbeat_send(MAVLINK_COMM_1 , packet1.type , packet1.autopilot , packet1.base_mode , packet1.custom_mode , packet1.system_status );
     mavlink_msg_heartbeat_decode(last_msg, &packet2);
@@ -103,10 +103,10 @@ static void mavlink_test_protocol_version(uint8_t system_id, uint8_t component_i
         packet1.version = packet_in.version;
         packet1.min_version = packet_in.min_version;
         packet1.max_version = packet_in.max_version;
-        
+
         mav_array_memcpy(packet1.spec_version_hash, packet_in.spec_version_hash, sizeof(uint8_t)*8);
         mav_array_memcpy(packet1.library_version_hash, packet_in.library_version_hash, sizeof(uint8_t)*8);
-        
+
 #ifdef MAVLINK_STATUS_FLAG_OUT_MAVLINK1
         if (status->flags & MAVLINK_STATUS_FLAG_OUT_MAVLINK1) {
            // cope with extensions
@@ -135,7 +135,7 @@ static void mavlink_test_protocol_version(uint8_t system_id, uint8_t component_i
         }
     mavlink_msg_protocol_version_decode(last_msg, &packet2);
         MAVLINK_ASSERT(memcmp(&packet1, &packet2, sizeof(packet1)) == 0);
-        
+
         memset(&packet2, 0, sizeof(packet2));
     mavlink_msg_protocol_version_send(MAVLINK_COMM_1 , packet1.version , packet1.min_version , packet1.max_version , packet1.spec_version_hash , packet1.library_version_hash );
     mavlink_msg_protocol_version_decode(last_msg, &packet2);
