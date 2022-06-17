@@ -2,7 +2,7 @@
 method : dqn
 action : simpleactions
 sensor : drone
-state : rfstate 
+state : rfstate
 target_speed: 1.0
 target_start: 100
 resample_proportion: 0.1
@@ -19,7 +19,7 @@ exploration_fraction : 0.2
 exploration_final_eps : 0.1
 batch_size : 64
 train_freq : 4
-# was 4 
+# was 4
 learning_starts : 100
 target_network_update_freq : 600
 # was 100

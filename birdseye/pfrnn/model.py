@@ -1,27 +1,30 @@
 # original source: https://github.com/Yusufma03/pfrnns/blob/master/model.py
-
-import torch.nn as nn
-import torch
-from birdseye.pfrnn.pfrnn_utils import PFLSTMCell, PFGRUCell
 import numpy as np
+import torch
+import torch.nn as nn
+
+from birdseye.pfrnn.pfrnn_utils import PFGRUCell
+from birdseye.pfrnn.pfrnn_utils import PFLSTMCell
+
 
 def conv(batchNorm, in_channels, out_channels, kernel_size=3, stride=1,
-        dropout=0.0):
+         dropout=0.0):
     if batchNorm:
         return nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
-                    stride=stride, padding=(kernel_size-1)//2, bias=False),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm2d(out_channels),
-                nn.Dropout2d(dropout)
-                )
+            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
+                      stride=stride, padding=(kernel_size-1)//2, bias=False),
+            nn.ReLU(inplace=True),
+            nn.BatchNorm2d(out_channels),
+            nn.Dropout2d(dropout)
+        )
     else:
         return nn.Sequential(
-                nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
-                    stride=stride, padding=(kernel_size-1)//2, bias=True),
-                nn.ReLU(inplace=True),
-                nn.Dropout2d(dropout)
-                )
+            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size,
+                      stride=stride, padding=(kernel_size-1)//2, bias=True),
+            nn.ReLU(inplace=True),
+            nn.Dropout2d(dropout)
+        )
+
 
 class Localizer(nn.Module):
 
@@ -41,10 +44,10 @@ class Localizer(nn.Module):
 
         if self.model == 'PFLSTM':
             self.rnn = PFLSTMCell(self.num_particles, total_emb,
-                    self.hidden_dim, 32, 32, args.resamp_alpha)
+                                  self.hidden_dim, 32, 32, args.resamp_alpha)
         elif self.model == 'PFGRU':
             self.rnn = PFGRUCell(self.num_particles, total_emb, self.hidden_dim,
-                    32, 32, args.resamp_alpha)
+                                 32, 32, args.resamp_alpha)
         else:
             raise ModuleNotFoundError
 
@@ -53,8 +56,9 @@ class Localizer(nn.Module):
         self.conv1 = conv(True, 1, 16, kernel_size=5, stride=2, dropout=0.2)
         if self.map_size > 18:
             self.conv1_2 = conv(True, 16, 16, kernel_size=5, stride=2,
-                    dropout=0.2)
-            self.conv2_2 = conv(True, 32, 32, kernel_size=3, stride=2, dropout=0.2)
+                                dropout=0.2)
+            self.conv2_2 = conv(True, 32, 32, kernel_size=3,
+                                stride=2, dropout=0.2)
         self.conv2 = conv(True, 16, 32, kernel_size=3, stride=1, dropout=0.2)
         self.conv3 = conv(True, 32, 32, kernel_size=3, stride=1, dropout=0)
         fake_map = torch.zeros(1, 1, self.map_size, self.map_size)
@@ -88,12 +92,14 @@ class Localizer(nn.Module):
         if self.model == 'PFLSTM':
             h0 = initializer(batch_size * self.num_particles, self.hidden_dim)
             c0 = initializer(batch_size * self.num_particles, self.hidden_dim)
-            p0 = torch.ones(batch_size * self.num_particles, 1) * np.log(1 / self.num_particles)
+            p0 = torch.ones(batch_size * self.num_particles,
+                            1) * np.log(1 / self.num_particles)
             hidden = (h0, c0, p0)
 
         elif self.model == 'PFGRU':
             h0 = initializer(batch_size * self.num_particles, self.hidden_dim)
-            p0 = torch.ones(batch_size * self.num_particles, 1) * np.log(1 / self.num_particles)
+            p0 = torch.ones(batch_size * self.num_particles,
+                            1) * np.log(1 / self.num_particles)
             hidden = (h0, p0)
 
         else:
@@ -152,7 +158,8 @@ class Localizer(nn.Module):
 
         probs = torch.stack(probs, dim=0)
         prob_reshape = probs.view([seq_len, self.num_particles, -1, 1])
-        out_reshape = hidden_states.view([seq_len, self.num_particles, -1, self.hidden_dim])
+        out_reshape = hidden_states.view(
+            [seq_len, self.num_particles, -1, self.hidden_dim])
         y = out_reshape * torch.exp(prob_reshape)
         y = torch.sum(y, dim=1)
         y = self.hidden2label(y)
@@ -174,7 +181,8 @@ class Localizer(nn.Module):
 
         gt_xy_normalized = gt_pos[:, :, :2] / self.map_size
         gt_theta_normalized = gt_pos[:, :, 2:] / (np.pi * 2)
-        gt_normalized = torch.cat([gt_xy_normalized, gt_theta_normalized], dim=2)
+        gt_normalized = torch.cat(
+            [gt_xy_normalized, gt_theta_normalized], dim=2)
 
         batch_size = pred.size(1)
         sl = pred.size(0)
@@ -189,8 +197,10 @@ class Localizer(nn.Module):
         bpdecay_params = bpdecay_params.unsqueeze(2)
         pred = pred.transpose(0, 1).contiguous()
 
-        l2_pred_loss = torch.nn.functional.mse_loss(pred, gt_normalized, reduction='none') * bpdecay_params
-        l1_pred_loss = torch.nn.functional.l1_loss(pred, gt_normalized, reduction='none') * bpdecay_params
+        l2_pred_loss = torch.nn.functional.mse_loss(
+            pred, gt_normalized, reduction='none') * bpdecay_params
+        l1_pred_loss = torch.nn.functional.l1_loss(
+            pred, gt_normalized, reduction='none') * bpdecay_params
 
         l2_xy_loss = torch.sum(l2_pred_loss[:, :, :2])
         l2_h_loss = torch.sum(l2_pred_loss[:, :, 2])
@@ -206,8 +216,10 @@ class Localizer(nn.Module):
 
         particle_pred = particle_pred.transpose(0, 1).contiguous()
         particle_gt = gt_normalized.repeat(self.num_particles, 1, 1)
-        l2_particle_loss = torch.nn.functional.mse_loss(particle_pred, particle_gt, reduction='none') * bpdecay_params
-        l1_particle_loss = torch.nn.functional.l1_loss(particle_pred, particle_gt, reduction='none') * bpdecay_params
+        l2_particle_loss = torch.nn.functional.mse_loss(
+            particle_pred, particle_gt, reduction='none') * bpdecay_params
+        l1_particle_loss = torch.nn.functional.l1_loss(
+            particle_pred, particle_gt, reduction='none') * bpdecay_params
 
         # p(y_t| \tau_{1:t}, x_{1:t}, \theta) is assumed to be a Gaussian with variance = 1.
         # other more complicated distributions could be used to improve the performance
@@ -225,11 +237,14 @@ class Localizer(nn.Module):
         h_l1_particle_loss = torch.mean(l1_particle_loss[:, :, 2])
         l1_particle_loss = 10 * xy_l1_particle_loss + args.h_weight * h_l1_particle_loss
 
-        belief_loss = args.l2_weight * l2_particle_loss + args.l1_weight * l1_particle_loss
+        belief_loss = args.l2_weight * l2_particle_loss + \
+            args.l1_weight * l1_particle_loss
         total_loss = total_loss + args.elbo_weight * belief_loss
 
-        loss_last = torch.nn.functional.mse_loss(pred[:, -1, :2] * self.map_size, gt_pos[:, -1, :2])
+        loss_last = torch.nn.functional.mse_loss(
+            pred[:, -1, :2] * self.map_size, gt_pos[:, -1, :2])
 
-        particle_pred = particle_pred.view(self.num_particles, batch_size, sl, 3)
+        particle_pred = particle_pred.view(
+            self.num_particles, batch_size, sl, 3)
 
         return total_loss, loss_last, particle_pred

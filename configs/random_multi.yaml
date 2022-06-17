@@ -1,11 +1,11 @@
 [Methods]
-# particle filter initialization larger r  
-# adjust dqn env observation heatmap size 
+# particle filter initialization larger r
+# adjust dqn env observation heatmap size
 env : RFMultiEnv
 method : baseline
 action : baselineactions
 sensor : doublerssilofi
-state : rfmultistate 
+state : rfmultistate
 target_speed: 1.0
 target_start: 100
 #resample_proportion: 0.005

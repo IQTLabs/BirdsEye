@@ -59,7 +59,7 @@ typedef struct __mavlink_open_drone_id_basic_id_t {
  *
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param id_type  Indicates the format for the uas_id field of this message.
  * @param ua_type  Indicates the type of UA (Unmanned Aircraft).
  * @param uas_id  UAS (Unmanned Aircraft System) ID following the format specified by id_type. Shall be filled with nulls in the unused portion of the field.
@@ -100,7 +100,7 @@ static inline uint16_t mavlink_msg_open_drone_id_basic_id_pack(uint8_t system_id
  * @param msg The MAVLink message to compress the data into
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param id_type  Indicates the format for the uas_id field of this message.
  * @param ua_type  Indicates the type of UA (Unmanned Aircraft).
  * @param uas_id  UAS (Unmanned Aircraft System) ID following the format specified by id_type. Shall be filled with nulls in the unused portion of the field.
@@ -167,7 +167,7 @@ static inline uint16_t mavlink_msg_open_drone_id_basic_id_encode_chan(uint8_t sy
  *
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param id_type  Indicates the format for the uas_id field of this message.
  * @param ua_type  Indicates the type of UA (Unmanned Aircraft).
  * @param uas_id  UAS (Unmanned Aircraft System) ID following the format specified by id_type. Shall be filled with nulls in the unused portion of the field.
@@ -271,7 +271,7 @@ static inline uint8_t mavlink_msg_open_drone_id_basic_id_get_target_component(co
 /**
  * @brief Get field id_or_mac from open_drone_id_basic_id message
  *
- * @return  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @return  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  */
 static inline uint16_t mavlink_msg_open_drone_id_basic_id_get_id_or_mac(const mavlink_message_t* msg, uint8_t *id_or_mac)
 {

@@ -1,8 +1,7 @@
 # original source: https://github.com/Yusufma03/pfrnns/blob/master/pfrnns.py
-
+import numpy as np
 import torch
 from torch import nn
-import numpy as np
 
 
 class PFRNNBaseCell(nn.Module):

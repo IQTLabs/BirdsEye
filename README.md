@@ -4,7 +4,7 @@
 The BirdsEye project demonstrates the simulated
 tracking of radio frequency (RF) signals via
 reinforcement learning (RL) techniques implemented
-on low-fidelity sensors. 
+on low-fidelity sensors.
 This permits training and inference without the need
 for significant compute hardware such as graphical
 processing units (GPU).
@@ -16,7 +16,7 @@ deployment, or where more sensitive sensors do not
 function or cannot be installed due to the nature of
 the environment.
 
-This repository is the official implementation of the work published [here](https://doi.org/10.1109/ROSE52750.2021.9611756): 
+This repository is the official implementation of the work published [here](https://doi.org/10.1109/ROSE52750.2021.9611756):
 > L. Tindall, Z. Hampel-Arias, J. Goldfrank, E. Mair and T. Q. Nguven, "Localizing Radio Frequency Targets Using Reinforcement Learning," 2021 IEEE International Symposium on Robotic and Sensors Environments (ROSE), 2021, pp. 1-7, doi: 10.1109/ROSE52750.2021.9611756.
 
 
@@ -38,7 +38,7 @@ successes such as [DeepMind’s AlphaGo](https://deepmind.com/research/case-stud
 ___
 
 <p align="center">
-  <img src="data/arch2.png" />   
+  <img src="data/arch2.png" />
   <em align = "center"><b>Fig. 2: Deep Q-Network architecture for motion planning</b></em>
 </p>
 
@@ -50,14 +50,14 @@ ___
 5. [Descriptions](#5-descriptions)
 
 ## 1. Usage
-### Installation 
+### Installation
 ```
 pip install -r requirements.txt
 ```
 
 ### To run on command line
 ```
-$ python run_birdseye.py -h 
+$ python run_birdseye.py -h
 usage: run_birdseye.py [-h] -c FILE [-b]
 
 optional arguments:
@@ -75,7 +75,7 @@ A Docker file has also been provided for ease of use. To run with Docker, execut
 > docker build -t birds_eye .
 > docker run -it --gpus all birds_eye -c {config.yaml}
 ```
-In order to streamline this process a `Makefile` has been provided as a shorthand. 
+In order to streamline this process a `Makefile` has been provided as a shorthand.
 ```
 > make run_mcts
 > make run_dqn
@@ -88,51 +88,50 @@ If you don't have or want to use GPUs you can preface the `make` command with `G
 > GPUS= make run_mcts
 ```
 
-## 2. Configurations 
-Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.  
-See [Configurations Documentation](docs/CONFIGS.md) for more information. 
+## 2. Configurations
+Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.
+See [Configurations Documentation](docs/CONFIGS.md) for more information.
 
 
 ## 3. Examples
 ### Run with Monte Carlo Tree Search policy
 ```
-$ python run_birdseye.py -c configs/mcts.yaml 
+$ python run_birdseye.py -c configs/mcts.yaml
 ```
-### Run with Deep Q-Network policy 
+### Run with Deep Q-Network policy
 ```
-$ python run_birdseye.py -c configs/dqn.yaml 
+$ python run_birdseye.py -c configs/dqn.yaml
 ```
 
 ## 4. Results
-The results of the experiments will be stored in the `./runs` directory.   
-Log files are created which store the configurations for each experiment along with metrics and state information per time step.   
+The results of the experiments will be stored in the `./runs` directory.
+Log files are created which store the configurations for each experiment along with metrics and state information per time step.
 For a detailed guide and visualizations please see results user guide notebook: [results_guide.ipynb](results_guide.ipynb).
 
 <p align="center">
-  <img src="data/results_example.png" />   
+  <img src="data/results_example.png" />
   <em align = "center"><b>Fig. 3: Localization results (distance between mean belief and actual target location)</b></em>
 </p>
 
 <p align="center">
-  <img src="data/speedup.png" />   
+  <img src="data/speedup.png" />
   <em align = "center"><b>Fig. 4: Inference times and speed comparison</b></em>
 </p>
 
 
 
 ## 5. Descriptions
-All code for training and evaluation in simulation is contained in the [birdseye](birdseye) directory.  
-The [birdseye](birdseye) directory contains some important base classes which can be extended to offer customizability to a specific use case. We provide a few subclasses to get started. 
+All code for training and evaluation in simulation is contained in the [birdseye](birdseye) directory.
+The [birdseye](birdseye) directory contains some important base classes which can be extended to offer customizability to a specific use case. We provide a few subclasses to get started.
 
 ### [Sensor](birdseye/sensor.py)
-The Sensor class defines the observation model for the simulated sensor. Users must define methods for sampling an observation given a state and for determining the likelihood of an observation given a state. We have provided example subclasses for an omni-directional signal strength setup and a bearing based directional setup. 
+The Sensor class defines the observation model for the simulated sensor. Users must define methods for sampling an observation given a state and for determining the likelihood of an observation given a state. We have provided example subclasses for an omni-directional signal strength setup and a bearing based directional setup.
 
 ### [Actions](birdseye/actions.py)
-The Actions class defines the action space for the sensor. For computational simplicity, actions are discretized. 
+The Actions class defines the action space for the sensor. For computational simplicity, actions are discretized.
 
 ### [State](birdseye/state.py)
-The State class includes methods for updating the state variables of the environment. This includes states for both the sensor and target. Motion dynamics and reward functions are defined within this class. We have included example reward functions based on an entropy/collision tradeoff as well as a range based reward. 
+The State class includes methods for updating the state variables of the environment. This includes states for both the sensor and target. Motion dynamics and reward functions are defined within this class. We have included example reward functions based on an entropy/collision tradeoff as well as a range based reward.
 
 ### [RFEnv](birdseye/env.py)
-The RFEnv class is a Gym-like class for controlling the entire pipeline of the simulation. 
-
+The RFEnv class is a Gym-like class for controlling the entire pipeline of the simulation.

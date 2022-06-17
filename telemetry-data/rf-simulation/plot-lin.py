@@ -1,7 +1,7 @@
-#Python script to plot RF heat map based on rssi values at lat/lon coordinates
+# Python script to plot RF heat map based on rssi values at lat/lon coordinates
 # using linear/bilinear interpolation
 #
-#Syntax:
+# Syntax:
 #
 #	python3 ./plot-lin.py file.csv
 #
@@ -15,13 +15,12 @@
 # rssi,remrssi,simrssi,lat,lon
 # 154,150,126,39.034535,-76.65557
 # TODO: add delta and delta ratio (delta/value)
+import os
+import sys
 
 import matplotlib.pyplot as plt
 import matplotlib.tri as tri
 import numpy as np
-
-import sys
-import os
 from scipy.interpolate import griddata
 
 np.random.seed(19680801)
@@ -32,20 +31,20 @@ ngridy = 4000
 file_in_path = sys.argv[1]
 
 # Load data from CSV
-dat = np.genfromtxt(file_in_path, delimiter=',',skip_header=1)
-X_dat = dat[:,3]
-Y_dat = dat[:,4]
-Z1_dat = dat[:,1]
-Z2_dat = dat[:,2]
+dat = np.genfromtxt(file_in_path, delimiter=',', skip_header=1)
+X_dat = dat[:, 3]
+Y_dat = dat[:, 4]
+Z1_dat = dat[:, 1]
+Z2_dat = dat[:, 2]
 
 # Convert from pandas dataframes to numpy arrays
 x, y, z1, z2 = np.array([]), np.array([]), np.array([]), np.array([])
 for i in range(len(X_dat)):
-        #print("x dat {} {}".format(Z_dat[i], i))
-        x = np.append(x, X_dat[i])
-        y = np.append(y, Y_dat[i])
-        z1 = np.append(z1, Z1_dat[i])
-        z2 = np.append(z2, Z2_dat[i])
+    #print("x dat {} {}".format(Z_dat[i], i))
+    x = np.append(x, X_dat[i])
+    y = np.append(y, Y_dat[i])
+    z1 = np.append(z1, Z1_dat[i])
+    z2 = np.append(z2, Z2_dat[i])
 
 #x = np.random.uniform(-2, 2, npts)
 #y = np.random.uniform(-2, 2, npts)
@@ -80,7 +79,7 @@ ax1.contour(xi, yi, zi1, levels=24, linewidths=0.0, colors='k')
 cntr1 = ax1.contourf(xi, yi, zi1, levels=24, cmap=plt.cm.rainbow)
 
 fig.colorbar(cntr1, ax=ax1)
-#ax1.plot(x, y, 'ko', ms=3) # comment out to remove lat/lon position points
+# ax1.plot(x, y, 'ko', ms=3) # comment out to remove lat/lon position points
 ax1.axis('off')
 
 ax1.set(xlim=(x.min(), x.max()), ylim=(y.min(), y.max()))
@@ -97,7 +96,7 @@ cntr2 = ax2.tricontourf(x, y, z2, levels=24, cmap=plt.cm.rainbow)
 #cntr3 = ax3.tricontourf(x, y, z2, levels=24, cmap=plt.cm.rainbow)
 
 fig.colorbar(cntr2, ax=ax2)
-ax3.plot(x, y, 'ko', ms=3) # comment out to remove lat/lon position points
+ax3.plot(x, y, 'ko', ms=3)  # comment out to remove lat/lon position points
 ax2.axis('off')
 
 #ax1.set(xlim=(x.min(), x.max()), ylim=(y.min(), y.max()))

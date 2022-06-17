@@ -1,7 +1,7 @@
-
 import os
-import unittest
 import tempfile
+import unittest
+
 from run_birdseye import run_birdseye
 
 

@@ -1,31 +1,31 @@
 /*******************************************************************************
  Copyright (C) 2010  Bryan Godbolt godbolt ( a t ) ualberta.ca
- 
+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
  the Free Software Foundation, either version 3 of the License, or
  (at your option) any later version.
- 
+
  This program is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  GNU General Public License for more details.
- 
+
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
  ****************************************************************************/
 /*
  This program sends some data to qgroundcontrol using the mavlink protocol.  The sent packets
  cause qgroundcontrol to respond with heartbeats.  Any settings or custom commands sent from
  qgroundcontrol are printed by this program along with the heartbeats.
- 
- 
+
+
  I compiled this program sucessfully on Ubuntu 10.04 with the following command
- 
- 
+
+
  gcc -std=c99 -I ../../include/common -o mavlink_udp mavlink_udp.c
- 
+
 the rt library is needed for the clock_gettime on linux
  */
 /* These headers are for QNX, but should all be standard on unix/linux */
@@ -61,18 +61,18 @@ uint64_t microsSinceEpoch();
 
 int main(int argc, char* argv[])
 {
-	
+
 	char help[] = "--help";
-	
+
 	struct		tm timer;
 	time_t now;
 	char buff[100];
 
 	char target_ip[100];
-	
+
 	float position[6] = {};
 	int sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	struct sockaddr_in gcAddr; 
+	struct sockaddr_in gcAddr;
 	struct sockaddr_in locAddr;
 	//struct sockaddr_in fromAddr;
 	uint8_t buf[BUFFER_LENGTH];
@@ -99,7 +99,7 @@ int main(int argc, char* argv[])
 	//int success = 0;
 	unsigned int temp = 0;
 	FILE*		filePtr;
-	
+
 	printf("date,time,rssi,remrssi,noise,remnoise,lat,lon,heading\n");
 
 	for(k=1;k<argc;k++)
@@ -139,41 +139,41 @@ int main(int argc, char* argv[])
 		printf("\tDefault for localhost: udp-server 127.0.0.1\n\n");
 		exit(EXIT_FAILURE);
     }
-	
-	
+
+
 	// Change the target ip if parameter was given
 	strcpy(target_ip, "127.0.0.1");
 	if (argc == 2)
     {
 		strcpy(target_ip, argv[1]);
     }
-	
+
 	if(file){
 		printf("Opening file: %s\n",output_file);
 		filePtr = fopen(output_file,"w");
 
 		if(filePtr==NULL){
-			printf("Can't open file: %s! Exiting...\n", output_file); 
+			printf("Can't open file: %s! Exiting...\n", output_file);
 			exit(0);
 		}
 
 		fprintf(filePtr,"date,time,rssi,remrssi,noise,remnoise,lat,lon,heading\n");
 
 	}
-	
+
 	memset(&locAddr, 0, sizeof(locAddr));
 	locAddr.sin_family = AF_INET;
 	locAddr.sin_addr.s_addr = INADDR_ANY;
 	//locAddr.sin_port = htons(14550);
 	locAddr.sin_port = htons(14445);
-	/* Bind the socket to port 14551 - necessary to receive packets from qgroundcontrol */ 
+	/* Bind the socket to port 14551 - necessary to receive packets from qgroundcontrol */
 	if (-1 == bind(sock,(struct sockaddr *)&locAddr, sizeof(struct sockaddr)))
     {
 		perror("error bind failed");
 		close(sock);
 		exit(EXIT_FAILURE);
-    } 
-	
+    }
+
 	/* Attempt to make it non blocking */
 #if (defined __QNX__) | (defined __QNXNTO__)
 	if (fcntl(sock, F_SETFL, O_NONBLOCK | FASYNC) < 0)
@@ -186,14 +186,14 @@ int main(int argc, char* argv[])
 		close(sock);
 		exit(EXIT_FAILURE);
     }
-	
-	
+
+
 	memset(&gcAddr, 0, sizeof(gcAddr));
 	gcAddr.sin_family = AF_INET;
 	gcAddr.sin_addr.s_addr = inet_addr(target_ip);
 	gcAddr.sin_port = htons(14445);
-	
-	for (;;) 
+
+	for (;;)
     	{
 		memset(buf, 0, BUFFER_LENGTH);
 		recsize = recvfrom(sock, (void *)buf, BUFFER_LENGTH, 0, (struct sockaddr *)&gcAddr, &fromlen);
@@ -202,7 +202,7 @@ int main(int argc, char* argv[])
 			// Something received - print out all bytes and parse packet
 			mavlink_message_t msg;
 			mavlink_status_t status;
-			
+
 			//printf("Bytes Received: %d\nDatagram: ", (int)recsize);
 			for (i = 0; i < recsize; ++i)
 			{
@@ -212,10 +212,10 @@ int main(int argc, char* argv[])
 				{
 					// Packet received
 					if(msg.msgid == 109){
-						rssi=mavlink_msg_radio_status_get_rssi(&msg);					
-						rem_rssi=mavlink_msg_radio_status_get_remrssi(&msg);					
-						noise=mavlink_msg_radio_status_get_noise(&msg);					
-						rem_noise=mavlink_msg_radio_status_get_remnoise(&msg);	
+						rssi=mavlink_msg_radio_status_get_rssi(&msg);
+						rem_rssi=mavlink_msg_radio_status_get_remrssi(&msg);
+						noise=mavlink_msg_radio_status_get_noise(&msg);
+						rem_noise=mavlink_msg_radio_status_get_remnoise(&msg);
 
     						now = time (0);
     						strftime (buff, 100, "%Y%m%d,%H%M%S,", localtime (&now));
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 							printf("%d,%d,%d,%d,%f,%f\n",rssi, rem_rssi,noise, rem_noise,lat/10000000.,lon/10000000.);
 					    if(file && lat != 0 && lon != 0){
 						fprintf (filePtr,"%s", buff);
-						if(includeHeading)	
+						if(includeHeading)
 							fprintf(filePtr,"%d,%d,%d,%d,%f,%f,%6.3f\n",rssi, rem_rssi,noise, rem_noise,lat/10000000.,lon/10000000.,heading/1000.);
 						else
 							fprintf(filePtr,"%d,%d,%d,%d,%f,%f\n",rssi, rem_rssi,noise, rem_noise,lat/10000000.,lon/10000000.);
@@ -259,27 +259,27 @@ int main(int argc, char* argv[])
 #if (defined __QNX__) | (defined __QNXNTO__)
 uint64_t microsSinceEpoch()
 {
-	
+
 	struct timespec time;
-	
+
 	uint64_t micros = 0;
-	
-	clock_gettime(CLOCK_REALTIME, &time);  
+
+	clock_gettime(CLOCK_REALTIME, &time);
 	micros = (uint64_t)time.tv_sec * 1000000 + time.tv_nsec/1000;
-	
+
 	return micros;
 }
 #else
 uint64_t microsSinceEpoch()
 {
-	
+
 	struct timeval tv;
-	
+
 	uint64_t micros = 0;
-	
-	gettimeofday(&tv, NULL);  
+
+	gettimeofday(&tv, NULL);
 	micros =  ((uint64_t)tv.tv_sec) * 1000000 + tv.tv_usec;
-	
+
 	return micros;
 }
 #endif

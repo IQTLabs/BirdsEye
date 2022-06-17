@@ -97,7 +97,7 @@ typedef struct __mavlink_open_drone_id_location_t {
  *
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param status  Indicates whether the unmanned aircraft is on the ground or in the air.
  * @param direction [cdeg] Direction over ground (not heading, but direction of movement) measured clockwise from true North: 0 - 35999 centi-degrees. If unknown: 36100 centi-degrees.
  * @param speed_horizontal [cm/s] Ground speed. Positive only. If unknown: 25500 cm/s. If speed is larger than 25425 cm/s, use 25425 cm/s.
@@ -177,7 +177,7 @@ static inline uint16_t mavlink_msg_open_drone_id_location_pack(uint8_t system_id
  * @param msg The MAVLink message to compress the data into
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param status  Indicates whether the unmanned aircraft is on the ground or in the air.
  * @param direction [cdeg] Direction over ground (not heading, but direction of movement) measured clockwise from true North: 0 - 35999 centi-degrees. If unknown: 36100 centi-degrees.
  * @param speed_horizontal [cm/s] Ground speed. Positive only. If unknown: 25500 cm/s. If speed is larger than 25425 cm/s, use 25425 cm/s.
@@ -283,7 +283,7 @@ static inline uint16_t mavlink_msg_open_drone_id_location_encode_chan(uint8_t sy
  *
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param status  Indicates whether the unmanned aircraft is on the ground or in the air.
  * @param direction [cdeg] Direction over ground (not heading, but direction of movement) measured clockwise from true North: 0 - 35999 centi-degrees. If unknown: 36100 centi-degrees.
  * @param speed_horizontal [cm/s] Ground speed. Positive only. If unknown: 25500 cm/s. If speed is larger than 25425 cm/s, use 25425 cm/s.
@@ -452,7 +452,7 @@ static inline uint8_t mavlink_msg_open_drone_id_location_get_target_component(co
 /**
  * @brief Get field id_or_mac from open_drone_id_location message
  *
- * @return  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @return  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  */
 static inline uint16_t mavlink_msg_open_drone_id_location_get_id_or_mac(const mavlink_message_t* msg, uint8_t *id_or_mac)
 {

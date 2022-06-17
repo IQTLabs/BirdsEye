@@ -3,7 +3,7 @@ name: Code health checks
 on: [push, pull_request]
 
 env:
-  CODECHECK_PY_VER: 3.8
+  CODECHECK_PY_VER: 3.9
 
 jobs:
   codecheck:
@@ -18,6 +18,7 @@ jobs:
           python-version: ${{ env.CODECHECK_PY_VER }}
       - name: Run pytype
         run: |
-          pip3 install -r requirements.txt && \
-          pip3 install pytype && \
+          pip3 install -r requirements.txt -r tests/requirements.txt && \
+          export PYTHONPATH=$PWD/birdseye:$PYTHONPATH && \
+          pylint --fail-under=5 *py tests/*py birdseye/*py && \
           pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye *py telemetry-data/*/*py

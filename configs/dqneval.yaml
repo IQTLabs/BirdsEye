@@ -3,7 +3,7 @@ env : RFMultiEnv
 method : dqn
 action : simpleactions
 sensor : doublerssilofi
-state : rfmultistate 
+state : rfmultistate
 fading_sigma: 8.0
 #reward: range_reward
 reward: entropy_collision_reward
@@ -28,7 +28,7 @@ exploration_fraction : 0.2
 exploration_final_eps : 0.1
 batch_size : 64
 train_freq : 4
-# was 4 
+# was 4
 learning_starts : 100
 target_network_update_freq : 600
 # was 100

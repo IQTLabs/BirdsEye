@@ -68,7 +68,7 @@ typedef struct __mavlink_open_drone_id_authentication_t {
  *
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param authentication_type  Indicates the type of authentication.
  * @param data_page  Allowed range is 0 - 4.
  * @param page_count  This field is only present for page 0. Allowed range is 0 - 5.
@@ -118,7 +118,7 @@ static inline uint16_t mavlink_msg_open_drone_id_authentication_pack(uint8_t sys
  * @param msg The MAVLink message to compress the data into
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param authentication_type  Indicates the type of authentication.
  * @param data_page  Allowed range is 0 - 4.
  * @param page_count  This field is only present for page 0. Allowed range is 0 - 5.
@@ -194,7 +194,7 @@ static inline uint16_t mavlink_msg_open_drone_id_authentication_encode_chan(uint
  *
  * @param target_system  System ID (0 for broadcast).
  * @param target_component  Component ID (0 for broadcast).
- * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @param id_or_mac  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  * @param authentication_type  Indicates the type of authentication.
  * @param data_page  Allowed range is 0 - 4.
  * @param page_count  This field is only present for page 0. Allowed range is 0 - 5.
@@ -313,7 +313,7 @@ static inline uint8_t mavlink_msg_open_drone_id_authentication_get_target_compon
 /**
  * @brief Get field id_or_mac from open_drone_id_authentication message
  *
- * @return  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html. 
+ * @return  Only used for drone ID data received from other UAs. See detailed description at https://mavlink.io/en/services/opendroneid.html.
  */
 static inline uint16_t mavlink_msg_open_drone_id_authentication_get_id_or_mac(const mavlink_message_t* msg, uint8_t *id_or_mac)
 {
