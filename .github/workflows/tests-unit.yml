@@ -6,7 +6,7 @@ env:
   CODECHECK_PY_VER: 3.8
 
 jobs:
-  codecheck:
+  unit-tests:
     name: Code check
     runs-on: ubuntu-latest
     steps:
@@ -18,10 +18,15 @@ jobs:
           python-version: ${{ env.CODECHECK_PY_VER }}
       - name: Smoke tests
         run: |
-          pip3 install -r requirements.txt && \
-          pip3 install pytest && \
+          pip3 install -r requirements.txt -r tests/requirements.txt && \
+          pip3 install codecov && \
           PYTHONPATH=. python3 -m birdseye.baseline --help \
           PYTHONPATH=. python3 -m birdseye.dqn --help && \
           PYTHONPATH=. python3 -m birdseye.mcts --help && \
           PYTHONPATH=. python3 ./run_birdseye.py -h && \
-          PYTHONPATH=. pytest test/
+          PYTHONPATH=. pytest tests/ && \
+          PATH=/home/runner/.local/bin:$PATH coverage report && \
+          PATH=/home/runner/.local/bin:$PATH coverage xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3.1.0
+        if: github.repository == 'iqtlabs/birdseye'

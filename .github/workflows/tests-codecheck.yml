@@ -19,14 +19,7 @@ jobs:
       - name: Run pytype
         run: |
           pip3 install -r requirements.txt -r tests/requirements.txt && \
-          pip3 install codecov && \
           export PYTHONPATH=$PWD/birdseye:$PYTHONPATH && \
           pylint --fail-under=5 *py tests/*py birdseye/*py && pytype && \
           pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye *py telemetry-data/*/*py
-          PATH=/home/runner/.local/bin:$PATH py.test -v -vv --cov-report term-missing --cov=. --cov=birdseye -c .coveragerc && \
-          PATH=/home/runner/.local/bin:$PATH coverage report && \
-          PATH=/home/runner/.local/bin:$PATH coverage xml
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3.1.0
-        if: github.repository == 'iqtlabs/birdseye'
 
