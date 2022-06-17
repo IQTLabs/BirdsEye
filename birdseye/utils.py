@@ -418,7 +418,6 @@ class Results:
             self.openstreetmap.set_origin(data['position'])
             self.transform = np.array([self.openstreetmap.origin[0], self.openstreetmap.origin[1]])
 
-
         self.time_step = time_step
         self.pf_stats['mean_hypothesis'].append(env.pf.mean_hypothesis if hasattr(env.pf, 'mean_hypothesis') else [None])
         self.pf_stats['map_hypothesis'].append(env.pf.map_hypothesis if hasattr(env.pf, 'map_hypothesis') else [None])
@@ -441,7 +440,8 @@ class Results:
         ax.clear()
         if self.openstreetmap is not None:
             self.openstreetmap.plot_map(axis1=ax)
-        ax.set_title('Time = {}'.format(time_step))
+        # TODO get variables
+        ax.set_title('Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}'.format(time_step, None, None, None))
 
         color_array = [['salmon','darkred', 'red'],['lightskyblue','darkblue','blue']]
         lines = [] # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
