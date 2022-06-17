@@ -24,7 +24,7 @@ jobs:
           PYTHONPATH=. python3 -m birdseye.dqn --help && \
           PYTHONPATH=. python3 -m birdseye.mcts --help && \
           PYTHONPATH=. python3 ./run_birdseye.py -h && \
-          PYTHONPATH=. pytest tests/ && \
+          PYTHONPATH=. pytest -v -vv --cov-report term-missing --cov=. --cov=birdseye -c .coveragerc && \
           PATH=/home/runner/.local/bin:$PATH coverage report && \
           PATH=/home/runner/.local/bin:$PATH coverage xml
       - name: Upload coverage to Codecov
