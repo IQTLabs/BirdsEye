@@ -36,7 +36,14 @@ class GamutRFSensor(birdseye.sensor.SingleRSSI):
     GamutRF Sensor
     """
 
-    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None, threshold=-120, data={}):
+    def __init__(self,
+                 antenna_filename=None,
+                 power_tx=26,
+                 directivity_tx=1,
+                 freq=5.7e9,
+                 fading_sigma=None,
+                 threshold=-120,
+                 data={}):
         super().__init__(antenna_filename=antenna_filename, power_tx=power_tx,
                          directivity_tx=directivity_tx, f=f, fading_sigma=fading_sigma)
         self.threshold = threshold
@@ -192,9 +199,9 @@ class SigScan:
                 client.on_message = self.on_message
                 client.connect(mqtt_host, mqtt_port, 60)
                 client.loop_start()
-            except Exception as e:
+            except Exception as err:
                 logging.error(
-                    f'Unable to connect to MQTT host {mqtt_host}:{mqtt_port} because: {e}. Quitting.')
+                    f'Unable to connect to MQTT host {mqtt_host}:{mqtt_port} because: {err}.')
                 sys.exit(1)
         else:
             with open(replay_file, 'r', encoding='UTF-8') as open_file:
@@ -219,7 +226,7 @@ class SigScan:
             antenna_filename=antenna_filename,
             power_tx=power_tx,
             directivity_tx=directivity_tx,
-            f=freq,
+            freq=freq,
             fading_sigma=fading_sigma,
             threshold=threshold,
             data=self.data)  # fading sigm = 8dB, threshold = -120dB

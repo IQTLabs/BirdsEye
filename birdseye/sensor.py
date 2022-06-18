@@ -70,11 +70,11 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fadin
     return power_rx
 
 
-def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
+def dist_from_rssi(rssi_val, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
     """
     Calculate distance between receiver and transmitter based on RSSI.
     """
-    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi -
+    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi_val -
                      (20*np.log10(f)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
     return distance
 
@@ -229,14 +229,14 @@ class SingleRSSI(Sensor):
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
 
-    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
+    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, freq=5.7e9, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename)
         self.std_dev = 15
 
         self.power_tx = power_tx
         self.directivity_tx = directivity_tx
-        self.f = f
+        self.f = freq
 
         self.fading_sigma = fading_sigma
         if self.fading_sigma:

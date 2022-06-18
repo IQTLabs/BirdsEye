@@ -14,7 +14,7 @@ from datetime import datetime
 
 import numpy as np
 import torch.distributions
-import torch.nn as nn
+from torch import nn
 from torch.nn.functional import log_softmax
 from torch.nn.functional import softmax
 from torch.optim import Adam
@@ -305,7 +305,7 @@ def run_dqn(env, config, global_start_time):
 
         if save_interval and n_iter % save_interval == 0:
             torch.save([qnet.state_dict(), optimizer.state_dict()],
-                       os.path.join(save_path, '{}_{}.checkpoint'.format(global_start_time, n_iter)))
+                       os.path.join(save_path, f'{global_start_time}_{n_iter}.checkpoint'))
 
         if eval_interval and n_iter % eval_interval == 0:
             evaluate(env, qnet, max_episode_length, device, ob_scale, results)
@@ -470,7 +470,7 @@ def _generate(device, env, qnet, ob_scale,
             }
         # return data and update observation
         yield (o, [a], [r], o_, [int(done)], infos)
-        infos = dict()
+        infos = {}
         o = o_ if not done else env.reset()
 
         if info['episode']['l'] > max_episode_length:

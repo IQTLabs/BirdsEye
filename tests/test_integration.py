@@ -40,7 +40,7 @@ class BirdsEyeIntegrationTest(unittest.TestCase):
     def test_integration(self):
         with tempfile.TemporaryDirectory() as tempdir:
             config_file = os.path.join(tempdir, 'config.yaml')
-            with open(config_file, 'w') as file:
+            with open(config_file, 'w', encoding='UTF-8') as file:
                 file.write(TEST_CONFIG)
             fake_args = FakeArgs(config_file)
             run_birdseye(args=fake_args)

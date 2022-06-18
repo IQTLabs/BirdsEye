@@ -40,7 +40,11 @@ class RFMultiEnv:
             new_p = []
             for t in range(self.state.n_targets):
                 new_p += self.state.update_state(
-                    p[4*t:4*(t+1)], control=control, distance=distance, course=course, heading=heading)
+                    p[4*t:4*(t+1)],
+                    control=control,
+                    distance=distance,
+                    course=course,
+                    heading=heading)
             #new_p = np.array([self.state.update_state(target_state, control) for target_state in p])
             updated_particles.append(new_p)
         return np.array(updated_particles)
