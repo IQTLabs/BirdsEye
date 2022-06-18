@@ -6,8 +6,6 @@ These functions are adapted from github.com/Officium/RL-Experiments
 Logger singleton wrapper
 Default logger folder is `os.path.join(__file__, '..', '..', 'logs')`
 """
-
-
 import logging.handlers
 import os
 __all__ = ['init_logger']

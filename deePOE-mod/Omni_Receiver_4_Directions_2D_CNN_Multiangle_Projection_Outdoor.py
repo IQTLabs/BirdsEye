@@ -4,43 +4,61 @@
 #         Author: Debashri Roy                              #
 #############################################################
 ############ IMPORTING NECESSARY PACKAGES ################
-from keras.layers.core import Reshape, Dense, Dropout, Activation, Flatten
-import random
-import os
-from keras import backend as K
-from mpl_toolkits.mplot3d import Axes3D
-import pandas as pd
-from sklearn.linear_model import LinearRegression
-import scipy
 import itertools
-import keras
-import matplotlib.pyplot as plt
-import matplotlib
-from tensorflow.keras.optimizers import SGD
-from keras.utils.np_utils import to_categorical
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import classification_report
-from keras.layers import GRU, RNN, SimpleRNN, LSTM, GRUCell, SimpleRNNCell, LSTMCell
-from tensorflow.keras.layers import BatchNormalization
-from keras.layers.advanced_activations import LeakyReLU, PReLU
-from sklearn.preprocessing import StandardScaler
-from sklearn import preprocessing
-from keras.callbacks import ReduceLROnPlateau, ModelCheckpoint
-from tensorflow.keras.optimizers import RMSprop
-from keras.layers.convolutional_recurrent import ConvLSTM2D
-from keras.regularizers import *
-from keras.layers.convolutional import Conv2D, Conv1D, Convolution2D, MaxPooling2D, ZeroPadding2D, Convolution1D
-from keras.layers.noise import GaussianNoise
-from keras.layers import Embedding
-from keras.models import Sequential
-import keras.models as models
-from keras.utils import np_utils
-from array import array
-from sklearn.model_selection import train_test_split
-import tensorflow as tf
+import os
+import random
 import sys  # Package to get command line arguments
 import time  # Package is for computing execution time
+from array import array
+
+import keras
+import keras.models as models
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np  # Package for numerical computation
+import pandas as pd
+import scipy
+import tensorflow as tf
+from keras import backend as K
+from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ReduceLROnPlateau
+from keras.layers import Embedding
+from keras.layers import GRU
+from keras.layers import GRUCell
+from keras.layers import LSTM
+from keras.layers import LSTMCell
+from keras.layers import RNN
+from keras.layers import SimpleRNN
+from keras.layers import SimpleRNNCell
+from keras.layers.advanced_activations import LeakyReLU
+from keras.layers.advanced_activations import PReLU
+from keras.layers.convolutional import Conv1D
+from keras.layers.convolutional import Conv2D
+from keras.layers.convolutional import Convolution1D
+from keras.layers.convolutional import Convolution2D
+from keras.layers.convolutional import MaxPooling2D
+from keras.layers.convolutional import ZeroPadding2D
+from keras.layers.convolutional_recurrent import ConvLSTM2D
+from keras.layers.core import Activation
+from keras.layers.core import Dense
+from keras.layers.core import Dropout
+from keras.layers.core import Flatten
+from keras.layers.core import Reshape
+from keras.layers.noise import GaussianNoise
+from keras.models import Sequential
+from keras.regularizers import *
+from keras.utils import np_utils
+from keras.utils.np_utils import to_categorical
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn import preprocessing
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.optimizers import RMSprop
+from tensorflow.keras.optimizers import SGD
 np.set_printoptions(threshold=np.inf)  # To print each elements
 
 #   by setting env variables before Keras import you can set up which backend
