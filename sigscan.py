@@ -104,13 +104,12 @@ class SigScan:
         json_data = json.loads(json_message.payload)
         self.data_handler(json_data)
 
-    def on_connect(self, client, userdata, flags, rc):
+    def on_connect(self, client, userdata, flags, result_code):
         """
         Subscribe to MQTT channel
         """
         sub_channel = 'gamutrf/rssi'
-        logging.info('Connected to {} with result code {}'.format(
-            sub_channel, str(rc)))
+        logging.info(f'Connected to {sub_channel} with result code {result_code}')
         client.subscribe(sub_channel)
 
     def run_flask(self, flask_host, flask_port, fig, results):
@@ -136,7 +135,7 @@ class SigScan:
 
             logging.debug('=======================================')
             logging.debug('Flask Timing')
-            logging.debug('time step = ', results.time_step)
+            logging.debug(f'time step = {results.time_step}')
             logging.debug('buffer size = {:.2f} MB'.format(
                 len(buf.getbuffer())/1e6))
             logging.debug('Duration = {:.4f} s'.format(
@@ -198,7 +197,7 @@ class SigScan:
                     f'Unable to connect to MQTT host {mqtt_host}:{mqtt_port} because: {e}. Quitting.')
                 sys.exit(1)
         else:
-            with open(replay_file, 'r') as open_file:
+            with open(replay_file, 'r', encoding='UTF-8') as open_file:
                 replay_data = json.load(open_file)
                 replay_ts = sorted(replay_data.keys())
 
@@ -295,7 +294,7 @@ class SigScan:
             particle_save_end = timer()
 
             data_start = timer()
-            with open('{}/birdseye-{}.log'.format(results.logdir, global_start_time), 'a') as outfile:
+            with open(f'{results.logdir}/birdseye-{global_start_time}.log', 'a', encoding='UTF-8') as outfile:
                 json.dump(self.data, outfile)
                 outfile.write('\n')
             data_end = timer()
