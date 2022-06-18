@@ -23,6 +23,4 @@ def get_method(method_name=''):
     if method_name in AVAIL_METHODS:
         method = AVAIL_METHODS[method_name]
         return method
-    else:
-        raise ValueError('Invalid method name, {}, entered. Must be '
-                         'in {}'.format(method_name, AVAIL_METHODS.keys()))
+    raise ValueError(f'Invalid method name, {method_name}, entered. Must be in {AVAIL_METHODS.keys()}')

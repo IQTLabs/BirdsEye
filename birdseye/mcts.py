@@ -3,12 +3,11 @@ import configparser
 from datetime import datetime
 from types import SimpleNamespace
 
-from .actions import *
-from .definitions import *
+from .actions import SimpleActions
 from .env import RFEnv
-from .mcts_utils import *
-from .sensor import *
-from .state import *
+from .mcts_utils import mcts_trial
+from .sensor import Drone
+from .state import RFState
 from .utils import Results
 from .utils import write_header_log
 
@@ -102,11 +101,11 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         mcts_loss = result[7][-1]
         print('.')
         print('\n==============================')
-        print('Runs: {}'.format(i))
-        print('SIMULATIONS: {}'.format(simulations))
-        print('MCTS Depth {} Results'.format(DEPTH))
-        print('Collision Rate: {}'.format(mcts_coll/i))
-        print('Loss Rate: {}'.format(mcts_loss/i))
+        print(f'Runs: {i}')
+        print(f'SIMULATIONS: {simulations}')
+        print(f'MCTS Depth {DEPTH} Results')
+        print(f'Collision Rate: {mcts_coll/i}')
+        print(f'Loss Rate: {mcts_loss/i}')
         print('==============================')
 
         # Saving results to CSV file
@@ -121,8 +120,7 @@ def mcts(args=None, env=None):
     config = None
 
     if args:
-        # pytype: disable=wrong-arg-types
-        config = configparser.ConfigParser(defaults)
+        config = configparser.ConfigParser(defaults)  # pytype: disable=wrong-arg-types
         config.read_dict({section: dict(args[section])
                          for section in args.sections()})
         defaults = dict(config.items('Defaults'))

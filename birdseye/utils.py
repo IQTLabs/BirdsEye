@@ -2,6 +2,7 @@
 import configparser
 import json
 import math
+import os
 from collections import defaultdict
 from io import BytesIO
 from itertools import permutations
@@ -16,7 +17,7 @@ import requests
 from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
 
-from .definitions import *
+from .definitions import RUN_DIR
 
 ##################################################################
 # Particle Filter helper functions
@@ -1302,18 +1303,15 @@ def write_header_log(config, method, global_start_time):
         config2log = dict(config)
 
     # write output header
-    run_dir = RUN_DIR
-    if not os.path.isdir('{}/{}/'.format(RUN_DIR, method)):
-        os.makedirs('{}/{}/'.format(RUN_DIR, method))
-    header_filename = '{}/{}/{}_header.txt'.format(
-        RUN_DIR, method, global_start_time)
-    with open(header_filename, 'w') as f:
+    if not os.path.isdir(f'{RUN_DIR}/{method}/'):
+        os.makedirs(f'{RUN_DIR}/{method}/')
+    header_filename = f'{RUN_DIR}/{method}/{global_start_time}_header.txt'
+    with open(header_filename, 'w', encoding='UTF-8') as f:
         f.write(json.dumps(config2log))
 
 
 def read_header_log(filename):
-
-    with open(filename) as f:
+    with open(filename, 'r', encoding='UTF-8') as f:
         config = json.load(f)
     return config
 

@@ -32,7 +32,7 @@ class Sensor:
 
 def get_radiation_pattern(antenna_filename=None):
     radiation_pattern = []
-    with open(antenna_filename, newline='') as csvfile:
+    with open(antenna_filename, newline='', encoding='UTF-8') as csvfile:
         reader = csv.reader(csvfile, delimiter='\n')
         for row in reader:
             radiation_pattern.append(float(row[0]))
@@ -70,11 +70,11 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fadin
     return power_rx
 
 
-def dist_from_rssi(rssi, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
+def dist_from_rssi(rssi_val, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
     """
     Calculate distance between receiver and transmitter based on RSSI.
     """
-    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi -
+    distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi_val -
                      (20*np.log10(f)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
     return distance
 
@@ -229,14 +229,14 @@ class SingleRSSI(Sensor):
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
 
-    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
+    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, freq=5.7e9, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename)
         self.std_dev = 15
 
         self.power_tx = power_tx
         self.directivity_tx = directivity_tx
-        self.f = f
+        self.f = freq
 
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
@@ -386,8 +386,7 @@ class Drone(Sensor):
         elif obs == 0:
             obs_weight *= 1-self.obs1_prob(state)
         else:
-            raise ValueError('Observation number ({}) outside acceptable int values: 0-{}'
-                             .format(obs, self.num_avail_obs-1))
+            raise ValueError(f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
 
         return obs_weight
 
@@ -449,24 +448,26 @@ class Bearing(Sensor):
         elif obs == 3:
             obs_weight *= self.obs3(state)
         else:
-            raise ValueError('Observation number ({}) outside acceptable int values: 0-{}'
-                             .format(obs, self.num_avail_obs-1))
+            raise ValueError(f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
 
         return obs_weight
 
     def acceptance(self, state):
         return 1.
 
-    # samples observation given state
     def observation(self, state):
+        """
+        Samples observation given state
+        """
         weights = [self.obs0(state), self.obs1(
             state), self.obs2(state), self.obs3(state)]
         obsers = [0, 1, 2, 3]
         return random.choices(obsers, weights)[0]
 
-    # sample state from observation
     def gen_state(self, obs):
-
+        """
+        Sample state from observation
+        """
         if obs == 0:
             bearing = random.randint(-60, 60)
         elif obs == 1:

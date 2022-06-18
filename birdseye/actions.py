@@ -54,14 +54,13 @@ class Actions:
     def print_action_info(self):
         print('Available Actions:')
         print('  ID, Values')
-        for ai in zip(self.get_action_list(), self.avail_actions()):
-            print('   {}   {}'.format(ai[0], ai[1]))
-
-# Human walking action space
+        for action_info in zip(self.get_action_list(), self.avail_actions()):
+            print(f'   {action_info[0]}   {action_info[1]}')
 
 
 class WalkingActions(Actions):
-    """WalkingActions for a human walking
+    """
+    WalkingActions for a human walking
     """
 
     def __init__(self):
@@ -135,6 +134,5 @@ def get_action(action_name=''):
     if action_name in AVAIL_ACTIONS:
         action_obj = AVAIL_ACTIONS[action_name]
         return action_obj
-    else:
-        raise ValueError('Invalid action method name, {}, entered. Must be '
-                         'in {}'.format(action_name, AVAIL_ACTIONS.keys()))
+    raise ValueError(f'Invalid action method name, {action_name}, entered. Must be '
+                     'in {AVAIL_ACTIONS.keys()}')

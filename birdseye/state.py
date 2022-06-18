@@ -521,7 +521,7 @@ class RFState(State):
         state_range = state[0]
 
         if action_idx is not None:  # returns reward as a function of range, action, and action penalty
-            if (1 < action_idx < 4):
+            if 1 < action_idx < 4:
                 action_penalty = 0
 
             if state_range >= 150:
