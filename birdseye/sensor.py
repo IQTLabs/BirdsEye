@@ -449,24 +449,26 @@ class Bearing(Sensor):
         elif obs == 3:
             obs_weight *= self.obs3(state)
         else:
-            raise ValueError('Observation number ({}) outside acceptable int values: 0-{}'
-                             .format(obs, self.num_avail_obs-1))
+            raise ValueError(f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
 
         return obs_weight
 
     def acceptance(self, state):
         return 1.
 
-    # samples observation given state
     def observation(self, state):
+        """
+        Samples observation given state
+        """
         weights = [self.obs0(state), self.obs1(
             state), self.obs2(state), self.obs3(state)]
         obsers = [0, 1, 2, 3]
         return random.choices(obsers, weights)[0]
 
-    # sample state from observation
     def gen_state(self, obs):
-
+        """
+        Sample state from observation
+        """
         if obs == 0:
             bearing = random.randint(-60, 60)
         elif obs == 1:
