@@ -121,7 +121,7 @@ def mcts(args=None, env=None):
     config = None
 
     if args:
-        config = configparser.ConfigParser(defaults)
+        config = configparser.ConfigParser(defaults)  # pytype: disable=wrong-arg-types
         config.read_dict({section: dict(args[section])
                          for section in args.sections()})
         defaults = dict(config.items('Defaults'))
