@@ -32,7 +32,7 @@ class Sensor:
 
 def get_radiation_pattern(antenna_filename=None):
     radiation_pattern = []
-    with open(antenna_filename, newline='') as csvfile:
+    with open(antenna_filename, newline='', encoding='UTF-8') as csvfile:
         reader = csv.reader(csvfile, delimiter='\n')
         for row in reader:
             radiation_pattern.append(float(row[0]))
@@ -386,8 +386,7 @@ class Drone(Sensor):
         elif obs == 0:
             obs_weight *= 1-self.obs1_prob(state)
         else:
-            raise ValueError('Observation number ({}) outside acceptable int values: 0-{}'
-                             .format(obs, self.num_avail_obs-1))
+            raise ValueError(f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
 
         return obs_weight
 

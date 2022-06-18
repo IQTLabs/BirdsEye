@@ -1,4 +1,3 @@
-# results.py
 import re
 from datetime import datetime
 
@@ -6,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .definitions import *
+from .definitions import RUN_DIR
 from .utils import read_header_log
 
 
