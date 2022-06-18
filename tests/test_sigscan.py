@@ -2,4 +2,5 @@ from sigscan import SigScan
 
 
 def test_sigscan():
-    instance = SigScan()
+    instance = SigScan(config_path='tests/test_sigscan_config.ini')
+    instance.main()
