@@ -3,10 +3,10 @@ from pfilter import ParticleFilter
 from pfilter import systematic_resample
 from scipy.ndimage.filters import gaussian_filter
 
+from .pfrnn.pfrnn import pfrnn
 from .utils import particle_swap
 from .utils import particles_mean_belief
 from .utils import pol2cart
-from birdseye.pfrnn.pfrnn import pfrnn
 
 
 class RFMultiEnv:
@@ -25,6 +25,7 @@ class RFMultiEnv:
 
         self.last_observation = None
         self.pf = None
+        self.iters = 0
 
     def dynamics(self, particles, control=None, distance=None, course=None, heading=None, **kwargs):
         """Helper function for particle filter dynamics

@@ -2,6 +2,7 @@
 import configparser
 import json
 import math
+import os
 from collections import defaultdict
 from io import BytesIO
 from itertools import permutations
@@ -16,7 +17,7 @@ import requests
 from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
 
-from .definitions import *
+from .definitions import RUN_DIR
 
 ##################################################################
 # Particle Filter helper functions

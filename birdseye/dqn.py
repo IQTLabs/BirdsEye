@@ -19,8 +19,7 @@ from torch.nn.functional import log_softmax
 from torch.nn.functional import softmax
 from torch.optim import Adam
 
-from .actions import *
-from .definitions import *
+from .actions import SimpleActions
 from .env import RFEnv
 from .rl_common.logger import close_logger
 from .rl_common.logger import init_logger
@@ -28,8 +27,8 @@ from .rl_common.models import SmallRFPFQnet
 from .rl_common.replay_buffer import PrioritizedReplayBuffer
 from .rl_common.replay_buffer import ReplayBuffer
 from .rl_common.util import scale_ob
-from .sensor import *
-from .state import *
+from .sensor import Drone
+from .state import RFState
 from .utils import Results
 from .utils import tracking_error
 from .utils import write_header_log
