@@ -45,7 +45,7 @@ class GamutRFSensor(birdseye.sensor.SingleRSSI):
                  threshold=-120,
                  data={}):
         super().__init__(antenna_filename=antenna_filename, power_tx=power_tx,
-                         directivity_tx=directivity_tx, f=f, fading_sigma=fading_sigma)
+                         directivity_tx=directivity_tx, freq=freq, fading_sigma=fading_sigma)
         self.threshold = threshold
         self.data = data
 
@@ -173,7 +173,7 @@ class SigScan:
         planner_method = self.config.get('planner_method', 'dqn')
         power_tx = float(self.config.get('power_tx', str(26)))
         directivity_tx = float(self.config.get('directivity_tx', str(1)))
-        freq = float(self.config.get('f', str(5.7e9)))
+        freq = float(self.config.get('freq', str(5.7e9)))
         fading_sigma = float(self.config.get('fading_sigma', str(8)))
         threshold = float(self.config.get('threshold', str(-120)))
         reward_func = self.config.get('reward', 'heuristic_reward')
