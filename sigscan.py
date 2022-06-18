@@ -2,9 +2,8 @@ import base64
 import configparser
 import json
 import logging
-import threading
-import time
 import sys
+import threading
 from datetime import datetime
 from io import BytesIO
 from timeit import default_timer as timer
@@ -36,6 +35,7 @@ class GamutRFSensor(birdseye.sensor.SingleRSSI):
     """
     GamutRF Sensor
     """
+
     def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None, threshold=-120, data={}):
         super().__init__(antenna_filename=antenna_filename, power_tx=power_tx,
                          directivity_tx=directivity_tx, f=f, fading_sigma=fading_sigma)
@@ -78,23 +78,24 @@ class SigScan:
 
         self.data['rssi'] = message_data.get('rssi', None)
         self.data['position'] = message_data.get('position', None)
-        self.data['course'] = get_bearing(self.data['previous_position'], self.data['position'])
+        self.data['course'] = get_bearing(
+            self.data['previous_position'], self.data['position'])
         self.data['bearing'] = -float(message_data.get('bearing', None)) + \
-            90 if is_float(message_data.get('bearing', None)) else self.data['course']
+            90 if is_float(message_data.get('bearing', None)
+                           ) else self.data['course']
         self.data['distance'] = get_distance(
             self.data['previous_position'], self.data['position'])
         delta_bearing = (self.data['bearing'] - self.data['previous_bearing']
                          ) if self.data['bearing'] and self.data['previous_bearing'] else None
         self.data['action_taken'] = (delta_bearing, self.data['distance']
-                                ) if delta_bearing and self.data['distance'] else (0, 0)
+                                     ) if delta_bearing and self.data['distance'] else (0, 0)
 
         self.data['drone_position'] = message_data.get('drone_position', None)
         if self.data['drone_position']:
             self.data['drone_position'] = [self.data['drone_position']
-                                      [1], self.data['drone_position'][0]]  # swap lon,lat
+                                           [1], self.data['drone_position'][0]]  # swap lon,lat
 
         self.data['needs_processing'] = True
-
 
     def on_message(self, client, userdata, json_message):
         """
@@ -103,15 +104,14 @@ class SigScan:
         json_data = json.loads(json_message.payload)
         self.data_handler(json_data)
 
-
     def on_connect(self, client, userdata, flags, rc):
         """
         Subscribe to MQTT channel
         """
         sub_channel = 'gamutrf/rssi'
-        logging.info('Connected to {} with result code {}'.format(sub_channel, str(rc)))
+        logging.info('Connected to {} with result code {}'.format(
+            sub_channel, str(rc)))
         client.subscribe(sub_channel)
-
 
     def run_flask(self, flask_host, flask_port, fig, results):
         """
@@ -137,7 +137,8 @@ class SigScan:
             logging.debug('=======================================')
             logging.debug('Flask Timing')
             logging.debug('time step = ', results.time_step)
-            logging.debug('buffer size = {:.2f} MB'.format(len(buf.getbuffer())/1e6))
+            logging.debug('buffer size = {:.2f} MB'.format(
+                len(buf.getbuffer())/1e6))
             logging.debug('Duration = {:.4f} s'.format(
                 flask_end_time - flask_start_time))
             logging.debug('=======================================')
@@ -147,7 +148,6 @@ class SigScan:
         port = flask_port
         threading.Thread(target=lambda: app.run(
             host=host_name, port=port, debug=True, use_reloader=False)).start()
-
 
     def main(self):
         """
@@ -194,7 +194,8 @@ class SigScan:
                 client.connect(mqtt_host, mqtt_port, 60)
                 client.loop_start()
             except Exception as e:
-                logging.error(f'Unable to connect to MQTT host {mqtt_host}:{mqtt_port} because: {e}. Quitting.')
+                logging.error(
+                    f'Unable to connect to MQTT host {mqtt_host}:{mqtt_port} because: {e}. Quitting.')
                 sys.exit(1)
         else:
             with open(replay_file, 'r') as open_file:
