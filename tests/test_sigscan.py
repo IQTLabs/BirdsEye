@@ -12,6 +12,8 @@ def test_sigscan():
     instance.main()
     instance = SigScan(config_path='tests/test_sigscan_config2.ini')
     instance.main()
+    instance = SigScan(config_path='tests/test_sigscan_config3.ini')
+    instance.main()
 
 
 def test_on_message():
