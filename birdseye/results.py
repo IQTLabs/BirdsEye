@@ -122,7 +122,6 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
             ############################
 
             # 3
-            #print('MCTS, {}, {}, inference time={:.2e}s'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], mcts_avg_inference_time))
             if timing:
                 print('MCTS inference time={:.2e}s'.format(
                     mcts_avg_inference_time))
@@ -159,7 +158,6 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
 
             lns += l3+l4
 
-            #print('DQN, {}, {}, inference time={:.2e}s'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], dqn_avg_inference_time))
             if timing:
                 print('DQN inference time={:.2e}s'.format(
                     dqn_avg_inference_time))
@@ -298,7 +296,7 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
             ax1.fill_between(np.arange(len(variance_med)),
                              variance_low, variance_high, alpha=0.2)
 
-    # plt caption
+        # plt caption
         print('DQN, {}, {}, inference time={:.2e}s'.format(
             sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], dqn_avg_inference_time))
 
@@ -392,7 +390,6 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
                                  r_low, r_high, alpha=0.2)
                 ax2.fill_between(np.arange(len(theta_med)),
                                  theta_low, theta_high, alpha=0.2)
-            #print('MCTS, {}, {}, inference time={:.2e}s'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], mcts_avg_inference_time))
             if timing:
                 print('MCTS inference time={:.2e}s'.format(
                     mcts_avg_inference_time))
@@ -439,7 +436,6 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
                                  r_low, r_high, alpha=0.2)
                 ax2.fill_between(np.arange(len(theta_med)),
                                  theta_low, theta_high, alpha=0.2)
-            #print('DQN, {}, {}, inference time={:.2e}s'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], dqn_avg_inference_time))
             if timing:
                 print('DQN inference time={:.2e}s'.format(
                     dqn_avg_inference_time))
@@ -450,7 +446,6 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
         print('======================================')
     ax1.margins(0)
 
-    #ax1.set_ylim(0, y_lim)
     ax1.set_xlabel('Time Step', fontsize=16)
     ax1.set_ylabel(r'$\sigma_{r}$ (m)', fontsize=24)
     ax2.set_ylabel(r'$\sigma_{\theta}$ (degrees)', fontsize=24)
@@ -526,8 +521,6 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
         if variance_bars:
             y_std = np.std(list(plot_data), axis=0)
             ax1.fill_between(np.arange(len(med)), low, high, alpha=0.2)
-        #print('run: {}'.format(r))
-        #print('MCTS, {}, {}, inference time={:.2e}s'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], mcts_avg_inference_time))
         print('MCTS inference time={:.2e}s'.format(mcts_avg_inference_time))
 
     for r in filtered_dqn_runs[-limit:]:
@@ -558,9 +551,7 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
             y_std = np.std(list(plot_data), axis=0)
             ax1.fill_between(np.arange(len(med)), low, high, alpha=0.2)
 
-    # plt caption
-        #print('run: {}'.format(r))
-        #print('DQN, {}, {}, inference time={:.2e}s'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], dqn_avg_inference_time))
+        # plt caption
         print('DQN inference time={:.2e}s'.format(dqn_avg_inference_time))
 
     print(
@@ -586,8 +577,6 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
     metric_str = {'centroid_err': 'Centroid Distance (m)'}
     metric_s = metric_str.get(metric, metric)
 
-    #mcts_config_filter = {'datetime_start': '2021-05-11T02:40:29', 'reward':reward, 'sensor':sensor,  'target_speed':1, 'target_start':['50','150']}
-    #dqn_config_filter = {'datetime_start': '2021-05-27T22:55:22', 'reward':reward, 'sensor':sensor, 'target_speed':1, 'target_start':['50','150']}
     mcts_config_filter = {}
     dqn_config_filter = {}
     mcts_config_filter.update(config)
@@ -605,7 +594,6 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
         get_config('dqn', r)['Methods']['target_start']), reverse=True)
 
     fig = plt.figure(figsize=(20, 6))
-    #fig.suptitle('{} & {}'.format(sensor_str[sensor], reward_str[reward]), fontsize=28)
     plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
 
     ax1 = plt.subplot(1, 3, 1)
@@ -630,8 +618,6 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
         ax3.plot(np.mean(list(plot_data), axis=0), '-',
                  label=r'MCTS, $r_0 \in [{},{}]$'.format(target_start-25, target_start+25))
 
-        #print('MCTS, {}, {}, target_start = {}'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], config['Methods']['target_start']))
-
     for r in sorted_filtered_dqn_runs:
         config = get_config('dqn', r)
         # print(r,'\n')
@@ -646,8 +632,6 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
             y, '-', label=r'$r_0 \in [{},{}]$'.format(target_start-25, target_start+25))
         ax3.plot(
             y, '--', label=r'DQN, $r_0 \in [{},{}]$'.format(target_start-25, target_start+25))
-
-        #print('DQN, {}, {}, target_start = {}'.format(sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], config['Methods']['target_start']))
 
     ax1.margins(0)
     ax1.set_ylim(0, 125)
@@ -669,8 +653,6 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
     ax3.set_ylabel('{}'.format(metric_s), fontsize=16)
     ax3.set_title('MCTS vs DQN', fontsize=20)
     ax3.legend(fontsize=10)
-    # plt.subplots_adjust(
-    #                hspace=0.4)
     plt.subplots_adjust(top=0.85)
     plt.suptitle('{} & {}'.format(sensor_str[sensor], reward_str[reward]))
 
@@ -701,8 +683,6 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
     #fig.suptitle('Sensor: {}, Reward: {}'.format(sensor, reward), fontsize=32)
 
     ax1 = plt.subplot(1, 1, 1)
-
-    #ax1.set_prop_cycle(color=['red','blue', 'magenta', 'green'])
 
     # red blue color scheme
     if limit == 1:
@@ -785,7 +765,7 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
             y_std = np.std(list(plot_data), axis=0)
             ax1.fill_between(np.arange(len(med)), low, high, alpha=0.5)
 
-    # plt caption
+        # plt caption
         print('DQN, {}, {}, inference time={:.2e}s'.format(
             sensor_str[config['Methods']['sensor']], reward_str[config['Methods']['reward']], dqn_avg_inference_time))
 
@@ -803,10 +783,12 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
     plt.show()
 
 
-# Results file reader functions
 def get_config(method_name, run_name):
+    """
+    Results file reader functions
+    """
     config = read_header_log(
-        '{}/{}/{}_header.txt'.format(RUN_DIR, method_name, run_name))
+        f'{RUN_DIR}/{method_name}/{run_name}_header.txt')
     config['Methods']['reward'] = config['Methods'].get(
         'reward', 'range_reward')
     return config
@@ -814,13 +796,11 @@ def get_config(method_name, run_name):
 
 def get_data(method_name, run_name):
     data = pd.read_csv(
-        '{}/{}/{}_data.csv'.format(RUN_DIR, method_name, run_name))
-    #append_metric_avgs(data, ['r_err', 'theta_err', 'heading_err', 'centroid_err', 'rmse'])
+        f'{RUN_DIR}/{method_name}/{run_name}_data.csv')
     return data
 
 
 def append_metric_avgs(df, metrics):
-
     for m in metrics:
         if ('avg_{}'.format(m) not in df) and ('average_{}'.format(m) not in df):
             df['avg_{}'.format(m)] = np.mean(list(df[m]), axis=1)
@@ -841,7 +821,6 @@ def get_valid_runs(method_name):
 
 
 def filter_runs(method_name, config_filter=None):
-
     runs = get_valid_runs(method_name)
 
     filtered_runs = []
@@ -911,11 +890,7 @@ def show_results():
     filtered_dqn_runs = filter_runs('dqn', config_filter)
     print(filtered_dqn_runs)
     print(dqn_runs)
-    # print(mcts_runs)
     run_name = '2021-04-21T09:46:52'
 
     config = get_config(method_name, run_name)
     data = get_data(method_name, run_name)
-
-    # print(config)
-    # print(data)
