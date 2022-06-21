@@ -386,7 +386,8 @@ class Drone(Sensor):
         elif obs == 0:
             obs_weight *= 1-self.obs1_prob(state)
         else:
-            raise ValueError(f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
+            raise ValueError(
+                f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
 
         return obs_weight
 
@@ -448,7 +449,8 @@ class Bearing(Sensor):
         elif obs == 3:
             obs_weight *= self.obs3(state)
         else:
-            raise ValueError(f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
+            raise ValueError(
+                f'Observation number ({obs}) outside acceptable int values: 0-{self.num_avail_obs-1}')
 
         return obs_weight
 

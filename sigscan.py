@@ -116,7 +116,8 @@ class SigScan:
         Subscribe to MQTT channel
         """
         sub_channel = 'gamutrf/rssi'
-        logging.info(f'Connected to {sub_channel} with result code {result_code}')
+        logging.info(
+            f'Connected to {sub_channel} with result code {result_code}')
         client.subscribe(sub_channel)
 
     def run_flask(self, flask_host, flask_port, fig, results):
@@ -210,7 +211,7 @@ class SigScan:
 
         # BirdsEye
         global_start_time = datetime.utcnow().timestamp()
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')  # pylint: disable=no-member
         results = birdseye.utils.Results(
             method_name=planner_method,
             global_start_time=global_start_time,
@@ -296,8 +297,8 @@ class SigScan:
             plot_end = timer()
 
             particle_save_start = timer()
-            np.save('{}/{}_particles.npy'.format(results.logdir,
-                    self.data['utc_time']), env.pf.particles)
+            np.save(
+                f'{results.logdir}/{self.data["utc_time"]}_particles.npy', env.pf.particles)
             particle_save_end = timer()
 
             data_start = timer()
