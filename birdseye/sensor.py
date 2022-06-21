@@ -49,7 +49,8 @@ def get_directivity(radiation_pattern, theta):
     return radiation_pattern[int(theta*180/np.pi) % len(radiation_pattern)]
 
 
-def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
+def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, freq=5.7e9,
+         fading_sigma=None):
     """
     Calculate the received signal strength at a receiver in dB
     """
@@ -59,7 +60,7 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fadin
         directivity_tx +
                (20*np.log10(speed_of_light/(4*np.pi))) +
         -20*np.log10(distance) +
-        -20*np.log10(f)
+        -20*np.log10(freq)
     )
     # fading
     if fading_sigma:
@@ -70,12 +71,13 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, f=5.7e9, fadin
     return power_rx
 
 
-def dist_from_rssi(rssi_val, directivity_rx, power_tx=10, directivity_tx=1, f=2.4e9):
+def dist_from_rssi(rssi_val, directivity_rx, power_tx=10, directivity_tx=1,
+                   freq=2.4e9):
     """
     Calculate distance between receiver and transmitter based on RSSI.
     """
     distance = 10 ^ ((power_tx + directivity_rx + directivity_tx - rssi_val -
-                     (20*np.log10(f)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
+                     (20*np.log10(freq)) + (20*np.log10(speed_of_light/(4*np.pi))))/20)
     return distance
 
 
@@ -92,14 +94,14 @@ class DoubleRSSILofi(Sensor):
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
 
-    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
-
+    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1,
+                 freq=5.7e9, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename)
         self.std_dev = 6
         self.power_tx = power_tx
         self.directivity_tx = directivity_tx
-        self.f = f
+        self.freq = freq
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
@@ -130,14 +132,12 @@ class DoubleRSSILofi(Sensor):
             (expected_rssi[:, 0] - expected_rssi[:, 1])
         observed_diff = multiplier * (observed_rssi[0] - observed_rssi[1])
         print('std = ', np.std(expected_diff))
-        # np.std(expected_diff)#(1e-11)/observed_diff # 3e-6 #observed_diff/10 #1e-5
         lofi_sigma = 0.7 * np.std(expected_diff)
         # Gaussian weighting function
         numerator = np.power(expected_diff - observed_diff, 2.)
         print('numerator = ', numerator)
         denominator = 2 * np.power(lofi_sigma, 2.)
         print('denominator = ', denominator)
-        # * (1/(lofi_sigma*np.sqrt(2*np.pi))) + 0.001
         weight = np.exp(- numerator / denominator) + 0.001
         #likelihood = np.prod(weight, axis=1)
         print('expect = ', expected_diff)
@@ -178,19 +178,9 @@ class DoubleRSSILofi(Sensor):
             likelihood = match + unsure + no_match
         return likelihood
 
-        # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
-        # expected_front_greater = expected_rssi[:,0] > expected_rssi[:,1]
-        # observed_rssi = obs[0]
-        # observed_front_greater = observed_rssi[0] > observed_rssi[1]
-        # match = 0.9 * (observed_front_greater == expected_front_greater)
-        # no_match = 0.1 * (observed_front_greater != expected_front_greater)
-        # likelihood = match+no_match
-        # return likelihood
-
     # samples observation given state
     def observation(self, state):
         # Calculate observation for multiple targets
-        # if len(state) > 1: #state.n_targets > 1:
         power_front = 0
         power_back = 0
         for ts in state:  # target_state, particle_state
@@ -201,26 +191,19 @@ class DoubleRSSILofi(Sensor):
                 self.radiation_pattern, theta_front)
             directivity_rx_back = get_directivity(
                 self.radiation_pattern, theta_back)
-            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx,
-                                       directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
-            power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx,
-                                      directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            power_front += dB_to_power(rssi(distance, directivity_rx_front,
+                                            power_tx=self.power_tx,
+                                            directivity_tx=self.directivity_tx,
+                                            freq=self.freq,
+                                            fading_sigma=self.fading_sigma))
+            power_back += dB_to_power(rssi(distance, directivity_rx_back,
+                                           power_tx=self.power_tx,
+                                           directivity_tx=self.directivity_tx,
+                                           freq=self.freq,
+                                           fading_sigma=self.fading_sigma))
         rssi_front = power_to_dB(power_front)
         rssi_back = power_to_dB(power_back)
-        #print('rssi_front = {}, rssi_back = {}'.format(rssi_front, rssi_back))
-        #rssi_front = power_front
-        #rssi_back = power_back
 
-        # if np.isnan([rssi_front, rssi_back]).any():
-        #     print([rssi_front, rssi_back])
-        #     print(state)
-        #     print('fading = ',self.fading_sigma)
-        #     print('distance = ',distance)
-        #     print('theta = ',theta_front)
-        #     print('directivity_rx_front = ',directivity_rx_front)
-        #     print('directivity_rx_b = ',directivity_rx_back)
-        #     print('power_fron = ',power_front)
-        #     print('power_back = ',power_back)
         return [rssi_front, rssi_back]
 
 
@@ -229,14 +212,15 @@ class SingleRSSI(Sensor):
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
 
-    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, freq=5.7e9, fading_sigma=None):
+    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1,
+                 freq=5.7e9, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename)
         self.std_dev = 15
 
         self.power_tx = power_tx
         self.directivity_tx = directivity_tx
-        self.f = freq
+        self.freq = freq
 
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
@@ -263,15 +247,17 @@ class SingleRSSI(Sensor):
             theta_front = ts[1] * np.pi / 180.0
             directivity_rx_front = get_directivity(
                 self.radiation_pattern, theta_front)
-            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx,
-                                       directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            power_front += dB_to_power(rssi(distance, directivity_rx_front,
+                                            power_tx=self.power_tx,
+                                            directivity_tx=self.directivity_tx,
+                                            freq=self.freq,
+                                            fading_sigma=self.fading_sigma))
         rssi_front = power_to_dB(power_front)
         return [rssi_front]
 
     # sample state from observation
     def gen_state(self, obs):
         r_dist = np.sqrt(1/obs)
-        # return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
         return [r_dist, random.randint(0, 359), random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
@@ -283,13 +269,14 @@ class DoubleRSSI(Sensor):
     Uses RSSI comparison from two opposite facing Yagi/directional antennas
     """
 
-    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9, fading_sigma=None):
+    def __init__(self, antenna_filename=None, power_tx=26, directivity_tx=1,
+                 freq=5.7e9, fading_sigma=None):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename)
         self.std_dev = 15
         self.power_tx = power_tx
         self.directivity_tx = directivity_tx
-        self.f = f
+        self.freq = freq
         self.fading_sigma = fading_sigma
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
@@ -317,10 +304,16 @@ class DoubleRSSI(Sensor):
                 self.radiation_pattern, theta_front)
             directivity_rx_back = get_directivity(
                 self.radiation_pattern, theta_back)
-            power_front += dB_to_power(rssi(distance, directivity_rx_front, power_tx=self.power_tx,
-                                       directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
-            power_back += dB_to_power(rssi(distance, directivity_rx_back, power_tx=self.power_tx,
-                                      directivity_tx=self.directivity_tx, f=self.f, fading_sigma=self.fading_sigma))
+            power_front += dB_to_power(rssi(distance, directivity_rx_front,
+                                            power_tx=self.power_tx,
+                                            directivity_tx=self.directivity_tx,
+                                            freq=self.freq,
+                                            fading_sigma=self.fading_sigma))
+            power_back += dB_to_power(rssi(distance, directivity_rx_back,
+                                           power_tx=self.power_tx,
+                                           directivity_tx=self.directivity_tx,
+                                           freq=self.freq,
+                                           fading_sigma=self.fading_sigma))
         rssi_front = power_to_dB(power_front)
         rssi_back = power_to_dB(power_back)
         return [rssi_front, rssi_back]
@@ -328,7 +321,6 @@ class DoubleRSSI(Sensor):
     # sample state from observation
     def gen_state(self, obs):
         r_dist = np.sqrt(1/obs)
-        # return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
         return [r_dist, random.randint(0, 359), random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
@@ -360,7 +352,6 @@ class SignalStrength(Sensor):
     # sample state from observation
     def gen_state(self, obs):
         r_dist = np.sqrt(1/obs)
-        # return [np.random.normal(r_dist, self.std_dev), random.randint(0,359), random.randint(0,11)*30, 1]
         return [r_dist, random.randint(0, 359), random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
@@ -542,9 +533,6 @@ class Bearing(Sensor):
 
 
 AVAIL_SENSORS = {
-    # 'bearing' : Bearing,
-    # 'drone' : Drone,
-    # 'signalstrength': SignalStrength,
     'doublerssi': DoubleRSSI,
     'doublerssilofi': DoubleRSSILofi,
     'singlerssi': SingleRSSI
