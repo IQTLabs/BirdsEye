@@ -20,5 +20,5 @@ jobs:
         run: |
           pip3 install -r requirements.txt -r tests/requirements.txt && \
           export PYTHONPATH=$PWD/birdseye:$PYTHONPATH && \
-          pylint --fail-under=6.5 *py tests/*py birdseye/*py && \
+          pylint --fail-under=7 *py tests/*py birdseye/*py && \
           pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye/*py *py telemetry-data/*/*py
