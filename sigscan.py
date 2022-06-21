@@ -325,6 +325,6 @@ class SigScan:
             results.save_gif('tracking')
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     instance = SigScan()
     instance.main()
