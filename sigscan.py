@@ -117,7 +117,7 @@ class SigScan:
         """
         sub_channel = 'gamutrf/rssi'
         logging.info(
-            f'Connected to {sub_channel} with result code {result_code}')
+            'Connected to %s with result code %s', sub_channel, str(result_code))
         client.subscribe(sub_channel)
 
     def run_flask(self, flask_host, flask_port, fig, results):
@@ -143,7 +143,7 @@ class SigScan:
 
             logging.debug('=======================================')
             logging.debug('Flask Timing')
-            logging.debug(f'time step = {results.time_step}')
+            logging.debug('time step = %s', str(results.time_step))
             logging.debug('buffer size = {:.2f} MB'.format(
                 len(buf.getbuffer())/1e6))
             logging.debug('Duration = {:.4f} s'.format(
@@ -202,7 +202,8 @@ class SigScan:
                 client.loop_start()
             except Exception as err:
                 logging.error(
-                    f'Unable to connect to MQTT host {mqtt_host}:{mqtt_port} because: {err}.')
+                    'Unable to connect to MQTT host %s:%s because: %s.',
+                    mqtt_host, str(mqtt_port), str(err))
                 sys.exit(1)
         else:
             with open(replay_file, 'r', encoding='UTF-8') as open_file:

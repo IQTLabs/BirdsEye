@@ -1,4 +1,6 @@
-# utils.py
+"""
+Particle Filter helper functions
+"""
 import configparser
 import json
 import math
@@ -19,10 +21,6 @@ from scipy.ndimage.filters import gaussian_filter
 
 from .definitions import RUN_DIR
 
-##################################################################
-# Particle Filter helper functions
-##################################################################
-
 
 def permute_particle(particle):
     return np.hstack((particle[4:], particle[:4]))
@@ -34,7 +32,6 @@ def particle_swap(env):
     n_targets = env.state.n_targets
     state_dim = 4
 
-    # print(env.pf.particles[0])
     # convert particles to cartesian
     for i in range(n_targets):
         x, y = pol2cart(particles[:, state_dim*i],
@@ -46,7 +43,6 @@ def particle_swap(env):
     k = 0
     while swapped and k < 10:
         k += 1
-        #print('k-means run')
         swapped = False
         for i in range(len(particles)):
             original_particle = np.copy(particles[i])
@@ -81,30 +77,30 @@ def particle_swap(env):
         particles[:, (state_dim*i)+1] = np.degrees(phi)
 
     env.pf.particles = particles
-    # print(env.pf.particles[0])
-
-##################################################################
-# Transforms
-##################################################################
 
 
 def pol2cart(rho, phi):
+    """
+    Transform polar to cartesian
+    """
     x = rho * np.cos(phi)
     y = rho * np.sin(phi)
     return(x, y)
 
 
 def cart2pol(x, y):
+    """
+    Transform cartesian to polar
+    """
     rho = np.sqrt(x**2 + y**2)
     phi = np.arctan2(y, x)
     return rho, phi
 
-##################################################################
-# helper functions for lat/lon
-##################################################################
-
 
 def get_distance(coord1, coord2):
+    """
+    Get the distance between two coordinates
+    """
     if (coord1 is None) or (coord2 is None):
         return None
 
@@ -130,6 +126,9 @@ def get_distance(coord1, coord2):
 
 
 def get_bearing(coord1, coord2):
+    """
+    Get the bearing of two coordinates
+    """
     if (coord1 is None) or (coord2 is None):
         return None
 
@@ -147,6 +146,9 @@ def get_bearing(coord1, coord2):
 
 
 def is_float(element):
+    """
+    Check if an element is a float or not
+    """
     try:
         float(element)
         return True
@@ -170,7 +172,6 @@ class GPSVis:
         :param map_path: Path to pre-downloaded OSM map in image format.
         :param bounds: Upper-left, and lower-right GPS points of the map (lat1, lon1, lat2, lon2).
         """
-        #self.data_path = data_path
         self.position = position
         self.map_path = map_path
         self.bounds = bounds
@@ -182,10 +183,8 @@ class GPSVis:
             self.TILE_SIZE = 256
             distance = 100
 
-            #coord = [45.598915, -122.679929]
             coord = self.position
 
-            #x, y = point_to_pixels(coord[0],coord[1], zoom)
             lat_dist = distance/111111
             lon_dist = distance / (111111 * np.cos(np.radians(coord[0])))
             top, bot = coord[0] + lat_dist, coord[0] - lat_dist
@@ -212,13 +211,7 @@ class GPSVis:
             fig, axis1 = plt.subplots(figsize=(10, 13))
 
         # Plot background map
-        # , extent=[-122.68450, -122.67505, 45.59494, 45.60311], aspect='auto')
         axis1.imshow(np.flipud(self.img), alpha=0.7, origin='lower')
-
-        # Plot points
-        # img_points = np.array(img_points)
-        # axis1.plot(img_points[:,0],img_points[:,1], marker='.', markersize=12, color='red', linestyle='None')
-        #axis1.plot(10, 10, marker='.', markersize=22, color='blue', linestyle='None')
 
         # Set axis dimensions, labels and tick marks
         axis1.set_xlim(0, int(self.width_meters))
@@ -250,9 +243,6 @@ class GPSVis:
 
     def create_image_from_position(self):
         URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'.format
-
-        # print('top, bottom',top,bot)
-        # print('left, right',lef,rgt)
 
         top, lef, bot, rgt = self.bounds
 
@@ -312,15 +302,6 @@ class GPSVis:
         img = img.resize((int(self.width_meters), int(self.height_meters)))
         print('background image size (pixels) = ', img.size)
 
-        # if self.data_path:
-        #     data = pd.read_csv(self.data_path, names=['LATITUDE', 'LONGITUDE'], sep=',')
-        #     gps_data = tuple(zip(data['LATITUDE'].values, data['LONGITUDE'].values))
-        #     print(self.result_image.size[0], self.result_image.size[1])
-        #     for d in gps_data:
-        #         x1, y1 = self.scale_to_img(d, (self.result_image.size[0], self.result_image.size[1]))
-        #         img_points.append((x1, y1))
-        #         print(x1,y1)
-
         return img
 
     def scale_to_img(self, lat_lon, w_h):
@@ -366,9 +347,6 @@ class GPSVis:
         self.x_ticks = list(self.x_ticks)
 
 
-##################################################################
-# Saving Results
-##################################################################
 class Results:
     '''
     Results class for saving run results
@@ -380,8 +358,8 @@ class Results:
         self.method_name = method_name
         self.global_start_time = global_start_time
         self.plotting = plotting
-        if type(self.plotting) != bool:
-            if self.plotting == 'true' or self.plotting == 'True':
+        if not isinstance(self.plotting, bool):
+            if self.plotting in ('true', 'True'):
                 self.plotting = True
             else:
                 self.plotting = False
@@ -389,12 +367,10 @@ class Results:
         self.plot_every_n = int(config.get('plot_every_n', 1))
         self.make_gif = config.get('make_gif', 'false').lower()
 
-        self.namefile = '{}/{}/{}_data.csv'.format(
-            RUN_DIR, method_name, global_start_time)
+        self.namefile = f'{RUN_DIR}/{method_name}/{global_start_time}_data.csv'
         self.plot_dir = config.get(
-            'plot_dir', '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time))
-        self.logdir = '{}/{}/{}_logs/'.format(RUN_DIR,
-                                              method_name, global_start_time)
+            'plot_dir', f'{RUN_DIR}/{method_name}/{global_start_time}')
+        self.logdir = f'{RUN_DIR}/{method_name}/{global_start_time}_logs/'
         if self.make_gif == 'true':
             Path(self.plot_dir+'/png/').mkdir(parents=True, exist_ok=True)
             Path(self.plot_dir+'/gif/').mkdir(parents=True, exist_ok=True)
@@ -419,8 +395,10 @@ class Results:
         if config:
             write_header_log(config, self.method_name, self.global_start_time)
 
-    # Save dataframe to CSV file
     def write_dataframe(self, run_data):
+        """
+        Save dataframe to CSV file
+        """
         if os.path.isfile(self.namefile):
             print('Updating file {}'.format(self.namefile))
         else:
@@ -436,12 +414,10 @@ class Results:
                 image = imageio.imread(self.plot_dir+'/png/'+png_filename)
                 writer.append_data(image)
 
-    ##################################################################
-    # Plotting
-    ##################################################################
-
     def live_plot(self, env, time_step=None, fig=None, ax=None, data=None):
-
+        """
+        Create a live plot
+        """
         if self.openstreetmap is None and data.get('position', None) is not None and data.get('bearing', None) is not None:
             self.openstreetmap = GPSVis(
                 position=data['position']
@@ -533,14 +509,6 @@ class Results:
                          color='blue', label='sensor', markersize=10, zorder=4)
         lines.extend([line4])
 
-        # if self.openstreetmap and data.get('position', None) is not None:
-        #     self.sensor_gps_hist.append(self.openstreetmap.scale_to_img(data['position'], (self.openstreetmap.width_meters,self.openstreetmap.height_meters)))
-        #     sensor_gps_hist_np = np.array(self.sensor_gps_hist)
-        #     if len(self.sensor_gps_hist) > 1:
-        #         ax.plot(sensor_gps_hist_np[:,0], sensor_gps_hist_np[:,1], linewidth=3.0, color='turquoise', zorder=3, markersize=4)
-        #     line5, = ax.plot(sensor_gps_hist_np[-1,0], sensor_gps_hist_np[-1,1], 'o', color='turquoise', markeredgecolor='black', label='sensor_gps', markersize=10, zorder=3)
-        #     lines.extend([line5])
-
         if self.openstreetmap and data.get('drone_position', None) is not None:
             self.target_hist.append(self.openstreetmap.scale_to_img(
                 data['drone_position'], (self.openstreetmap.width_meters, self.openstreetmap.height_meters)))
@@ -565,7 +533,6 @@ class Results:
             ax.set_ylim(min_map, max_map)
 
         # Sidebar Text
-
         # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
         actual_str = 'Actual\n'
         actual_str += 'Bearing = {:.0f} deg\n'.format(data.get(
@@ -573,7 +540,6 @@ class Results:
         actual_str += 'Speed = {:.2f} m/s'.format(data.get('action_taken', None)[
                                                   1]) if data.get('action_taken', None) else 'Speed = unknown\n'
 
-        #proposal_str = r'$\bf{Proposed}$''\n'
         proposal_str = 'Proposed\n'
         proposal_str += 'Bearing = {:.0f} deg\n'.format(data.get('action_proposal', None)[
                                                         0]) if None not in data.get('action_proposal', (None, None)) else 'Bearing = unknown\n'
@@ -583,7 +549,6 @@ class Results:
         last_mean_hyp = self.pf_stats['mean_hypothesis'][-1][0]
         last_map_hyp = self.pf_stats['map_hypothesis'][-1][0]
 
-        #rssi_str = r'$\bf{RSSI}$''\n'
         rssi_str = 'RSSI\n'
         rssi_str += 'Observed = {:.1f} dB\n'.format(
             env.last_observation) if env.last_observation else 'Observed = unknown\n'
@@ -636,16 +601,6 @@ class Results:
             abs_target = np.array(env.get_absolute_target())
         else:
             abs_target = None
-        # print('xp shape = ',xp.shape)
-        # print('belief shape = ',belief.shape)
-        # print('abs sensor shape = ',abs_sensor.shape)
-        # print('abs_target shape = ',abs_target.shape)
-        # print('abs_particles.shape = ',abs_particles.shape)
-
-        # textstr = '\n'.join((
-        # r'$\mathrm{Target 1 distance}=%.2f$' % (centroid_distance_error[0], ),
-        # r'$\mathrm{Target 2 distance}=%.2f$' % (centroid_distance_error[1], ),
-        # r'$\mathrm{Sum of distances}=%.2f$' % (np.sum(centroid_distance_error), )))
 
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
@@ -667,7 +622,6 @@ class Results:
         self.target_hist.append(abs_target)
         self.sensor_hist.append(abs_sensor)
 
-        #fig = plt.figure(figsize=(10*len(selected_plots), 10), dpi=100)
         plt.tight_layout()
         # Put space between plots
         plt.subplots_adjust(wspace=0.7, hspace=0.2)
@@ -688,7 +642,6 @@ class Results:
         yedges = np.arange(min_map, max_map+cell_size, cell_size)
 
         if 1 in selected_plots:
-            #####
             # Plot 1: Particle Plot (Polar)
             plot_count += 1
             if 1 not in axs:
@@ -699,27 +652,18 @@ class Results:
 
             for t in range(env.state.n_targets):
                 # plot particles
-                # np.radians(np.array([row[1] for row in belief]))
                 plot_theta = np.radians(belief[:, t, 1])
                 plot_r = belief[:, t, 0]  # [row[0] for row in belief]
 
-                #ax.plot(plot_theta, plot_r, 'o', markeredgecolor='black', zorder=1)
                 ax.plot(plot_theta, plot_r, 'o', color=color_array[t][0], markersize=4,
                         markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
 
                 # plot targets
                 plot_x_theta = np.radians(xp[t, 1])
                 plot_x_r = xp[t, 0]
-                #ax.plot(plot_x_theta, plot_x_r, 'X', markersize=10, zorder=2)
-                #ax.plot(plot_x_theta, plot_x_r, 'X', color=color_array[t][2], markeredgecolor='white', label='target', markersize=12, zorder=2)
-            ax.set_ylim(0, 300)
-            #ax.set_title('iteration {}'.format(time_step), fontsize=16)
-            # place a text box in upper left in axes coords
-            #ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-            #####
 
+            ax.set_ylim(0, 300)
         if 2 in selected_plots:
-            #####
             # Plot 2: Particle Plot (Polar) with Interpolation
             plot_count += 1
             if 2 not in axs:
@@ -730,7 +674,6 @@ class Results:
             for t in range(env.state.n_targets):
                 # Create grid values first via histogram.
                 nbins = 10
-                # np.radians(np.array([row[1] for row in belief]))
                 plot_theta = np.radians(belief[:, t, 1])
                 plot_r = belief[:, t, 0]  # [row[0] for row in belief]
                 counts, xbins, ybins = np.histogram2d(
@@ -745,19 +688,12 @@ class Results:
                 ax.plot(plot_x_theta, plot_x_r, 'X')
 
             ax.set_ylim(0, 300)
-            #ax.set_title('Interpolated Belief'.format(time_step), fontsize=16)
-            #####
-
         if 3 in selected_plots:
-            #####
             # Plot 3: Heatmap Plot (Cartesian)
             plot_count += 1
             if 3 not in axs:
                 axs[3] = fig.add_subplot(1, len(selected_plots), plot_count)
             ax = axs[3]
-
-            #ax2 = fig.add_subplot(1, len(selected_plots)+1, plot_count+1)
-            #axs = [ax, ax2]
 
             # COMBINED; UNCOMMENT AFTER PAPER PLOT
             all_particles_x, all_particles_y = [], []
@@ -770,14 +706,6 @@ class Results:
                 all_particles_x.extend(x)
                 all_particles_y.extend(y)
 
-                #xedges = np.arange(min_map, max_map,cell_size)
-                #yedges = np.arange(min_map, max_map,cell_size)
-                #heatmap, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
-                #heatmap = gaussian_filter(heatmap, sigma=8)
-                #extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-                #im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='jet')
-                # plt.colorbar(im)
-
             heatmap, xedges, yedges = np.histogram2d(
                 all_particles_x, all_particles_y, bins=(xedges, yedges))
             heatmap = gaussian_filter(heatmap, sigma=8)
@@ -787,47 +715,6 @@ class Results:
             plt.colorbar(im)
             ax.set_xlim(min_map, max_map)
             ax.set_ylim(min_map, max_map)
-            #ax.set_title('Particle heatmap (relative to sensor)')
-
-            # for t in range(env.state.n_targets):
-            #     cart  = np.array(list(map(pol2cart, belief[:,t,0], np.radians(belief[:,t,1]))))
-            #     x = cart[:,0]
-            #     y = cart[:,1]
-
-            #     heatmap, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
-            #     heatmap = gaussian_filter(heatmap, sigma=8)
-            #     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-            #     im  = axs[t].imshow(heatmap.T, extent=extent, origin='lower', cmap='jet')
-            #     #plt.colorbar(im)
-
-            #     axs[t].set_xlim(min_map, max_map)
-            #     axs[t].set_ylim(min_map, max_map)
-            #     axs[t].set_title('Particle heatmap (relative to sensor)')
-
-        # Plots 4 & 5: Absolute Particle/Sensor/Target Plot
-        # particles/centroid coordinates
-        # for t in range(env.state.n_targets):
-        #     print(abs_particles.shape)
-        #     print(abs_particles[:,0].shape)
-
-        #     particles_x, particles_y = pol2cart(abs_particles[:,0], np.radians(abs_particles[:,1]))
-        #     print(particles_x)
-        #     asdf
-        #     centroid_x = np.mean(particles_x)
-        #     centroid_y = np.mean(particles_y)
-        #     centroid_r, centroid_theta = cart2pol(centroid_x, centroid_y)
-        #     target_r, target_theta, target_x, target_y = [], [], [], []
-        #     for i in range(5):
-        #         target_r.append(self.abs_target_hist[10*(i+1)-1][0])
-        #         target_theta.append(np.radians(self.abs_target_hist[10*(i+1)-1][1]))
-        #     target_x, target_y = pol2cart(target_r, target_theta)
-
-        # sensor_r, sensor_theta, sensor_x, sensor_y  = [], [], [], []
-        # for i in range(5):
-        #     sensor_r.append(self.abs_sensor_hist[10*(i+1)-1][0])
-        #     sensor_theta.append(np.radians(self.abs_sensor_hist[10*(i+1)-1][1]))
-        # sensor_x, sensor_y = pol2cart(sensor_r, sensor_theta)
-
         if 4 in selected_plots:
             # Plot 4: Absolute Polar coordinates
             plot_count += 1
@@ -861,16 +748,10 @@ class Results:
 
                 line1, = ax.plot(np.radians(abs_particles[:, t, 1]), abs_particles[:, t, 0], 'o', color=color_array[t]
                                  [0], markersize=4, markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
-                #ax.plot(centroid_theta, centroid_r, '*', color=color_array[t][1],markeredgecolor='white', label='centroid', markersize=12, zorder=2)
                 if t == 0:
                     lines.extend([line0, line1])
                 else:
                     lines.extend([line0])
-
-                # for i in range(4):
-                #    ax.plot(target_theta[i], target_r[i], 'X', markersize=6, alpha=0.75, zorder=4)
-
-            #line4, = ax.plot(sensor_theta[4], sensor_r[4], 'H', color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
 
             if len(self.sensor_hist) > 1:
                 ax.plot(np.radians(np.array(self.sensor_hist)[:-1, 1]), np.array(self.sensor_hist)[
@@ -879,15 +760,9 @@ class Results:
             line4, = ax.plot(np.radians(self.sensor_hist[-1][1]), self.sensor_hist[-1][0], 'H',
                              color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
             lines.extend([line4])
-            # for i in range(4):
-            #    ax.plot(sensor_theta[i], sensor_r[i], 'bp', markersize=6, alpha=0.75, zorder=3)
-            # ax.legend()
             ax.legend(handles=lines, loc='center left', bbox_to_anchor=(
                 1.08, 0.5), fancybox=True, shadow=True,)
             ax.set_ylim(0, 250)
-
-            #ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
-
         if 5 in selected_plots:
             # Plot 5: Absolute Cartesian coordinates
             plot_count += 1
@@ -915,27 +790,11 @@ class Results:
                         self.abs_target_hist[10*(i+1)-1][t][1]))
                 target_x, target_y = pol2cart(target_r, target_theta)
 
-                # heatmap, xedges, yedges = np.histogram2d(particles_x, particles_y, bins=(xedges, yedges))
-                # heatmap = gaussian_filter(heatmap, sigma=16)
-                # if heatmap_combined is None:
-                #     heatmap_combined = heatmap
-                # else:
-                #     heatmap_combined += heatmap
-
-                # extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-                # im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='jet')
-                # plt.colorbar(im)
-
-                #ax.plot(particles_x, particles_y, 'ro', label='particles', alpha=0.5)
-                #ax.plot(sensor_x, sensor_y, 'gp', label='sensor', markersize=12)
-                #ax.plot(target_x, target_y, 'mX', label='target', markersize=12)
                 ax.plot(centroid_x, centroid_y, '*',
                         label='centroid', markersize=12)
 
                 ax.plot(target_x[4], target_y[4], 'X',
                         label='target', markersize=12)
-                # for i in range(4):
-                #    ax.plot(target_x[i], target_y[i], 'X', markersize=6, alpha=0.55)
             sensor_r, sensor_theta, sensor_x, sensor_y = [], [], [], []
             for i in range(5):
                 sensor_r.append(self.abs_sensor_hist[10*(i+1)-1][0])
@@ -944,8 +803,6 @@ class Results:
             sensor_x, sensor_y = pol2cart(sensor_r, sensor_theta)
             ax.plot(sensor_x[4], sensor_y[4], 'p',
                     label='sensor', markersize=12)
-            # for i in range(4):
-            #    ax.plot(sensor_x[i], sensor_y[i], 'p', markersize=6, alpha=0.55)
 
             heatmap, xedges, yedges = np.histogram2d(
                 all_particles_x, all_particles_y, bins=(xedges, yedges))
@@ -955,15 +812,11 @@ class Results:
                            cmap='jet', interpolation='nearest')
             plt.colorbar(im)
 
-            # ax.legend()
             ax.legend(loc='center left', bbox_to_anchor=(
                 1.2, 0.5), fancybox=True, shadow=True,)
             ax.set_xlim(min_map, max_map)
             ax.set_ylim(min_map, max_map)
-            #ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)
-
         if 6 in selected_plots:
-            #####
             # Plot 1: Particle Plot (Polar)
             plot_count += 1
             if 6 not in axs:
@@ -983,16 +836,13 @@ class Results:
                 # plot targets
                 plot_x_theta = np.radians(xp[t, 1])
                 plot_x_r = xp[t, 0]
-                #ax.plot(plot_x_theta, plot_x_r, 'X', markersize=10, zorder=2)
-                #ax.plot(plot_x_theta, plot_x_r, 'X', color=color_array[t][2], markeredgecolor='white', label='target', markersize=12, zorder=2)
+
             ax.set_xlim(min_map, max_map)
             ax.set_ylim(min_map, max_map)
 
             sensor_x, sensor_y = pol2cart(
                 self.sensor_hist[-1][0], np.radians(self.sensor_hist[-1][1]))
-
         if 7 in selected_plots:
-
             plot_count += 1
             if 7 not in axs:
                 axs[7] = fig.add_subplot(1, len(selected_plots), plot_count)
@@ -1032,11 +882,6 @@ class Results:
                 else:
                     lines.extend([line0])
 
-                # for i in range(4):
-                #    ax.plot(target_theta[i], target_r[i], 'X', markersize=6, alpha=0.75, zorder=4)
-
-            #line4, = ax.plot(sensor_theta[4], sensor_r[4], 'H', color='mediumorchid', markeredgecolor='black', label='sensor', markersize=20, zorder=3)
-
             sensor_x, sensor_y = pol2cart(np.array(self.sensor_hist)[
                                           :, 0], np.radians(np.array(self.sensor_hist)[:, 1]))
             if len(self.sensor_hist) > 1:
@@ -1046,18 +891,12 @@ class Results:
             line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='mediumorchid',
                              markeredgecolor='black', label='sensor', markersize=20, zorder=3)
             lines.extend([line4])
-            # for i in range(4):
-            #    ax.plot(sensor_theta[i], sensor_r[i], 'bp', markersize=6, alpha=0.75, zorder=3)
-            # ax.legend()
             ax.legend(handles=lines, loc='center left', bbox_to_anchor=(
                 1.08, 0.5), fancybox=True, shadow=True,)
 
             ax.set_xlim(min_map, max_map)
             ax.set_ylim(min_map, max_map)
-            #ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
-
         if 8 in selected_plots:
-
             plot_count += 1
             if 8 not in axs:
                 axs[8] = fig.add_subplot(1, len(selected_plots), plot_count)
@@ -1074,7 +913,6 @@ class Results:
 
                 line1, = ax.plot(particles_x, particles_y, 'o',
                                  color=color_array[t][0], markersize=4, markeredgecolor='black', label='particles', alpha=0.3, zorder=1)
-                #ax.plot(centroid_theta, centroid_r, '*', color=color_array[t][1],markeredgecolor='white', label='centroid', markersize=12, zorder=2)
                 if t == 0:
                     lines.extend([line1])
                 else:
@@ -1089,9 +927,6 @@ class Results:
             line4, = ax.plot(sensor_x[-1], sensor_y[-1], 'H', color='mediumorchid',
                              markeredgecolor='black', label='sensor', markersize=20, zorder=3)
             lines.extend([line4])
-            # for i in range(4):
-            #    ax.plot(sensor_theta[i], sensor_r[i], 'bp', markersize=6, alpha=0.75, zorder=3)
-            # ax.legend()
             ax.legend(handles=lines, loc='upper center', bbox_to_anchor=(
                 0.5, -0.05), fancybox=True, shadow=True, ncol=2)
 
@@ -1106,14 +941,8 @@ class Results:
                              facecolor='paleturquoise', alpha=0.5)
                 ax.text(1.04, 0.5, textstr[1], transform=ax.transAxes,
                         fontsize=14, verticalalignment='top', bbox=props)
-            #ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
 
         png_filename = '{}/png/{}.png'.format(self.plot_dir, time_step)
-        #print('saving plots in {}'.format(png_filename))
-        #plt.savefig(png_filename, bbox_inches='tight')
-        # plt.close(fig)
-        # plt.draw()
-        # plt.show()
         return axs
 
     def build_plots(self, xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particles=None, time_step=None, fig=None, ax=None):
@@ -1177,45 +1006,6 @@ class Results:
         ax.set_title('Particle heatmap (relative to sensor)')
 
         # Plots 4 & 5: Absolute Particle/Sensor/Target Plot
-        # if abs_sensor is not None and abs_target is not None and abs_particles is not None:
-        #     # particles/centroid coordinates
-        #     particles_x, particles_y = pol2cart(abs_particles[:,0], np.radians(abs_particles[:,1]))
-        #     centroid_x = np.mean(particles_x)
-        #     centroid_y = np.mean(particles_y)
-        #     centroid_r, centroid_theta = cart2pol(centroid_x, centroid_y)
-        #     # target coordinates
-        #     target_x, target_y = pol2cart(abs_target[0], np.radians(abs_target[1]))
-        #     # sensor coordinates
-        #     sensor_x, sensor_y = pol2cart(abs_sensor[0], np.radians(abs_sensor[1]))
-
-        #     # Plot 4: Absolute Polar coordinates
-        #     ax = fig.add_subplot(1, 5, 4, polar=True)
-        #     ax.plot(np.radians(abs_particles[:,1]), abs_particles[:,0], 'ro', label='particles')
-        #     ax.plot(centroid_theta, centroid_r, 'c*', label='centroid', markersize=12)
-        #     ax.plot(np.radians(abs_sensor[1]), abs_sensor[0], 'gp', label='sensor', markersize=12)
-        #     ax.plot(np.radians(abs_target[1]), abs_target[0], 'bX', label='target', markersize=12)
-        #     ax.legend()
-        #     ax.set_title('Absolute positions (polar)'.format(time_step), fontsize=16)
-
-        #     # Plot 5: Absolute Cartesian coordinates
-        #     ax = fig.add_subplot(1, 5, 5)
-        #     xedges = np.arange(-100, 103, 3)
-        #     yedges = np.arange(-100, 103, 3)
-        #     heatmap, xedges, yedges = np.histogram2d(particles_x, particles_y, bins=(xedges, yedges))
-        #     heatmap = gaussian_filter(heatmap, sigma=2)
-        #     extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-        #     im  = ax.imshow(heatmap.T, extent=extent, origin='lower', cmap='coolwarm')
-        #     plt.colorbar(im)
-        #     #ax.plot(particles_x, particles_y, 'ro', label='particles')
-        #     ax.plot(centroid_x, centroid_y, 'c*', label='centroid', markersize=12)
-        #     ax.plot(sensor_x, sensor_y, 'gp', label='sensor', markersize=12)
-        #     ax.plot(target_x, target_y, 'mX', label='target', markersize=12)
-        #     ax.legend()
-        #     ax.set_xlim(-100,100)
-        #     ax.set_ylim(-100,100)
-        #     ax.set_title('Absolute positions (cartesian)'.format(time_step), fontsize=16)
-
-        # Plots 4 & 5: Absolute Particle/Sensor/Target Plot
         # particles/centroid coordinates
         particles_x, particles_y = pol2cart(
             abs_particles[:, 0], np.radians(abs_particles[:, 1]))
@@ -1264,9 +1054,6 @@ class Results:
         im = ax.imshow(heatmap.T, extent=extent,
                        origin='lower', cmap='coolwarm')
         plt.colorbar(im)
-        #ax.plot(particles_x, particles_y, 'ro', label='particles', alpha=0.5)
-        #ax.plot(sensor_x, sensor_y, 'gp', label='sensor', markersize=12)
-        #ax.plot(target_x, target_y, 'mX', label='target', markersize=12)
         ax.plot(centroid_x, centroid_y, 'c*', label='centroid', markersize=12)
         ax.plot(sensor_x[4], sensor_y[4], 'gp', label='sensor', markersize=12)
         ax.plot(target_x[4], target_y[4], 'bX', label='target', markersize=12)
@@ -1281,14 +1068,11 @@ class Results:
 
         r_error, theta_error, heading_error, centroid_distance_error, rmse, mae = tracking_error(
             abs_target, abs_particles)
-        # print('r error = {:.0f}, theta error = {:.0f} deg, heading error = {:.0f} deg, centroid distance = {:.0f}, rmse = {:.0f}'.format(
-        #    r_error, theta_error, heading_error, centroid_distance_error, rmse))
 
         png_filename = '{}/png/{}.png'.format(self.plot_dir, time_step)
         print('saving plots in {}'.format(png_filename))
         plt.savefig(png_filename)
         plt.close(fig)
-        # plt.show()
 
 
 ##################################################################
@@ -1360,11 +1144,12 @@ def angle_diff(angle):
     diff[diff > 180] -= 360
     return diff
 
-# calculate different tracking errors
 
 
 def tracking_error(all_targets, all_particles):
-
+    """
+    Calculate different tracking errors
+    """
     results = []
     n_targets = len(all_particles[0])//4
 
@@ -1382,13 +1167,9 @@ def tracking_error(all_targets, all_particles):
             target = np.array(
                 pol2cart(target_permutation[t][0], np.radians(target_permutation[t][1])))
             distance += np.linalg.norm(particle_centroid-target)**2
-            #print('target {}, distance = {}'.format(t,np.linalg.norm(particle_centroid-target) ))
-        #print('sum distance = ',distance)
         if min_distance is None or distance < min_distance:
             min_distance = distance
             optimal_target_permutation = target_permutation
-
-    #print('optimal min sum distance = ',min_distance)
 
     for t in range(n_targets):
         target = optimal_target_permutation[t]
@@ -1402,15 +1183,8 @@ def tracking_error(all_targets, all_particles):
         particles_x, particles_y, mean_x, mean_y, mean_r, mean_theta, mean_heading, mean_spd = particles_mean_belief(
             particles)
 
-        # Error Measures
-        #r_error = target_r - mean_r
         r_error = np.mean(np.abs(target_r - particles[:, 0]))
-        # theta_error = np.degrees(target_theta - mean_theta) # final error in degrees
-        #theta_error = np.mean(np.degrees(target_theta-np.radians(particles[:,1])))
         theta_error = np.mean(np.abs(angle_diff(target[1] - particles[:, 1])))
-        # if theta_error > 360:
-        #     theta_error = theta_error % 360
-        #heading_diff = np.abs(target_heading - mean_heading) % 360
         heading_diff = np.abs(np.mean(target_heading - particles[:, 2])) % 360
         heading_error = heading_diff if heading_diff <= 180 else 360-heading_diff
 
