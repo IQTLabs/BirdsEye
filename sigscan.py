@@ -35,7 +35,6 @@ class GamutRFSensor(birdseye.sensor.SingleRSSI):
     """
     GamutRF Sensor
     """
-
     def __init__(self,
                  antenna_filename=None,
                  power_tx=26,
@@ -160,7 +159,6 @@ class SigScan:
         """
         Main loop
         """
-
         replay_file = self.config.get('replay_file', None)
 
         mqtt_host = self.config.get('mqtt_host', 'localhost')

@@ -84,7 +84,6 @@ def run_birdseye(args=None, env=None):
     sensor_class = get_sensor(sensor_name)
     state_class = get_state(state_name)
 
-    # antenna_filename=None, power_tx=26, directivity_tx=1, f=5.7e9,
     sensor = sensor_class(
         antenna_filename='radiation_pattern_yagi_5.csv',
         fading_sigma=fading_sigma)
@@ -103,7 +102,7 @@ def run_birdseye(args=None, env=None):
     run_method(args=config, env=env)
 
 
-if __name__ == '__main__':
+def main():
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-b', '--batch',
                             action='store_true',
@@ -123,3 +122,7 @@ if __name__ == '__main__':
         batch_run()
     else:
         run_birdseye(args=args)
+
+
+if __name__ == '__main__':
+    main()
