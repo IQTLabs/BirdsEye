@@ -347,9 +347,6 @@ class GPSVis:
         self.x_ticks = list(self.x_ticks)
 
 
-##################################################################
-# Saving Results
-##################################################################
 class Results:
     '''
     Results class for saving run results
@@ -361,8 +358,8 @@ class Results:
         self.method_name = method_name
         self.global_start_time = global_start_time
         self.plotting = plotting
-        if type(self.plotting) != bool:
-            if self.plotting == 'true' or self.plotting == 'True':
+        if not isinstance(self.plotting, bool):
+            if self.plotting in ('true', 'True'):
                 self.plotting = True
             else:
                 self.plotting = False
@@ -370,12 +367,10 @@ class Results:
         self.plot_every_n = int(config.get('plot_every_n', 1))
         self.make_gif = config.get('make_gif', 'false').lower()
 
-        self.namefile = '{}/{}/{}_data.csv'.format(
-            RUN_DIR, method_name, global_start_time)
+        self.namefile = f'{RUN_DIR}/{method_name}/{global_start_time}_data.csv'
         self.plot_dir = config.get(
-            'plot_dir', '{}/{}/{}'.format(RUN_DIR, method_name, global_start_time))
-        self.logdir = '{}/{}/{}_logs/'.format(RUN_DIR,
-                                              method_name, global_start_time)
+            'plot_dir', f'{RUN_DIR}/{method_name}/{global_start_time}')
+        self.logdir = f'{RUN_DIR}/{method_name}/{global_start_time}_logs/'
         if self.make_gif == 'true':
             Path(self.plot_dir+'/png/').mkdir(parents=True, exist_ok=True)
             Path(self.plot_dir+'/gif/').mkdir(parents=True, exist_ok=True)
