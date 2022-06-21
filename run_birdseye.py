@@ -45,7 +45,7 @@ def batch_run():
                             reward=reward))
 
                         config = configparser.ConfigParser()
-                        config.read([f'configs/{method_namme}.yaml'])
+                        config.read([f'configs/{method_name}.yaml'])
                         config.set('Methods', 'action', action_config)
                         config.set('Methods', 'sensor', sensor_config)
                         config.set('Methods', 'state', state_config)
