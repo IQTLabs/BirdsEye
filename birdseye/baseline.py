@@ -13,7 +13,6 @@ from .env import RFEnv
 from .sensor import Drone
 from .state import RFState
 from .utils import particle_swap
-from .utils import pol2cart
 from .utils import Results
 from .utils import tracking_error
 from .utils import write_header_log
@@ -74,9 +73,6 @@ def baseline_trial(env, policy, num_timesteps, plotting=False, results=None):
     all_mae = np.zeros((num_timesteps, env.state.n_targets))
     all_inference_times = np.zeros(num_timesteps)
     all_pf_cov = [None]*num_timesteps
-
-    abs_particle_hist = []
-    abs_target_hist = []
 
     # 500 time steps with an action to be selected at each
     plots = []
