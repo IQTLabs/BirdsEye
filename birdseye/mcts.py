@@ -60,11 +60,8 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
         config = SimpleNamespace(**mcts_defaults)
     simulations = config.simulations
     DEPTH = config.depth
-    lambda_arg = config.lambda_arg
     num_runs = config.trials
     iterations = config.iterations
-    COLLISION_REWARD = config.collision
-    LOSS_REWARD = config.loss
     plotting = config.plotting
 
     # Results instance for saving results to file
@@ -73,20 +70,11 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
                       num_iters=num_runs,
                       plotting=plotting)
 
-    # cumulative collisions, losses, and number of trials
-    # total reward, and best average tracking
-    cum_coll = 0
-    cum_loss = 0
-    cum_trials = 0
-    total_reward = 0
-    best_average = 1
-
     run_data = []
 
     # trials
     mcts_loss = 0
     mcts_coll = 0
-    run_times = []
     for i in range(1, num_runs+1):
         run_start_time = datetime.now()
         #global mcts_loss, mcts_coll, num_particles, DEPTH
