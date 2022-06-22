@@ -153,7 +153,7 @@ class SigScan:
         host_name = flask_host
         port = flask_port
         threading.Thread(target=lambda: app.run(
-            host=host_name, port=port, debug=True, use_reloader=False)).start()
+            host=host_name, port=port, debug=False, use_reloader=False)).start()
 
     def main(self):
         """
@@ -164,7 +164,7 @@ class SigScan:
         mqtt_host = self.config.get('mqtt_host', 'localhost')
         mqtt_port = int(self.config.get('mqtt_port', str(1883)))
 
-        flask_host = self.config.get('flask_host', '0.0.0.0')
+        flask_host = self.config.get('flask_host', '127.0.0.1')
         flask_port = int(self.config.get('flask_port', str(4999)))
 
         n_antennas = int(self.config.get('n_antennas', str(1)))

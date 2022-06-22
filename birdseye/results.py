@@ -44,7 +44,6 @@ def separate_plotter(plot_func, title=None, target_start=78, sensors=['drone', '
 
     for i, s in enumerate(sensors):
         for j, r in enumerate(rewards):
-            #print('{} & {}'.format(sensor_str[s], reward_str[r]))
             config = {'datetime_start': '2021-06-18T00:00:00', 'reward': r,
                       'sensor': s, 'target_start': target_start, 'target_speed': 1}
             plot_func(axs[i*len(sensors)+j][0], config, dqn=False, **kwargs)
@@ -62,7 +61,6 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
                   'signalstrength': 'Signal Strength Sensor'}
     metric_str = {
         'centroid_err': 'Centroid Distance (m)', 'r_err': r'$\delta_{r}$ (m)', 'theta_err': r'$\delta_{\theta}$ (degrees)'}
-    #metric_s = metric_str.get(metric, metric)
 
     # get configs and run data
     mcts_config_filter = {}
@@ -98,8 +96,6 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
                 mcts_avg_inference_time = np.mean(list(data['inference_times'].apply(
                     lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
 
-            ############################
-
             plot_data1 = np.abs(list(data[metric1].apply(
                 lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
             med1 = np.percentile(list(plot_data1), 50, axis=0)
@@ -120,7 +116,6 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
                 ax2.fill_between(np.arange(len(med2)), low2, high2, alpha=0.2)
 
             lns += l1+l2
-            ############################
 
             # 3
             if timing:
@@ -169,7 +164,6 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
         print('======================================')
     ax1.margins(0)
 
-    #ax1.set_ylim(0, y_lim)
     ax1.set_xlabel('Time Step', fontsize=16)
     ax1.set_ylabel(metric_str[metric1], fontsize=24)
     ax2.set_ylabel(metric_str[metric2], fontsize=24)
@@ -303,10 +297,8 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
     print('======================================')
     ax1.margins(0)
 
-    #ax1.set_ylim(0, y_lim)
     ax1.set_xlabel('Time Step', fontsize=16)
     ax1.set_ylabel(r'$\sigma_{{{}}}$'.format(metric_s), fontsize=22)
-    #ax1.set_title('{} during single episode'.format(metric), fontsize=24)
     ax1.tick_params(axis='both', which='both', labelsize=14)
     ax1.legend(fontsize=20)
 
@@ -317,8 +309,6 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
                   'entropy_collision_reward': 'Belief Dependent Reward'}
     sensor_str = {'drone': 'Bearings Sensor',
                   'signalstrength': 'Signal Strength Sensor'}
-    #metric_str = {'centroid_err':'Centroid Distance'}
-    #metric_s = metric_str.get(metric, metric)
 
     mcts_config_filter = {}
     dqn_config_filter = {}
@@ -331,8 +321,6 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
     reward = config.get('reward', 'all')
 
     ax2 = ax1.twinx()
-
-    #ax1.set_prop_cycle(color=['red','blue', 'magenta', 'green'])
 
     # blue green color scheme
     if limit == 1:
@@ -473,8 +461,6 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
 
     sensor = config.get('sensor', 'all')
     reward = config.get('reward', 'all')
-
-    #ax1.set_prop_cycle(color=['red','blue', 'magenta', 'green'])
 
     # red blue color scheme
     if limit == 1:
@@ -763,7 +749,6 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
     ax1.set_ylim(0, 125)
     ax1.set_xlabel('Time Step', fontsize=16)
     ax1.set_ylabel('{}'.format(metric_s), fontsize=16)
-    #ax1.set_title('{} during single episode'.format(metric), fontsize=24)
     ax1.tick_params(axis='both', which='both', labelsize=14)
     ax1.legend(fontsize=20)
 
@@ -820,8 +805,6 @@ def filter_runs(method_name, config_filter=None):
         else:
             config = get_config(method_name, r)['Methods']
         for k, v in config_filter.items():
-            # if v is None:
-            #    continue
             if k == 'target_speed':
                 v = float(v)
                 if ((config.get(k) is None) and (v != 1.)) or (float(config.get(k)) != v):
