@@ -201,7 +201,6 @@ class RFMultiState(State):
         reward_val = 0.
         state_ranges = [state[t, 0]
                         for t in range(self.n_targets)]  # state_range = state[0]
-        max_state_range = np.max(state_ranges)
         min_state_range = np.min(state_ranges)
 
         if action is not None:
@@ -668,7 +667,6 @@ class RFState(State):
 
 
 AVAIL_STATES = {
-    # 'rfstate' : RFState,
     'rfmultistate': RFMultiState
 }
 

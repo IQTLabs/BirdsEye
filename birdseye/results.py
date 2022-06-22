@@ -204,7 +204,6 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
 
     filtered_dqn_runs = sorted(filter_runs('dqn', dqn_config_filter))
     filtered_mcts_runs = sorted(filter_runs('mcts', mcts_config_filter))
-    sensor = config.get('sensor', 'all')
 
     # red blue color scheme
     if limit == 1:
@@ -275,7 +274,7 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
 
         pf_cov = data.get('pf_cov', None)
         if pf_cov is not None:
-            pf_cov = np.array([eval(cov_str) for cov_str in pf_cov])
+            pf_cov = np.array([ast.literal_eval(cov_str) for cov_str in pf_cov])
             pf_cov = pf_cov.reshape(pf_cov.shape[0], pf_cov.shape[1], 4, 4)
 
         else:
@@ -364,7 +363,7 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
 
             pf_cov = data.get('pf_cov', None)
             if pf_cov is not None:
-                pf_cov = np.array([eval(cov_str) for cov_str in pf_cov])
+                pf_cov = np.array([ast.literal_eval(cov_str) for cov_str in pf_cov])
                 pf_cov = pf_cov.reshape(pf_cov.shape[0], pf_cov.shape[1], 4, 4)
 
             else:
@@ -409,7 +408,7 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
 
             pf_cov = data.get('pf_cov', None)
             if pf_cov is not None:
-                pf_cov = np.array([eval(cov_str) for cov_str in pf_cov])
+                pf_cov = np.array([ast.literal_eval(cov_str) for cov_str in pf_cov])
                 pf_cov = pf_cov.reshape(pf_cov.shape[0], pf_cov.shape[1], 4, 4)
 
             else:
@@ -546,7 +545,6 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
         ax1.plot(med, '--', label='DQN')
 
         if variance_bars:
-            y_std = np.std(list(plot_data), axis=0)
             ax1.fill_between(np.arange(len(med)), low, high, alpha=0.2)
 
         # plt caption
@@ -671,10 +669,8 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
     filtered_dqn_runs = sorted(filter_runs('dqn', dqn_config_filter))
     filtered_mcts_runs = sorted(filter_runs('mcts', mcts_config_filter))
     sensor = config.get('sensor', 'all')
-    reward = config.get('reward', 'all')
 
     fig = plt.figure(figsize=(12, 8))
-    #fig.suptitle('Sensor: {}, Reward: {}'.format(sensor, reward), fontsize=32)
 
     ax1 = plt.subplot(1, 1, 1)
 
@@ -740,8 +736,6 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
 
         plot_data = list(data[metric].apply(lambda x: [float(xx)
                          for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
-        # median, 16, 84%
-        y = np.mean(list(plot_data), axis=0)
 
         med = np.percentile(list(plot_data), 50, axis=0)
         low = np.percentile(list(plot_data), 16, axis=0)
