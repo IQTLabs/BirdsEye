@@ -7,7 +7,7 @@ env:
 
 jobs:
   unit-tests:
-    name: Code check
+    name: Pytest
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
