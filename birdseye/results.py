@@ -1,3 +1,4 @@
+import ast
 import os
 import re
 from datetime import datetime
@@ -204,7 +205,6 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
     filtered_dqn_runs = sorted(filter_runs('dqn', dqn_config_filter))
     filtered_mcts_runs = sorted(filter_runs('mcts', mcts_config_filter))
     sensor = config.get('sensor', 'all')
-    reward = config.get('reward', 'all')
 
     # red blue color scheme
     if limit == 1:
@@ -222,7 +222,6 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
 
     mcts_avg_inference_time = 10
     dqn_avg_inference_time = 10
-    lns = []
     for r in filtered_mcts_runs[-limit:]:
         config = get_config('mcts', r)
         if verbose:
@@ -238,7 +237,7 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
 
         pf_cov = data.get('pf_cov', None)
         if pf_cov is not None:
-            pf_cov = np.array([eval(cov_str) for cov_str in pf_cov])
+            pf_cov = np.array([ast.literal_eval(cov_str) for cov_str in pf_cov])
             pf_cov = pf_cov.reshape(pf_cov.shape[0], pf_cov.shape[1], 4, 4)
 
         else:
@@ -519,7 +518,6 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
 
         ax1.plot(med, '-', label='MCTS')
         if variance_bars:
-            y_std = np.std(list(plot_data), axis=0)
             ax1.fill_between(np.arange(len(med)), low, high, alpha=0.2)
         print('MCTS inference time={:.2e}s'.format(mcts_avg_inference_time))
 
@@ -562,7 +560,6 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
     ax1.set_ylim(0, y_lim)
     ax1.set_xlabel('Time Step', fontsize=16)
     ax1.set_ylabel('{}'.format(metric_s), fontsize=16)
-    #ax1.set_title('{} during single episode'.format(metric), fontsize=24)
     ax1.tick_params(axis='both', which='both', labelsize=14)
     ax1.legend(fontsize=20)
     ax1.set_title('{} & {}'.format(sensor_str[sensor], reward_str[reward]))
@@ -609,7 +606,6 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
     for r in sorted_filtered_mcts_runs:
         config = get_config('mcts', r)
         data = get_data('mcts', r)
-        # print(r,'\n')
         plot_data = list(data['centroid_err'].apply(
             lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
         target_start = int(config['Methods']['target_start'])
@@ -620,8 +616,6 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
 
     for r in sorted_filtered_dqn_runs:
         config = get_config('dqn', r)
-        # print(r,'\n')
-        # print(config,'\n')
         data = get_data('dqn', r)
 
         plot_data = list(data['centroid_err'].apply(
@@ -714,7 +708,6 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
 
         plot_data = list(data[metric].apply(lambda x: [float(xx)
                          for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
-        y = np.mean(list(plot_data), axis=0)
 
         med = np.percentile(list(plot_data), 50, axis=0)
         low = np.percentile(list(plot_data), 16, axis=0)
@@ -841,7 +834,7 @@ def filter_runs(method_name, config_filter=None):
                     match = False
                     break
             elif k == 'target_start':
-                if type(v) == list:
+                if isinstance(v, list):
                     if config.get(k, None) not in v:
                         match = False
                         break
@@ -884,7 +877,6 @@ def show_results():
     method_name = 'mcts'  # should be 'mcts' or 'dqn'
 
     dqn_runs = get_valid_runs('dqn')
-    mcts_runs = get_valid_runs('mcts')
 
     config_filter = {'method': 'dqn'}
     filtered_dqn_runs = filter_runs('dqn', config_filter)

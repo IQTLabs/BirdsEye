@@ -239,11 +239,6 @@ def baseline(args=None, env=None):
     parser = argparse.ArgumentParser(description='Baselines',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.set_defaults(**defaults)
-    # parser.add_argument('--lambda_arg', type=float, help='Lambda value')
-    # parser.add_argument('--collision', type=float, help='Reward value for collision')
-    # parser.add_argument('--loss', type=float, help='Reward value for loss function')
-    # parser.add_argument('--depth', type=float, help='Tree depth')
-    # parser.add_argument('--simulations', type=int, help='Number of simulations')
     parser.add_argument('--policy', type=str, help='Policy for actions')
     parser.add_argument('--plotting', type=bool, help='Flag to plot or not')
     parser.add_argument('--trials', type=int, help='Number of runs')
