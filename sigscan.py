@@ -188,7 +188,7 @@ class SigScan:
             elif n_antennas == 2 and antenna_type == 'directional' and n_targets == 1:
                 dqn_checkpoint = 'checkpoints/double_directional_entropy_walking_1target.checkpoint'
             elif n_antennas == 1 and antenna_type == 'directional' and n_targets == 1:
-                dqn_checkpoint = 'checkpoints/double_directional_entropy_walking_1target.checkpoint'
+                dqn_checkpoint = 'checkpoints/single_directional_entropy_walking_1target.checkpoint'
 
         # MQTT
         if replay_file is None:
