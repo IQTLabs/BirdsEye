@@ -421,8 +421,6 @@ class Results:
         if self.openstreetmap is None and data.get('position', None) is not None and data.get('bearing', None) is not None:
             self.openstreetmap = GPSVis(
                 position=data['position']
-                # map_path='map_delta_park.png',  # Path to map downloaded from the OSM.
-                # bounds=(45.60311,-122.68450, 45.59494, -122.67505) # upper left, lower right
             )
             self.openstreetmap.set_origin(data['position'])
             self.transform = np.array(
@@ -1075,9 +1073,6 @@ class Results:
         plt.close(fig)
 
 
-##################################################################
-# Logging
-##################################################################
 def write_header_log(config, method, global_start_time):
 
     if type(config) == configparser.ConfigParser:
