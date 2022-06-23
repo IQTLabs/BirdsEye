@@ -3,6 +3,7 @@ from birdseye.actions import WalkingActions
 from birdseye.state import RFMultiState
 from birdseye.utils import GPSVis
 from birdseye.utils import Results
+from sigscan import GamutRFSensor
 
 
 def test_gpsvis():
@@ -11,7 +12,7 @@ def test_gpsvis():
 >           np.linspace(self.bounds[1], self.bounds[3], num=8))
 E       TypeError: 'NoneType' object is not subscriptable
     """
-    instance = GPSVis(bounds=[0,1,2,3])
+    instance = GPSVis(position=[0,0], bounds=[0,1,2,3])
     instance.plot_map(output='save')
     instance.plot_map(output='plot')
 
