@@ -1019,8 +1019,12 @@ class Results:
             target_r.append(self.abs_target_hist[10*(i+1)-1][0])
             target_theta.append(np.radians(
                 self.abs_target_hist[10*(i+1)-1][1]))
-            sensor_x[i], sensor_y[i] = pol2cart(sensor_r, sensor_theta)
-            target_x[i], target_y[i] = pol2cart(target_r, target_theta)
+            x_val, y_val = pol2cart(sensor_r, sensor_theta)
+            sensor_x.append(x_val)
+            sensor_y.append(y_val)
+            x_val, y_val = pol2cart(target_r, target_theta)
+            target_x.append(x_val)
+            target_y.append(y_val)
 
         # Plot 4: Absolute Polar coordinates
         ax = fig.add_subplot(1, 5, 4, polar=True)
