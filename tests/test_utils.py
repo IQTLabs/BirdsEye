@@ -22,13 +22,6 @@ E       TypeError: 'NoneType' object is not subscriptable
 def test_results():
     instance = Results(plotting='True')
     instance = Results(plotting='false')
-    # TODO fix attribute error
-    """
-    def build_plots(self, xp=[], belief=[], abs_sensor=None, abs_target=None, abs_particles=None, time_step=None, fig=None, ax=None):
->       print(belief.shape)
-E       AttributeError: 'list' object has no attribute 'shape'
-    """
-    #instance.build_plots()
 
     data = {
         'rssi': None,
@@ -62,3 +55,4 @@ E       AttributeError: 'list' object has no attribute 'shape'
     env.reset()
     fig, axis1 = plt.subplots(figsize=(10, 13))
     instance.build_multitarget_plots(env=env, fig=fig)
+    instance.build_plots(belief=env.pf.particles)
