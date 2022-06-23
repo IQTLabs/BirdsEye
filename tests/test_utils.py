@@ -9,11 +9,6 @@ from sigscan import GamutRFSensor
 
 
 def test_gpsvis():
-    # TODO fix type error
-    """
->           np.linspace(self.bounds[1], self.bounds[3], num=8))
-E       TypeError: 'NoneType' object is not subscriptable
-    """
     instance = GPSVis(position=[0,0], bounds=[0,1,2,3])
     instance.plot_map(output='save')
     instance.plot_map(output='plot')
@@ -55,4 +50,4 @@ def test_results():
     env.reset()
     fig, axis1 = plt.subplots(figsize=(10, 13))
     instance.build_multitarget_plots(env=env, fig=fig)
-    instance.build_plots(belief=env.pf.particles)
+    instance.build_plots(xp=[0], belief=env.pf.particles)
