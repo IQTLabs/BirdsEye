@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 from birdseye.env import RFMultiEnv
 from birdseye.actions import WalkingActions
 from birdseye.state import RFMultiState
@@ -58,4 +60,5 @@ E       AttributeError: 'list' object has no attribute 'shape'
         n_targets=str(2), reward='heuristic_reward', simulated=True)
     env = RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=True)
     env.reset()
-    instance.build_multitarget_plots(env=env)
+    fig, axis1 = plt.subplots(figsize=(10, 13))
+    instance.build_multitarget_plots(env=env, fig=fig)
