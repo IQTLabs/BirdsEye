@@ -57,4 +57,5 @@ E       AttributeError: 'list' object has no attribute 'shape'
     state = RFMultiState(
         n_targets=str(2), reward='heuristic_reward', simulated=True)
     env = RFMultiEnv(sensor=sensor, actions=actions, state=state, simulated=True)
+    env.reset()
     instance.build_multitarget_plots(env=env)
