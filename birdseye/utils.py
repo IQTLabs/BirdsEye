@@ -192,6 +192,7 @@ class GPSVis:
             self.bounds = [top, lef, bot, rgt]
 
             self.img = self.create_image_from_position()
+        # TODO if else self.width_meters and self.height_meters are undefined
         self.get_ticks()
         self.cell_size = 1
         self.xedges = np.arange(0, self.width_meters +
