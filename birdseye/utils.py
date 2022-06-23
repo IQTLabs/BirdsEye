@@ -125,9 +125,9 @@ def get_distance(coord1, coord2):
     return distance*(1e3)
 
 
-def get_bearing(coord1, coord2):
+def get_heading(coord1, coord2):
     """
-    Get the bearing of two coordinates
+    Get the heading of two coordinates
     """
     if (coord1 is None) or (coord2 is None):
         return None
@@ -419,7 +419,7 @@ class Results:
         """
         Create a live plot
         """
-        if self.openstreetmap is None and data.get('position', None) is not None and data.get('bearing', None) is not None:
+        if self.openstreetmap is None and data.get('position', None) is not None and data.get('heading', None) is not None:
             self.openstreetmap = GPSVis(
                 position=data['position']
             )
@@ -441,17 +441,17 @@ class Results:
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
 
-        target_bearing = None
-        target_relative_bearing = None
+        target_heading = None
+        target_relative_heading = None
 
-        if data.get('position', None) is not None and data.get('drone_position', None) is not None and data.get('bearing', None) is not None:
-            target_bearing = get_bearing(
+        if data.get('position', None) is not None and data.get('drone_position', None) is not None and data.get('heading', None) is not None:
+            target_heading = get_heading(
                 data['position'], data['drone_position'])
-            target_relative_bearing = target_bearing - data['bearing']
+            target_relative_heading = target_heading - data['heading']
             target_distance = get_distance(
                 data['position'], data['drone_position'])
             self.expected_target_rssi = env.sensor.observation(
-                [[target_distance, target_relative_bearing, None, None]])[0]
+                [[target_distance, target_relative_heading, None, None]])[0]
 
         ax.clear()
         if self.openstreetmap is not None:
@@ -534,14 +534,14 @@ class Results:
         # Sidebar Text
         # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
         actual_str = 'Actual\n'
-        actual_str += 'Bearing = {:.0f} deg\n'.format(data.get(
-            'bearing', None)) if data.get('bearing', None) else 'Bearing = unknown\n'
+        actual_str += 'Heading = {:.0f} deg\n'.format(data.get(
+            'heading', None)) if data.get('heading', None) else 'Heading = unknown\n'
         actual_str += 'Speed = {:.2f} m/s'.format(data.get('action_taken', None)[
                                                   1]) if data.get('action_taken', None) else 'Speed = unknown\n'
 
         proposal_str = 'Proposed\n'
-        proposal_str += 'Bearing = {:.0f} deg\n'.format(data.get('action_proposal', None)[
-                                                        0]) if None not in data.get('action_proposal', (None, None)) else 'Bearing = unknown\n'
+        proposal_str += 'Heading = {:.0f} deg\n'.format(data.get('action_proposal', None)[
+                                                        0]) if None not in data.get('action_proposal', (None, None)) else 'Heading = unknown\n'
         proposal_str += 'Speed = {:.2f} m/s'.format(data.get('action_proposal', None)[
                                                     1]) if None not in data.get('action_proposal', (None, None)) else 'Speed = unknown\n'
 
@@ -555,8 +555,8 @@ class Results:
             self.expected_target_rssi) if self.expected_target_rssi else 'Expected = unknown\n'
         rssi_str += 'Difference = {:.1f} dB\n'.format(env.last_observation - self.expected_target_rssi) if (
             env.last_observation and self.expected_target_rssi) else ''
-        #rssi_str += 'Target bearing = {} \n'.format(target_bearing) if target_bearing else ''
-        #rssi_str += 'Target relative bearing = {} \n'.format(target_relative_bearing) if target_relative_bearing else ''
+        #rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
+        #rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
         rssi_str += 'MLE estimate = {:.1f} dB\n'.format(
             last_mean_hyp) if last_mean_hyp else 'MLE estimate = unknown'
         rssi_str += 'MAP estimate = {:.1f} dB'.format(

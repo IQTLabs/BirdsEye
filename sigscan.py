@@ -23,7 +23,7 @@ import birdseye.utils
 from birdseye.actions import WalkingActions
 from birdseye.planner import DQNPlanner
 from birdseye.planner import MCTSPlanner
-from birdseye.utils import get_bearing
+from birdseye.utils import get_heading
 from birdseye.utils import get_distance
 from birdseye.utils import is_float
 
@@ -62,8 +62,8 @@ class SigScan:
             'position': None,
             'distance': None,
             'previous_position': None,
-            'bearing': None,
-            'previous_bearing': None,
+            'heading': None,
+            'previous_heading': None,
             'course': None,
             'action_proposal': None,
             'action_taken': None,
@@ -79,22 +79,22 @@ class SigScan:
         """
         self.data['previous_position'] = self.data.get('position', None) if not self.data.get(
             'needs_processing', True) else self.data.get('previous_position', None)
-        self.data['previous_bearing'] = self.data.get('bearing', None) if not self.data.get(
-            'needs_processing', True) else self.data.get('previous_bearing', None)
+        self.data['previous_heading'] = self.data.get('heading', None) if not self.data.get(
+            'needs_processing', True) else self.data.get('previous_heading', None)
 
         self.data['rssi'] = message_data.get('rssi', None)
         self.data['position'] = message_data.get('position', None)
-        self.data['course'] = get_bearing(
+        self.data['course'] = get_heading(
             self.data['previous_position'], self.data['position'])
-        self.data['bearing'] = -float(message_data.get('bearing', None)) + \
-            90 if is_float(message_data.get('bearing', None)
+        self.data['heading'] = -float(message_data.get('heading', None)) + \
+            90 if is_float(message_data.get('heading', None)
                            ) else self.data['course']
         self.data['distance'] = get_distance(
             self.data['previous_position'], self.data['position'])
-        delta_bearing = (self.data['bearing'] - self.data['previous_bearing']
-                         ) if self.data['bearing'] and self.data['previous_bearing'] else None
-        self.data['action_taken'] = (delta_bearing, self.data['distance']
-                                     ) if delta_bearing and self.data['distance'] else (0, 0)
+        delta_heading = (self.data['heading'] - self.data['previous_heading']
+                         ) if self.data['heading'] and self.data['previous_heading'] else None
+        self.data['action_taken'] = (delta_heading, self.data['distance']
+                                     ) if delta_heading and self.data['distance'] else (0, 0)
 
         self.data['drone_position'] = message_data.get('drone_position', None)
         if self.data['drone_position']:

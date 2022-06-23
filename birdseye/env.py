@@ -104,7 +104,7 @@ class RFMultiEnv:
                 hyp, o),
             resample_fn=systematic_resample,
             n_eff_threshold=1,
-            column_names=['range', 'bearing', 'relative_course', 'own_speed'])
+            column_names=['range', 'heading', 'relative_course', 'own_speed'])
 
         env_obs = self.env_observation()
         return env_obs
@@ -115,7 +115,7 @@ class RFMultiEnv:
 
         # Update position of sensor
         self.state.update_real_sensor(data.get('distance', None), data.get(
-            'course', None), data.get('bearing', None))
+            'course', None), data.get('heading', None))
 
         # Get sensor observation
         observation = self.sensor.real_observation()
@@ -124,12 +124,12 @@ class RFMultiEnv:
 
         # Update particle filter
         self.pf.update(observation, xp=self.pf.particles, distance=data.get(
-            'distance', None), course=data.get('course', None), heading=data.get('bearing', None))
+            'distance', None), course=data.get('course', None), heading=data.get('heading', None))
         # particle_swap(self)
 
         # Calculate reward based on updated state & action
-        control_heading = data['bearing'] if data.get(
-            'bearing', None) else self.state.sensor_state[2]
+        control_heading = data['heading'] if data.get(
+            'heading', None) else self.state.sensor_state[2]
         control_delta_heading = (
             control_heading - self.state.sensor_state[2]) % 360
         reward = self.state.reward_func(state=None, action=(
@@ -361,7 +361,7 @@ class RFEnv:
             weight_fn=lambda hyp, o, xp=None, **kwargs: [
                 self.sensor.weight(None, o, state=x) for x in xp],
             resample_fn=systematic_resample,
-            column_names=['range', 'bearing', 'relative_course', 'own_speed'])
+            column_names=['range', 'heading', 'relative_course', 'own_speed'])
 
         env_obs = self.env_observation()
         return env_obs
