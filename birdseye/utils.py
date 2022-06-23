@@ -591,7 +591,6 @@ class Results:
         xp = env.state.target_state
         belief = env.pf.particles.reshape(
             len(env.pf.particles), env.state.n_targets, 4)
-        #print('sensor state = ',env.state.sensor_state)
         abs_sensor = env.state.sensor_state
 
         abs_particles = env.get_absolute_particles()
