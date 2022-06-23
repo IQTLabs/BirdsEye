@@ -50,4 +50,4 @@ def test_results():
     env.reset()
     fig, axis1 = plt.subplots(figsize=(10, 13))
     instance.build_multitarget_plots(env=env, fig=fig)
-    instance.build_plots(xp=[0, 1], belief=env.pf.particles)
+    instance.build_plots(xp=[0, 1], belief=env.pf.particles, abs_particles=env.get_absolute_particles())
