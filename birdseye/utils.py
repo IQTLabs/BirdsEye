@@ -1157,7 +1157,7 @@ def tracking_error(all_targets, all_particles):
     optimal_target_permutation = None
 
     for idxs in list(permutations(range(n_targets))):
-        target_permutation = all_targets[np.array([idxs])]
+        target_permutation = all_targets[list(idxs)]
 
         distance = 0
         for t in range(n_targets):
