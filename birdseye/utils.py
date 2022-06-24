@@ -1049,6 +1049,8 @@ class Results:
         ax = fig.add_subplot(1, 5, 5)
         xedges = np.arange(-100, 103, 3)
         yedges = np.arange(-100, 103, 3)
+        np.asarray(particles_x)[:,0]
+        np.asarray(particles_y)[:,0]
         heatmap, xedges, yedges = np.histogram2d(
             particles_x, particles_y, bins=(xedges, yedges))
         heatmap = gaussian_filter(heatmap, sigma=2)
