@@ -44,7 +44,7 @@ def baseline_trial(env, policy, num_timesteps, plotting=False, results=None):
 
     # Initialize true state and belief state (particle filter);
     # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
-    # state is [range, bearing, relative course, own speed]
+    # state is [range, heading, relative course, own speed]
     # assume a starting position within range of sensor and not too close
     env.reset()
 

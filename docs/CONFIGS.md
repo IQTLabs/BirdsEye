@@ -25,7 +25,7 @@ The `[Defaults]` section contains settings specific to the motion planning metho
 method : string
     Choose from ['mcts','dqn']
 sensor : string
-    Choose from ['drone','signalstrength', 'bearing']
+    Choose from ['drone','signalstrength', 'heading']
 reward : string
     Choose from ['range_reward', 'entropy_collision_reward']
 target_speed : float

@@ -395,10 +395,10 @@ class Drone(Sensor):
 
     # probability of observation 1
     def obs1_prob(self, state):
-        rel_bearing = state[1]
-        if -60 <= rel_bearing <= 60:
+        rel_heading = state[1]
+        if -60 <= rel_heading <= 60:
             return 0.9
-        if 120 <= rel_bearing <= 240:
+        if 120 <= rel_heading <= 240:
             return 0.1
         return 0.5
 
@@ -406,20 +406,20 @@ class Drone(Sensor):
     def gen_state(self, obs):
 
         if obs == 1:
-            bearing = random.randint(-60, 60)
+            heading = random.randint(-60, 60)
         elif obs == 0:
-            bearing = random.randint(120, 240)
+            heading = random.randint(120, 240)
 
-        if bearing < 0:
-            bearing += 360
+        if heading < 0:
+            heading += 360
 
-        return [random.randint(10, 150), bearing, random.randint(0, 11)*30, 1]
+        return [random.randint(10, 150), heading, random.randint(0, 11)*30, 1]
 
     def near_state(self, state):
         return np.array(self.gen_state(self.observation(state)))
 
 
-class Bearing(Sensor):
+class Heading(Sensor):
     def __init__(self, sensor_range=150):
         self.sensor_range = sensor_range
         self.num_avail_obs = 4
@@ -462,20 +462,20 @@ class Bearing(Sensor):
         Sample state from observation
         """
         if obs == 0:
-            bearing = random.randint(-60, 60)
+            heading = random.randint(-60, 60)
         elif obs == 1:
-            bearing = random.choice(
+            heading = random.choice(
                 [random.randint(60, 90), random.randint(270, 300)])
         elif obs == 2:
-            bearing = random.choice(
+            heading = random.choice(
                 [random.randint(90, 120), random.randint(240, 270)])
         elif obs == 3:
-            bearing = random.randint(120, 240)
+            heading = random.randint(120, 240)
 
-        if bearing < 0:
-            bearing += 360
+        if heading < 0:
+            heading += 360
 
-        return [random.randint(25, 100), bearing, random.randint(0, 11)*30, 1]
+        return [random.randint(25, 100), heading, random.randint(0, 11)*30, 1]
 
     def obs1(self, state):
         #rel_brg = state[1] - state[3]

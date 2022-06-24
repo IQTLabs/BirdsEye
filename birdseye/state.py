@@ -94,9 +94,8 @@ class RFMultiState(State):
         array_like
             Randomly generated state variable array
         """
-        # state is [range, bearing, relative course, own speed]
-        # return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
-        return [self.random_state() for _ in range(self.n_targets)]
+        # state is [range, heading, relative course, own speed]
+        return np.array([self.random_state() for _ in range(self.n_targets)])
 
     def init_particle_state(self):
         """Function to initialize a random particle state
@@ -106,9 +105,8 @@ class RFMultiState(State):
         array_like
             Randomly generated state variable array
         """
-        # state is [range, bearing, relative course, own speed]
-        # return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
-        return [self.random_particle_state() for _ in range(self.n_targets)]
+        # state is [range, heading, relative course, own speed]
+        return np.array([self.random_particle_state() for _ in range(self.n_targets)])
 
     def random_particle_state(self):
         """Function to initialize a random state
@@ -118,8 +116,7 @@ class RFMultiState(State):
         array_like
             Randomly generated state variable array
         """
-        # state is [range, bearing, relative course, own speed]
-        # return np.array([random.randint(50,200), random.randint(0,359), random.randint(0,11)*30, random.randint(0,1)])
+        # state is [range, heading, relative course, own speed]
         return np.array([random.randint(5, 100), random.randint(0, 359), random.randint(0, 11)*30, random.randint(0, 1)])
 
     def random_state(self):
@@ -130,11 +127,11 @@ class RFMultiState(State):
         array_like
             Randomly generated state variable array
         """
-        # state is [range, bearing, relative course, own speed]
+        # state is [range, heading, relative course, own speed]
         return np.array([random.randint(50, self.target_start+25), random.randint(0, 359), random.randint(0, 11)*30, self.target_speed])
 
     def init_sensor_state(self):
-        # state is [range, bearing, relative course, own speed]
+        # state is [range, heading, relative course, own speed]
         return np.array([0, 0, 0, 0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
@@ -386,15 +383,15 @@ class RFMultiState(State):
 
         self.sensor_state = np.array([r, theta_deg, heading, spd])
 
-    def update_sensor(self, control, bearing=None):
+    def update_sensor(self, control, heading=None):
         r, theta_deg, crs, old_spd = self.sensor_state
 
         spd = control[1]
 
         crs = crs % 360
         crs += control[0]
-        if bearing is not None:
-            crs = bearing
+        if heading is not None:
+            crs = heading
         if crs < 0:
             crs += 360
         crs = crs % 360
@@ -477,7 +474,7 @@ class RFState(State):
         array_like
             Randomly generated state variable array
         """
-        # state is [range, bearing, relative course, own speed]
+        # state is [range, heading, relative course, own speed]
         # return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
         return np.array([random.randint(self.target_start-25, self.target_start+25), random.randint(0, 359), random.randint(0, 11)*30, self.target_speed])
 
@@ -489,11 +486,11 @@ class RFState(State):
         array_like
             Randomly generated state variable array
         """
-        # state is [range, bearing, relative course, own speed]
+        # state is [range, heading, relative course, own speed]
         return np.array([random.randint(10, 200), random.randint(0, 359), random.randint(0, 11)*30, self.target_speed])
 
     def init_sensor_state(self):
-        # state is [range, bearing, relative course, own speed]
+        # state is [range, heading, relative course, own speed]
         return np.array([0, 0, 0, 0])
 
     # returns reward as a function of range, action, and action penalty or as a function of range only

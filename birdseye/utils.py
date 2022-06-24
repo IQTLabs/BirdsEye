@@ -125,9 +125,9 @@ def get_distance(coord1, coord2):
     return distance*(1e3)
 
 
-def get_bearing(coord1, coord2):
+def get_heading(coord1, coord2):
     """
-    Get the bearing of two coordinates
+    Get the heading of two coordinates
     """
     if (coord1 is None) or (coord2 is None):
         return None
@@ -192,6 +192,7 @@ class GPSVis:
             self.bounds = [top, lef, bot, rgt]
 
             self.img = self.create_image_from_position()
+        # TODO if else self.width_meters and self.height_meters are undefined
         self.get_ticks()
         self.cell_size = 1
         self.xedges = np.arange(0, self.width_meters +
@@ -418,11 +419,9 @@ class Results:
         """
         Create a live plot
         """
-        if self.openstreetmap is None and data.get('position', None) is not None and data.get('bearing', None) is not None:
+        if self.openstreetmap is None and data.get('position', None) is not None and data.get('heading', None) is not None:
             self.openstreetmap = GPSVis(
                 position=data['position']
-                # map_path='map_delta_park.png',  # Path to map downloaded from the OSM.
-                # bounds=(45.60311,-122.68450, 45.59494, -122.67505) # upper left, lower right
             )
             self.openstreetmap.set_origin(data['position'])
             self.transform = np.array(
@@ -442,17 +441,17 @@ class Results:
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
 
-        target_bearing = None
-        target_relative_bearing = None
+        target_heading = None
+        target_relative_heading = None
 
-        if data.get('position', None) is not None and data.get('drone_position', None) is not None and data.get('bearing', None) is not None:
-            target_bearing = get_bearing(
+        if data.get('position', None) is not None and data.get('drone_position', None) is not None and data.get('heading', None) is not None:
+            target_heading = get_heading(
                 data['position'], data['drone_position'])
-            target_relative_bearing = target_bearing - data['bearing']
+            target_relative_heading = target_heading - data['heading']
             target_distance = get_distance(
                 data['position'], data['drone_position'])
             self.expected_target_rssi = env.sensor.observation(
-                [[target_distance, target_relative_bearing, None, None]])[0]
+                [[target_distance, target_relative_heading, None, None]])[0]
 
         ax.clear()
         if self.openstreetmap is not None:
@@ -535,14 +534,14 @@ class Results:
         # Sidebar Text
         # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
         actual_str = 'Actual\n'
-        actual_str += 'Bearing = {:.0f} deg\n'.format(data.get(
-            'bearing', None)) if data.get('bearing', None) else 'Bearing = unknown\n'
+        actual_str += 'Heading = {:.0f} deg\n'.format(data.get(
+            'heading', None)) if data.get('heading', None) else 'Heading = unknown\n'
         actual_str += 'Speed = {:.2f} m/s'.format(data.get('action_taken', None)[
                                                   1]) if data.get('action_taken', None) else 'Speed = unknown\n'
 
         proposal_str = 'Proposed\n'
-        proposal_str += 'Bearing = {:.0f} deg\n'.format(data.get('action_proposal', None)[
-                                                        0]) if None not in data.get('action_proposal', (None, None)) else 'Bearing = unknown\n'
+        proposal_str += 'Heading = {:.0f} deg\n'.format(data.get('action_proposal', None)[
+                                                        0]) if None not in data.get('action_proposal', (None, None)) else 'Heading = unknown\n'
         proposal_str += 'Speed = {:.2f} m/s'.format(data.get('action_proposal', None)[
                                                     1]) if None not in data.get('action_proposal', (None, None)) else 'Speed = unknown\n'
 
@@ -556,8 +555,8 @@ class Results:
             self.expected_target_rssi) if self.expected_target_rssi else 'Expected = unknown\n'
         rssi_str += 'Difference = {:.1f} dB\n'.format(env.last_observation - self.expected_target_rssi) if (
             env.last_observation and self.expected_target_rssi) else ''
-        #rssi_str += 'Target bearing = {} \n'.format(target_bearing) if target_bearing else ''
-        #rssi_str += 'Target relative bearing = {} \n'.format(target_relative_bearing) if target_relative_bearing else ''
+        #rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
+        #rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
         rssi_str += 'MLE estimate = {:.1f} dB\n'.format(
             last_mean_hyp) if last_mean_hyp else 'MLE estimate = unknown'
         rssi_str += 'MAP estimate = {:.1f} dB'.format(
@@ -592,7 +591,6 @@ class Results:
         xp = env.state.target_state
         belief = env.pf.particles.reshape(
             len(env.pf.particles), env.state.n_targets, 4)
-        #print('sensor state = ',env.state.sensor_state)
         abs_sensor = env.state.sensor_state
 
         abs_particles = env.get_absolute_particles()
@@ -1021,8 +1019,12 @@ class Results:
             target_r.append(self.abs_target_hist[10*(i+1)-1][0])
             target_theta.append(np.radians(
                 self.abs_target_hist[10*(i+1)-1][1]))
-            sensor_x[i], sensor_y[i] = pol2cart(sensor_r, sensor_theta)
-            target_x[i], target_y[i] = pol2cart(target_r, target_theta)
+            x_val, y_val = pol2cart(sensor_r, sensor_theta)
+            sensor_x.append(x_val)
+            sensor_y.append(y_val)
+            x_val, y_val = pol2cart(target_r, target_theta)
+            target_x.append(x_val)
+            target_y.append(y_val)
 
         # Plot 4: Absolute Polar coordinates
         ax = fig.add_subplot(1, 5, 4, polar=True)
@@ -1048,7 +1050,7 @@ class Results:
         xedges = np.arange(-100, 103, 3)
         yedges = np.arange(-100, 103, 3)
         heatmap, xedges, yedges = np.histogram2d(
-            particles_x, particles_y, bins=(xedges, yedges))
+            np.asarray(particles_x)[:,0], np.asarray(particles_y)[:,0], bins=(xedges, yedges))
         heatmap = gaussian_filter(heatmap, sigma=2)
         extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
         im = ax.imshow(heatmap.T, extent=extent,
@@ -1075,9 +1077,6 @@ class Results:
         plt.close(fig)
 
 
-##################################################################
-# Logging
-##################################################################
 def write_header_log(config, method, global_start_time):
 
     if type(config) == configparser.ConfigParser:
