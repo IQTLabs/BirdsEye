@@ -260,8 +260,6 @@ class RFMultiEnv:
             y = cart[:, 1]
 
             # Build two-dim histogram distribution
-            #xedges = np.arange(-150, 153, 3)
-            #yedges = np.arange(-150, 153, 3)
             h, xedges, yedges = np.histogram2d(x, y, bins=(xedges, yedges))
             h = gaussian_filter(h, sigma=8)
             heatmaps.append(h)
@@ -270,13 +268,11 @@ class RFMultiEnv:
 
     def get_absolute_particles(self):
         return np.array([[self.state.get_absolute_state(x[4*t:4*(t+1)]) for t in range(self.state.n_targets)] for x in self.pf.particles])
-        # return np.array([self.state.get_absolute_state(t) for t in self.pf.particles])
 
     def get_absolute_target(self):
-        return [self.state.get_absolute_state(state) for state in self.state.target_state]
+        return np.array([self.state.get_absolute_state(state) for state in self.state.target_state])
 
     def get_particle_centroid(self):
-
         particles = self.pf.particles
 
         particles_r = particles[:, 0]
@@ -290,7 +286,6 @@ class RFMultiEnv:
         return mean_x, mean_y
 
     def get_distance_error(self):
-
         mean_x, mean_y = self.get_particle_centroid()
 
         target_r = self.state.target_state[0]
