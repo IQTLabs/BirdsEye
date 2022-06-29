@@ -81,7 +81,7 @@ def simple_prep(env, device, checkpoint_filename):
 
 def simple_run(qnet, observation, device):
     with torch.no_grad():
-        observation = torch.from_numpy(np.expand_dims(
+        observation = torch.from_numpy(np.expand_dims(  # pylint: disable=no-member
             observation, 0).astype(np.float32)).to(device)
         q_values = qnet(observation)
         action = q_values.argmax(1).cpu().numpy()[0]
@@ -193,7 +193,7 @@ def run_dqn(env, config, global_start_time):
     logger = init_logger(log_path)
 
     # Access requested device
-    device = torch.device('cuda' if (
+    device = torch.device('cuda' if (  # pylint: disable=no-member
         use_gpu and torch.cuda.is_available()) else 'cpu')
 
     # Define network & training optimizer
@@ -220,7 +220,7 @@ def run_dqn(env, config, global_start_time):
                           atom_num, min_value, max_value, max_episode_length)
     if atom_num > 1:
         delta_z = float(max_value - min_value) / (atom_num - 1)
-        z_i = torch.linspace(min_value, max_value, atom_num).to(device)
+        z_i = torch.linspace(min_value, max_value, atom_num).to(device)  # pylint: disable=no-member
 
     infos = {'eplenmean': deque(maxlen=100), 'eprewmean': deque(maxlen=100)}
 
@@ -273,11 +273,11 @@ def run_dqn(env, config, global_start_time):
                     b_i = (b_tzj - min_value) / delta_z
                     b_l = b_i.floor()
                     b_u = b_i.ceil()
-                    b_m = torch.zeros(batch_size, atom_num).to(device)
-                    temp = b_dist_[torch.arange(batch_size), b_a_, :]
+                    b_m = torch.zeros(batch_size, atom_num).to(device)  # pylint: disable=no-member
+                    temp = b_dist_[torch.arange(batch_size), b_a_, :]  # pylint: disable=no-member
                     b_m.scatter_add_(1, b_l.long(), temp * (b_u - b_i))
                     b_m.scatter_add_(1, b_u.long(), temp * (b_i - b_l))
-                b_q = qnet(b_o)[torch.arange(batch_size), b_a.squeeze(1), :]
+                b_q = qnet(b_o)[torch.arange(batch_size), b_a.squeeze(1), :]  # pylint: disable=no-member
                 kl_error = -(b_q * b_m).sum(1)
                 # use kl error as priorities as proposed by Rainbow
                 priorities = kl_error.detach().cpu().clamp(1e-6).numpy()
@@ -441,10 +441,10 @@ def _generate(device, env, qnet, ob_scale,
                 q_dict = deepcopy(qnet.state_dict())
                 for _, m in qnet.named_modules():
                     if isinstance(m, nn.Linear):
-                        std = torch.empty_like(m.weight).fill_(noise_scale)
-                        m.weight.data.add_(torch.normal(0, std).to(device))
-                        std = torch.empty_like(m.bias).fill_(noise_scale)
-                        m.bias.data.add_(torch.normal(0, std).to(device))
+                        std = torch.empty_like(m.weight).fill_(noise_scale)  # pylint: disable=no-member
+                        m.weight.data.add_(torch.normal(0, std).to(device))  # pylint: disable=no-member
+                        std = torch.empty_like(m.bias).fill_(noise_scale)  # pylint: disable=no-member
+                        m.bias.data.add_(torch.normal(0, std).to(device))  # pylint: disable=no-member
                 q_perturb = qnet(ob)
                 if atom_num > 1:
                     q_perturb = (q_perturb.exp() * vrange).sum(2)

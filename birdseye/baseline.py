@@ -40,7 +40,7 @@ baseline_policy = {
 }
 
 
-def baseline_trial(env, policy, num_timesteps, plotting=False, results=None):
+def baseline_trial(env, policy, num_timesteps, results=None):
 
     # Initialize true state and belief state (particle filter);
     # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
@@ -204,8 +204,7 @@ def run_baseline(env, config=None, global_start_time=None):
     coll = 0
     for i in range(1, num_trials+1):
         run_start_time = datetime.now()
-        result = baseline_trial(env, policy, timesteps,
-                                plotting, results=results)
+        result = baseline_trial(env, policy, timesteps, results=results)
         run_time = datetime.now()-run_start_time
         run_data.append([datetime.now(), run_time] + result[1:])
 
