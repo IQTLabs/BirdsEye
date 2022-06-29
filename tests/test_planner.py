@@ -40,7 +40,7 @@ def test_dqn_planner():
         threshold=str(-120),
         data=data)
     state = RFMultiState(
-        n_targets=str(2), reward='heuristic_reward', simulated=True)
+        n_targets=str(1), reward='heuristic_reward', simulated=True)
     env = birdseye.env.RFMultiEnv(
             sensor=sensor, actions=actions, state=state, simulated=False)
     belief = env.reset()
