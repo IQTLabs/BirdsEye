@@ -372,8 +372,8 @@ class Results:
         self.plot_dir = config.get(
             'plot_dir', f'{RUN_DIR}/{method_name}/{global_start_time}')
         self.logdir = f'{RUN_DIR}/{method_name}/{global_start_time}_logs/'
+        Path(self.plot_dir+'/png/').mkdir(parents=True, exist_ok=True)
         if self.make_gif == 'true':
-            Path(self.plot_dir+'/png/').mkdir(parents=True, exist_ok=True)
             Path(self.plot_dir+'/gif/').mkdir(parents=True, exist_ok=True)
         Path(self.logdir).mkdir(parents=True, exist_ok=True)
         self.col_names = ['time', 'run_time', 'target_state', 'sensor_state',
@@ -583,8 +583,8 @@ class Results:
             plt.draw()
             plt.pause(0.001)
         if self.make_gif == 'true':
-            png_filename = '{}/png/{}.png'.format(self.plot_dir, time_step)
-            print('saving plots in {}'.format(png_filename))
+            png_filename = os.path.join(self.plot_dir, 'png', f'{time_step}.png')
+            print(f'saving plots in {png_filename}')
             plt.savefig(png_filename, bbox_inches='tight')
 
     def build_multitarget_plots(self, env, time_step=None, fig=None, axs=None, centroid_distance_error=None, selected_plots=[1, 2, 3, 4, 5], simulated=True, textstr=None):
@@ -1071,8 +1071,8 @@ class Results:
         r_error, theta_error, heading_error, centroid_distance_error, rmse, mae = tracking_error(
             abs_target, abs_particles)
 
-        png_filename = '{}/png/{}.png'.format(self.plot_dir, time_step)
-        print('saving plots in {}'.format(png_filename))
+        png_filename = os.path.join(self.plot_dir, 'png', f'{time_step}.png')
+        print(f'saving plots in {png_filename}')
         plt.savefig(png_filename)
         plt.close(fig)
 
@@ -1150,6 +1150,12 @@ def tracking_error(all_targets, all_particles):
     Calculate different tracking errors
     """
     results = []
+    r_error = None
+    theta_error = None
+    heading_error = None
+    centroid_distance_error = None
+    rmse = None
+    mae = None
     n_targets = len(all_particles[0])//4
 
     # reorder targets to fit closest particles
@@ -1202,11 +1208,12 @@ def tracking_error(all_targets, all_particles):
                        centroid_distance_error, rmse, mae])
     results = np.array(results).T
 
-    r_error = results[0]
-    theta_error = results[1]
-    heading_error = results[2]
-    centroid_distance_error = results[3]
-    rmse = results[4]
-    mae = results[5]
+    if len(results) > 5:
+        r_error = results[0]
+        theta_error = results[1]
+        heading_error = results[2]
+        centroid_distance_error = results[3]
+        rmse = results[4]
+        mae = results[5]
 
     return r_error, theta_error, heading_error, centroid_distance_error, rmse, mae

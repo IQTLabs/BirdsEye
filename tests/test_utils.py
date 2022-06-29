@@ -16,7 +16,7 @@ def test_gpsvis():
 
 def test_results():
     instance = Results(plotting='True')
-    instance = Results(plotting='false')
+    instance = Results(method_name='dqn', global_start_time='0', plotting='false')
 
     data = {
         'rssi': None,
@@ -50,5 +50,7 @@ def test_results():
     env.reset()
     fig, axis1 = plt.subplots(figsize=(10, 13))
     instance.build_multitarget_plots(env=env, fig=fig)
-    # TODO currently fails because all_targets[list(idxs)] is not an integer index in tracking_error()
-    #instance.build_plots(xp=[0, 1], belief=env.pf.particles, abs_particles=env.get_absolute_particles(), abs_sensor=env.state.sensor_state, abs_target=env.get_absolute_target(), time_step=1)
+    instance.build_plots(xp=[0, 1], belief=env.pf.particles,
+                         abs_particles=env.get_absolute_particles(),
+                         abs_sensor=env.state.sensor_state,
+                         abs_target=env.get_absolute_target(), time_step=1)
