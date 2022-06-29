@@ -94,10 +94,10 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
 
             if data.get('inference_times', None) is not None:
                 mcts_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                    lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                    lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
             plot_data1 = np.abs(list(data[metric1].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
             med1 = np.percentile(list(plot_data1), 50, axis=0)
             low1 = np.percentile(list(plot_data1), 16, axis=0)
             high1 = np.percentile(list(plot_data1), 84, axis=0)
@@ -105,7 +105,7 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
             l1 = ax1.plot(med1, '-', label='MCTS, '+metric_str[metric1])
 
             plot_data2 = np.abs(list(data[metric2].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
             med2 = np.percentile(list(plot_data2), 50, axis=0)
             low2 = np.percentile(list(plot_data2), 16, axis=0)
             high2 = np.percentile(list(plot_data2), 84, axis=0)
@@ -131,10 +131,10 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
 
             if data.get('inference_times', None) is not None:
                 dqn_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                    lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                    lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
             plot_data1 = np.abs(list(data[metric1].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
             med1 = np.percentile(list(plot_data1), 50, axis=0)
             low1 = np.percentile(list(plot_data1), 16, axis=0)
             high1 = np.percentile(list(plot_data1), 84, axis=0)
@@ -142,7 +142,7 @@ def two_metric_grid(ax1, config, mcts=True, dqn=True, metric1='r_err', metric2='
             l3 = ax1.plot(med1, '--', label='DQN, '+metric_str[metric1])
 
             plot_data2 = np.abs(list(data[metric2].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
             med2 = np.percentile(list(plot_data2), 50, axis=0)
             low2 = np.percentile(list(plot_data2), 16, axis=0)
             high2 = np.percentile(list(plot_data2), 84, axis=0)
@@ -226,7 +226,7 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
 
         if data.get('inference_times', None) is not None:
             mcts_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
         pf_cov = data.get('pf_cov', None)
         if pf_cov is not None:
@@ -264,7 +264,7 @@ def single_std_dev(ax1, config, metric='r', variance_bars=False, verbose=False, 
 
         if data.get('inference_times', None) is not None:
             dqn_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
         pf_cov = data.get('pf_cov', None)
         if pf_cov is not None:
@@ -347,7 +347,7 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
 
             if data.get('inference_times', None) is not None:
                 mcts_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                    lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                    lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
             pf_cov = data.get('pf_cov', None)
             if pf_cov is not None:
@@ -392,7 +392,7 @@ def std_dev_grid(ax1, config, mcts=True, dqn=True, variance_bars=False, verbose=
 
             if data.get('inference_times', None) is not None:
                 dqn_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                    lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                    lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
             pf_cov = data.get('pf_cov', None)
             if pf_cov is not None:
@@ -486,10 +486,10 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
 
         if data.get('inference_times', None) is not None:
             mcts_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
         plot_data = np.abs(list(data[metric].apply(
-            lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+            lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
         y = np.mean(list(plot_data), axis=0)
         if verbose:
             print(r, '\n')
@@ -518,10 +518,10 @@ def single_metric_grid(ax1, config, metric='centroid_err', variance_bars=False, 
 
         if data.get('inference_times', None) is not None:
             dqn_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
         plot_data = np.abs(list(data[metric].apply(
-            lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+            lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
         # median, 16, 84%
         y = np.mean(list(plot_data), axis=0)
 
@@ -591,7 +591,7 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
         config = get_config('mcts', r)
         data = get_data('mcts', r)
         plot_data = list(data['centroid_err'].apply(
-            lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+            lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0]))
         target_start = int(config['Methods']['target_start'])
         ax1.plot(np.mean(list(plot_data), axis=0), '-',
                  label=r'$r_0 \in [{},{}]$'.format(target_start-25, target_start+25))
@@ -603,7 +603,7 @@ def starting_position_plots(config, limit=1, metric='centroid_err'):
         data = get_data('dqn', r)
 
         plot_data = list(data['centroid_err'].apply(
-            lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+            lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0]))
         y = np.mean(list(plot_data), axis=0)
         target_start = int(config['Methods']['target_start'])
         ax2.plot(
@@ -686,10 +686,10 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
 
         if data.get('inference_times', None) is not None:
             mcts_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
         plot_data = list(data[metric].apply(lambda x: [float(xx)
-                         for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+                         for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0]))
 
         med = np.percentile(list(plot_data), 50, axis=0)
         low = np.percentile(list(plot_data), 16, axis=0)
@@ -718,10 +718,10 @@ def single_plot(config, metric='centroid_err', variance_bars=False, verbose=Fals
 
         if data.get('inference_times', None) is not None:
             dqn_avg_inference_time = np.mean(list(data['inference_times'].apply(
-                lambda x: [float(xx) for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0])))
+                lambda x: [float(xx) for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0])))
 
         plot_data = list(data[metric].apply(lambda x: [float(xx)
-                         for xx in re.split(', |\s+', x[1:-1]) if len(xx) > 0]))
+                         for xx in re.split(r', |\s+', x[1:-1]) if len(xx) > 0]))
 
         med = np.percentile(list(plot_data), 50, axis=0)
         low = np.percentile(list(plot_data), 16, axis=0)
