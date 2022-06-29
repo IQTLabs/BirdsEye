@@ -1208,7 +1208,7 @@ def tracking_error(all_targets, all_particles):
                        centroid_distance_error, rmse, mae])
     results = np.array(results).T
 
-    if results:
+    if len(results) > 5:
         r_error = results[0]
         theta_error = results[1]
         heading_error = results[2]
