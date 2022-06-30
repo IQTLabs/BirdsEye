@@ -168,8 +168,6 @@ def run_dqn(env, config, global_start_time):
     policy_dim = len(env.actions.action_space)
     # TODO: modify to match multi target
     map_dim = (env.state.n_targets, 300, 300)
-    #network = CNN(map_dim, policy_dim, atom_num, dueling)
-    #  SmallRFPFQnet(n_targets, map_dim, state_dim, policy_dim, atom_num, dueling)
     network = SmallRFPFQnet(env.state.n_targets, map_dim,
                             4, policy_dim, atom_num, dueling)
     optimizer = Adam(network.parameters(), 1e-4, eps=1e-5)
@@ -342,13 +340,6 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             total_lost = np.mean([np.mean(env.pf.particles[:, 4*t] > 150)
                                  for t in range(env.state.n_targets)])
 
-            # for target_state in env.state.target_state:
-            #     if target_state[0] < 15:
-            #         total_col += 1
-
-            #     if target_state[0] > 150:
-            #         total_lost += 1
-
             # Save results to output arrays
             all_target_states[n] = env.state.target_state
             all_sensor_states[n] = env.state.sensor_state
@@ -367,7 +358,6 @@ def test(env, qnet, number_timesteps, device, ob_scale, results=None):
             all_pf_cov[n] = list(env.pf.cov_state.flatten())
 
             if results is not None and results.plotting:
-                #results.build_plots(env.state.target_state, env.pf.particles, env.state.sensor_state, env.get_absolute_target(), env.get_absolute_particles(), n, None, None)
                 results.build_multitarget_plots(
                     env=env, time_step=n, centroid_distance_error=centroid_distance_error, selected_plots=[4])
 

@@ -11,20 +11,8 @@ from .state import RFState
 from .utils import Results
 from .utils import write_header_log
 
-# Default MCTS inputs
-mcts_defaults = {
-    'lambda_arg': 0.8,
-    'collision': -2.,
-    'loss': -2.,
-    'depth': 10,
-    'simulations': 500,
-    'plotting': False,
-    'trials': 100,
-    'iterations': 500
-}
 
-
-def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
+def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None, mcts_defaults={}):
     """Function to run Monte Carlo Tree Search
 
     Parameters
@@ -77,7 +65,6 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
     mcts_coll = 0
     for i in range(1, num_runs+1):
         run_start_time = datetime.now()
-        #global mcts_loss, mcts_coll, num_particles, DEPTH
         result = mcts_trial(env, iterations, DEPTH, 20, plotting,
                             simulations, fig=fig, ax=ax, results=results)
         run_time = datetime.now()-run_start_time
@@ -102,7 +89,7 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None):
             results.save_gif(i)
 
 
-def mcts(args=None, env=None):
+def mcts(args=None, env=None, mcts_defaults={}):
     # Grab mcts specific defaults
     defaults = mcts_defaults
     config = None
@@ -142,8 +129,20 @@ def mcts(args=None, env=None):
     if config:
         write_header_log(config, 'mcts', global_start_time)
 
-    run_mcts(env=env, config=args, global_start_time=global_start_time)
+    run_mcts(env=env, config=args, global_start_time=global_start_time, mcts_defaults=mcts_defaults)
 
 
-if __name__ == '__main__':
-    mcts()
+if __name__ == '__main__':  # pragma: no cover
+    # Default MCTS inputs
+    mcts_defaults = {
+        'lambda_arg': 0.8,
+        'collision': -2.,
+        'loss': -2.,
+        'depth': 10,
+        'simulations': 500,
+        'plotting': False,
+        'trials': 100,
+        'iterations': 500
+    }
+
+    mcts(mcts_defaults=mcts_defaults)
