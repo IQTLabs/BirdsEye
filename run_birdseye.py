@@ -32,7 +32,7 @@ def batch_run():
                         print('===========================')
                         run_method = get_method(method_name)
                         action_config = 'simpleactions'
-                        state_config = 'rfstate'
+                        state_config = 'rfmultistate'
                         actions = get_action(action_config)
                         sensor = get_sensor(sensor_config)
                         state = get_state(state_config)
