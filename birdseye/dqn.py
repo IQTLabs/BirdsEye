@@ -34,39 +34,6 @@ from .utils import tracking_error
 from .utils import write_header_log
 
 
-# Default DQN inputs
-dqn_defaults = {
-    'number_timesteps': 10000,
-    'dueling': False,
-    'double_q': False,
-    'param_noise': True,
-    'exploration_fraction': 0.2,
-    'exploration_final_eps': 0.1,
-    'batch_size': 100,
-    'train_freq': 4,
-    'learning_starts': 100,
-    'target_network_update_freq': 100,
-    'buffer_size': 10000,
-    'prioritized_replay': True,
-    'prioritized_replay_alpha': 0.6,
-    'prioritized_replay_beta0': 0.4,
-    'min_value': -10,
-    'max_value': 10,
-    'max_episode_length': 500,
-    'atom_num': 1,
-    'ob_scale': 1,
-    'gamma': 0.99,
-    'grad_norm': 10.0,
-    'save_interval': 100000,
-    'eval_interval': 100000,
-    'save_path': 'checkpoints',
-    'log_path': 'rl_log',
-    'use_gpu': True,
-    'plotting': False,
-    'eval_mode': False
-}
-
-
 def simple_prep(env, device, checkpoint_filename):
     policy_dim = len(env.actions.action_space)
     map_dim = (env.state.n_targets, 300, 300)
@@ -181,6 +148,7 @@ def run_dqn(env, config, global_start_time):
     max_value = config.max_value
     max_episode_length = config.max_episode_length
     plotting = config.plotting
+    trials = config.trials
     eval_mode = config.eval_mode
 
     # Results instance for saving results to file
@@ -233,7 +201,7 @@ def run_dqn(env, config, global_start_time):
         checkpoint = torch.load(
             'checkpoints/dqn_doublerssi.checkpoint', map_location=device)
         qnet.load_state_dict(checkpoint[0])
-        evaluate(env, qnet, max_episode_length, device, ob_scale, results)
+        evaluate(env, qnet, max_episode_length, device, ob_scale, results, trials=trials)
         return
 
     for n_iter in range(1, number_timesteps + 1):
@@ -308,14 +276,14 @@ def run_dqn(env, config, global_start_time):
                        os.path.join(save_path, f'{global_start_time}_{n_iter}.checkpoint'))
 
         if eval_interval and n_iter % eval_interval == 0:
-            evaluate(env, qnet, max_episode_length, device, ob_scale, results)
+            evaluate(env, qnet, max_episode_length, device, ob_scale, results, trials=trials)
 
     close_logger(logger)
 
 
-def evaluate(env, qnet, max_episode_length, device, ob_scale, results):
+def evaluate(env, qnet, max_episode_length, device, ob_scale, results, trials=500):
 
-    trials = 500  # 500
+    trials = trials
     run_data = []
     for i in range(trials):
         run_start_time = datetime.now()
@@ -482,7 +450,7 @@ def huber_loss(abs_td_error):
     return flag * abs_td_error.pow(2) * 0.5 + (1 - flag) * (abs_td_error - 0.5)
 
 
-def dqn(args=None, env=None):
+def dqn(args=None, env=None, dqn_defaults={}):
     defaults = dqn_defaults
     config = None
 
@@ -549,6 +517,8 @@ def dqn(args=None, env=None):
                         help='Interval for saving output values')
     parser.add_argument('--eval_interval', type=int,
                         help='Interval for evaluating model')
+    parser.add_argument('--trials', type=int,
+                        help='Number of trials when evaluating')
     parser.add_argument('--save_path', type=str, help='Path for saving')
     parser.add_argument('--log_path', type=str, help='Path for logging output')
     parser.add_argument('--use_gpu', type=bool,
@@ -570,5 +540,38 @@ def dqn(args=None, env=None):
     run_dqn(env=env, config=args, global_start_time=global_start_time)
 
 
-if __name__ == '__main__':
-    dqn()
+if __name__ == '__main__':  # pragma: no cover
+    # Default DQN inputs
+    dqn_defaults = {
+        'number_timesteps': 10000,
+        'dueling': False,
+        'double_q': False,
+        'param_noise': True,
+        'exploration_fraction': 0.2,
+        'exploration_final_eps': 0.1,
+        'batch_size': 100,
+        'train_freq': 4,
+        'learning_starts': 100,
+        'target_network_update_freq': 100,
+        'buffer_size': 10000,
+        'prioritized_replay': True,
+        'prioritized_replay_alpha': 0.6,
+        'prioritized_replay_beta0': 0.4,
+        'min_value': -10,
+        'max_value': 10,
+        'max_episode_length': 500,
+        'atom_num': 1,
+        'ob_scale': 1,
+        'gamma': 0.99,
+        'grad_norm': 10.0,
+        'save_interval': 100000,
+        'eval_interval': 100000,
+        'save_path': 'checkpoints',
+        'log_path': 'rl_log',
+        'use_gpu': True,
+        'plotting': False,
+        'trials': 500,
+        'eval_mode': False
+    }
+
+    dqn(dqn_defaults=dqn_defaults)
