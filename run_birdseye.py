@@ -18,7 +18,7 @@ AVAIL_ENVS = {
 def batch_run():
     # Setup requested method objects
     for method_name in ['mcts']:
-        for sensor_config in ['drone']:
+        for sensor_config in ['doublerssi']:
             for reward in ['range_reward', 'entropy_collision_reward']:
                 for target_start in ['78']:
                     for target_speed in ['1']:
