@@ -39,8 +39,7 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
 
             # compute exploration bonus, checking for zeroes (I don't think this will ever occur anyway...)
             log_N_h = np.log(N_h)
-            if log_N_h < 0:
-                log_N_h = 0
+            log_N_h = max(log_N_h, 0)
 
             numerator = np.sqrt(log_N_h)
             denominator = N[tuple(new_index)]
@@ -248,9 +247,6 @@ def mcts_trial(env, num_iters, depth, c, plotting=False, simulations=1000, fig=N
     all_mae = np.zeros((num_iters, env.state.n_targets))
     all_inference_times = np.zeros(num_iters)
     all_pf_cov = [None]*num_iters
-
-    abs_particle_hist = []
-    abs_target_hist = []
 
     # 500 time steps with an action to be selected at each
     plots = []

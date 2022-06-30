@@ -34,39 +34,6 @@ from .utils import tracking_error
 from .utils import write_header_log
 
 
-# Default DQN inputs
-dqn_defaults = {
-    'number_timesteps': 10000,
-    'dueling': False,
-    'double_q': False,
-    'param_noise': True,
-    'exploration_fraction': 0.2,
-    'exploration_final_eps': 0.1,
-    'batch_size': 100,
-    'train_freq': 4,
-    'learning_starts': 100,
-    'target_network_update_freq': 100,
-    'buffer_size': 10000,
-    'prioritized_replay': True,
-    'prioritized_replay_alpha': 0.6,
-    'prioritized_replay_beta0': 0.4,
-    'min_value': -10,
-    'max_value': 10,
-    'max_episode_length': 500,
-    'atom_num': 1,
-    'ob_scale': 1,
-    'gamma': 0.99,
-    'grad_norm': 10.0,
-    'save_interval': 100000,
-    'eval_interval': 100000,
-    'save_path': 'checkpoints',
-    'log_path': 'rl_log',
-    'use_gpu': True,
-    'plotting': False,
-    'eval_mode': False
-}
-
-
 def simple_prep(env, device, checkpoint_filename):
     policy_dim = len(env.actions.action_space)
     map_dim = (env.state.n_targets, 300, 300)
@@ -81,7 +48,7 @@ def simple_prep(env, device, checkpoint_filename):
 
 def simple_run(qnet, observation, device):
     with torch.no_grad():
-        observation = torch.from_numpy(np.expand_dims(
+        observation = torch.from_numpy(np.expand_dims(  # pylint: disable=no-member
             observation, 0).astype(np.float32)).to(device)
         q_values = qnet(observation)
         action = q_values.argmax(1).cpu().numpy()[0]
@@ -181,6 +148,7 @@ def run_dqn(env, config, global_start_time):
     max_value = config.max_value
     max_episode_length = config.max_episode_length
     plotting = config.plotting
+    trials = config.trials
     eval_mode = config.eval_mode
 
     # Results instance for saving results to file
@@ -193,7 +161,7 @@ def run_dqn(env, config, global_start_time):
     logger = init_logger(log_path)
 
     # Access requested device
-    device = torch.device('cuda' if (
+    device = torch.device('cuda' if (  # pylint: disable=no-member
         use_gpu and torch.cuda.is_available()) else 'cpu')
 
     # Define network & training optimizer
@@ -220,7 +188,7 @@ def run_dqn(env, config, global_start_time):
                           atom_num, min_value, max_value, max_episode_length)
     if atom_num > 1:
         delta_z = float(max_value - min_value) / (atom_num - 1)
-        z_i = torch.linspace(min_value, max_value, atom_num).to(device)
+        z_i = torch.linspace(min_value, max_value, atom_num).to(device)  # pylint: disable=no-member
 
     infos = {'eplenmean': deque(maxlen=100), 'eprewmean': deque(maxlen=100)}
 
@@ -233,7 +201,7 @@ def run_dqn(env, config, global_start_time):
         checkpoint = torch.load(
             'checkpoints/dqn_doublerssi.checkpoint', map_location=device)
         qnet.load_state_dict(checkpoint[0])
-        evaluate(env, qnet, max_episode_length, device, ob_scale, results)
+        evaluate(env, qnet, max_episode_length, device, ob_scale, results, trials=trials)
         return
 
     for n_iter in range(1, number_timesteps + 1):
@@ -273,11 +241,11 @@ def run_dqn(env, config, global_start_time):
                     b_i = (b_tzj - min_value) / delta_z
                     b_l = b_i.floor()
                     b_u = b_i.ceil()
-                    b_m = torch.zeros(batch_size, atom_num).to(device)
-                    temp = b_dist_[torch.arange(batch_size), b_a_, :]
+                    b_m = torch.zeros(batch_size, atom_num).to(device)  # pylint: disable=no-member
+                    temp = b_dist_[torch.arange(batch_size), b_a_, :]  # pylint: disable=no-member
                     b_m.scatter_add_(1, b_l.long(), temp * (b_u - b_i))
                     b_m.scatter_add_(1, b_u.long(), temp * (b_i - b_l))
-                b_q = qnet(b_o)[torch.arange(batch_size), b_a.squeeze(1), :]
+                b_q = qnet(b_o)[torch.arange(batch_size), b_a.squeeze(1), :]  # pylint: disable=no-member
                 kl_error = -(b_q * b_m).sum(1)
                 # use kl error as priorities as proposed by Rainbow
                 priorities = kl_error.detach().cpu().clamp(1e-6).numpy()
@@ -308,14 +276,14 @@ def run_dqn(env, config, global_start_time):
                        os.path.join(save_path, f'{global_start_time}_{n_iter}.checkpoint'))
 
         if eval_interval and n_iter % eval_interval == 0:
-            evaluate(env, qnet, max_episode_length, device, ob_scale, results)
+            evaluate(env, qnet, max_episode_length, device, ob_scale, results, trials=trials)
 
     close_logger(logger)
 
 
-def evaluate(env, qnet, max_episode_length, device, ob_scale, results):
+def evaluate(env, qnet, max_episode_length, device, ob_scale, results, trials=500):
 
-    trials = 500  # 500
+    trials = trials
     run_data = []
     for i in range(trials):
         run_start_time = datetime.now()
@@ -441,10 +409,10 @@ def _generate(device, env, qnet, ob_scale,
                 q_dict = deepcopy(qnet.state_dict())
                 for _, m in qnet.named_modules():
                     if isinstance(m, nn.Linear):
-                        std = torch.empty_like(m.weight).fill_(noise_scale)
-                        m.weight.data.add_(torch.normal(0, std).to(device))
-                        std = torch.empty_like(m.bias).fill_(noise_scale)
-                        m.bias.data.add_(torch.normal(0, std).to(device))
+                        std = torch.empty_like(m.weight).fill_(noise_scale)  # pylint: disable=no-member
+                        m.weight.data.add_(torch.normal(0, std).to(device))  # pylint: disable=no-member
+                        std = torch.empty_like(m.bias).fill_(noise_scale)  # pylint: disable=no-member
+                        m.bias.data.add_(torch.normal(0, std).to(device))  # pylint: disable=no-member
                 q_perturb = qnet(ob)
                 if atom_num > 1:
                     q_perturb = (q_perturb.exp() * vrange).sum(2)
@@ -482,7 +450,7 @@ def huber_loss(abs_td_error):
     return flag * abs_td_error.pow(2) * 0.5 + (1 - flag) * (abs_td_error - 0.5)
 
 
-def dqn(args=None, env=None):
+def dqn(args=None, env=None, dqn_defaults={}):
     defaults = dqn_defaults
     config = None
 
@@ -549,6 +517,8 @@ def dqn(args=None, env=None):
                         help='Interval for saving output values')
     parser.add_argument('--eval_interval', type=int,
                         help='Interval for evaluating model')
+    parser.add_argument('--trials', type=int,
+                        help='Number of trials when evaluating')
     parser.add_argument('--save_path', type=str, help='Path for saving')
     parser.add_argument('--log_path', type=str, help='Path for logging output')
     parser.add_argument('--use_gpu', type=bool,
@@ -570,5 +540,38 @@ def dqn(args=None, env=None):
     run_dqn(env=env, config=args, global_start_time=global_start_time)
 
 
-if __name__ == '__main__':
-    dqn()
+if __name__ == '__main__':  # pragma: no cover
+    # Default DQN inputs
+    dqn_defaults = {
+        'number_timesteps': 10000,
+        'dueling': False,
+        'double_q': False,
+        'param_noise': True,
+        'exploration_fraction': 0.2,
+        'exploration_final_eps': 0.1,
+        'batch_size': 100,
+        'train_freq': 4,
+        'learning_starts': 100,
+        'target_network_update_freq': 100,
+        'buffer_size': 10000,
+        'prioritized_replay': True,
+        'prioritized_replay_alpha': 0.6,
+        'prioritized_replay_beta0': 0.4,
+        'min_value': -10,
+        'max_value': 10,
+        'max_episode_length': 500,
+        'atom_num': 1,
+        'ob_scale': 1,
+        'gamma': 0.99,
+        'grad_norm': 10.0,
+        'save_interval': 100000,
+        'eval_interval': 100000,
+        'save_path': 'checkpoints',
+        'log_path': 'rl_log',
+        'use_gpu': True,
+        'plotting': False,
+        'trials': 500,
+        'eval_mode': False
+    }
+
+    dqn(dqn_defaults=dqn_defaults)

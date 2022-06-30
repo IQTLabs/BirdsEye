@@ -270,7 +270,7 @@ class PrioritizedReplayBuffer(ReplayBuffer):
         p_min = self._it_min.min() / it_sum
         max_weight = (p_min * len(self._storage)) ** (-self.beta)
 
-        p_samples = np.asarray([self._it_sum[idx] for idx in idxes]) / it_sum
+        p_samples = np.asarray([self._it_sum[idx] for idx in idxes], dtype=object) / it_sum
         weights = (p_samples * len(self._storage)) ** (-self.beta) / max_weight
         weights = torch.from_numpy(weights.astype('float32'))
         weights = weights.to(self._device).unsqueeze(1)
