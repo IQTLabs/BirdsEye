@@ -60,14 +60,11 @@ def rssi(distance, directivity_rx, power_tx=26, directivity_tx=1, freq=5.7e9,
         float(directivity_tx) +
                (20*np.log10(speed_of_light/(4*np.pi))) +
         -20*np.log10(distance) +
-        -20*np.log10(freq)
+        -20*np.log10(float(freq))
     )
     # fading
     if fading_sigma:
-        #pre = power_rx
-        #print('power_rx = ',pre)
         power_rx -= np.random.normal(0, fading_sigma)
-        #print('fading = ',power_rx - pre)
     return power_rx
 
 
