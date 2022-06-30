@@ -1,3 +1,6 @@
+"""
+Tests for dqn.py
+"""
 from birdseye.actions import WalkingActions
 from birdseye.dqn import dqn
 from birdseye.env import RFMultiEnv
@@ -6,6 +9,9 @@ from sigscan import GamutRFSensor
 
 
 def test_dqn():
+    """
+    Test the dqn function
+    """
     data = {
         'rssi': None,
         'position': None,

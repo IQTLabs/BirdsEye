@@ -1,3 +1,6 @@
+"""
+Tests for mcts.py
+"""
 from birdseye.actions import WalkingActions
 from birdseye.env import RFMultiEnv
 from birdseye.mcts import mcts
@@ -6,6 +9,9 @@ from sigscan import GamutRFSensor
 
 
 def test_mcts():
+    """
+    Test the mcts function
+    """
     data = {
         'rssi': None,
         'position': None,

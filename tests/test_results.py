@@ -1,3 +1,6 @@
+"""
+Tests for results.py
+"""
 from birdseye.results import plotter
 from birdseye.results import separate_plotter
 from birdseye.results import single_metric_grid

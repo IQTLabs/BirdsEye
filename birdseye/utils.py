@@ -175,6 +175,7 @@ class GPSVis:
         self.position = position
         self.map_path = map_path
         self.bounds = bounds
+        self.origin = None
 
         if self.map_path is not None and self.bounds is not None:
             self.img = self.create_image_from_map()
@@ -327,7 +328,6 @@ class GPSVis:
         return int(x), int(y)  # w_h[1] - int(y)
 
     def set_origin(self, lat_lon):
-
         self.origin = self.scale_to_img(
             lat_lon, (int(self.width_meters), int(self.height_meters)))
 
@@ -1079,7 +1079,7 @@ class Results:
 
 def write_header_log(config, method, global_start_time):
 
-    if type(config) == configparser.ConfigParser:
+    if isinstance(config, configparser.ConfigParser):
         config2log = {section: dict(config[section])
                       for section in config.sections()}
     else:

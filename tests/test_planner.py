@@ -1,3 +1,6 @@
+"""
+Tests for planner.py
+"""
 import torch
 
 import birdseye.env
@@ -10,11 +13,17 @@ from sigscan import GamutRFSensor
 
 
 def test_path_planner():
+    """
+    Test the PathPlanner class
+    """
     planner = PathPlanner(env=None, config=None, device=None)
     planner.proposal(None)
 
 
 def test_dqn_planner():
+    """
+    Test the DQNPlanner class
+    """
     actions = WalkingActions()
     actions.print_action_info()
     device = torch.device('cpu')
