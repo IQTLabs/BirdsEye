@@ -175,7 +175,7 @@ class GPSVis:
         self.position = position
         self.map_path = map_path
         self.bounds = bounds
-        self.origin = None
+        self.origin = (0, 0)
 
         if self.map_path is not None and self.bounds is not None:
             self.img = self.create_image_from_map()
@@ -325,7 +325,7 @@ class GPSVis:
              (lon_old[1] - lon_old[0])) + new[0]
         # y must be reversed because the orientation of the image in the matplotlib.
         # image - (0, 0) in upper left corner; coordinate system - (0, 0) in lower left corner
-        return int(x), int(y)  # w_h[1] - int(y)
+        return int(x), int(y)
 
     def set_origin(self, lat_lon):
         self.origin = self.scale_to_img(
