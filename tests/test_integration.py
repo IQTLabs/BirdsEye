@@ -1,3 +1,6 @@
+"""
+Integration tests
+"""
 import os
 import tempfile
 import unittest
@@ -30,14 +33,26 @@ timesteps : 2
 
 
 class FakeArgs:
+    """
+    Mock class to provide fake args
+    """
 
     def __init__(self, config):
+        """
+        Initialize variables
+        """
         self.config = config
 
 
 class BirdsEyeIntegrationTest(unittest.TestCase):
+    """
+    Class of integration tests of running birdseye
+    """
 
     def test_integration(self):
+        """
+        Integration test
+        """
         with tempfile.TemporaryDirectory() as tempdir:
             config_file = os.path.join(tempdir, 'config.yaml')
             with open(config_file, 'w', encoding='UTF-8') as file:

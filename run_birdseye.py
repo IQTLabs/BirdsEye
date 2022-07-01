@@ -15,10 +15,11 @@ AVAIL_ENVS = {
 }
 
 
-def batch_run():
+def batch_run():  # pragma: no cover
+    # TODO this function no longer works with the rest of the codebase
     # Setup requested method objects
     for method_name in ['mcts']:
-        for sensor_config in ['drone']:
+        for sensor_config in ['doublerssi']:
             for reward in ['range_reward', 'entropy_collision_reward']:
                 for target_start in ['78']:
                     for target_speed in ['1']:
@@ -32,7 +33,7 @@ def batch_run():
                         print('===========================')
                         run_method = get_method(method_name)
                         action_config = 'simpleactions'
-                        state_config = 'rfstate'
+                        state_config = 'rfmultistate'
                         actions = get_action(action_config)
                         sensor = get_sensor(sensor_config)
                         state = get_state(state_config)

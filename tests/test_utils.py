@@ -1,3 +1,6 @@
+"""
+Tests for utils.py
+"""
 import matplotlib.pyplot as plt
 
 from birdseye.env import RFMultiEnv
@@ -9,12 +12,18 @@ from sigscan import GamutRFSensor
 
 
 def test_gpsvis():
+    """
+    Test the GPSVis class
+    """
     instance = GPSVis(position=[0,0], bounds=[0,1,2,3])
     instance.plot_map(output='save')
     instance.plot_map(output='plot')
 
 
 def test_results():
+    """
+    Test the Results class
+    """
     instance = Results(plotting='True')
     instance = Results(method_name='dqn', global_start_time='0', plotting='false')
 
