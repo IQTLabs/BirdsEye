@@ -781,7 +781,6 @@ def append_metric_avgs(df, metrics):
 def get_valid_runs(method_name):
     files = os.listdir('{}/{}/'.format(RUN_DIR, method_name))
     runs = list(set([f.split('_')[0] for f in files]))
-    print(runs)
     valid_runs = []
     for r in runs:
         if (r+'_data.csv' in files) and (r+'_header.txt' in files):
@@ -790,7 +789,6 @@ def get_valid_runs(method_name):
                 valid_runs.append(r)
             except:
                 pass
-    print(valid_runs)
     return valid_runs
 
 
