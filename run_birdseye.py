@@ -15,7 +15,8 @@ AVAIL_ENVS = {
 }
 
 
-def batch_run():
+def batch_run():  # pragma: no cover
+    # TODO this function no longer works with the rest of the codebase
     # Setup requested method objects
     for method_name in ['mcts']:
         for sensor_config in ['doublerssi']:

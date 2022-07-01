@@ -5,18 +5,13 @@ state : rfmultistate
 
 # Action space
 action : walkingactions
-#action : simpleactions
 
 # Sensor
-#sensor : doublerssi
 sensor : singlerssi
-#antenna_filename: radiation_pattern_yagi_5.csv
 antenna_filename: radiation_pattern_monopole.csv
 
 # Reward
 reward: range_reward
-#reward: heuristic_reward
-#reward: entropy_collision_reward
 
 # Target settings
 n_targets: 2
@@ -28,9 +23,6 @@ target_start: 100
 particle_resample: 0.01
 particle_min: 10
 particle_max: 200
-
-# Other
-# version: paper
 
 [Defaults]
 lambda_arg : 0.8

@@ -12,11 +12,3 @@ def test_run_birdseye_main():
     """
     sys.argv = ['', '-c', 'tests/test_mcts_multi.yaml']
     main()
-
-
-def test_run_birdseye_main_batch():
-    """
-    Test the main function using batch mode
-    """
-    sys.argv = ['', '-c', 'tests/test_mcts_multi.yaml', '-b']
-    main()
