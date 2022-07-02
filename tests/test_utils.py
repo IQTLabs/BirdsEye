@@ -24,8 +24,8 @@ def test_results():
     """
     Test the Results class
     """
-    instance = Results(plotting='True')
-    instance = Results(method_name='dqn', global_start_time='0', plotting='false')
+    instance = Results(plotting='false')
+    instance = Results(method_name='dqn', global_start_time='1656695290', plotting='True')
 
     data = {
         'rssi': None,
