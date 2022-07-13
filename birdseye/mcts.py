@@ -12,7 +12,9 @@ from .utils import Results
 from .utils import write_header_log
 
 
-def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None, mcts_defaults={}):
+def run_mcts(
+    env, config=None, fig=None, ax=None, global_start_time=None, mcts_defaults={}
+):
     """Function to run Monte Carlo Tree Search
 
     Parameters
@@ -53,35 +55,46 @@ def run_mcts(env, config=None, fig=None, ax=None, global_start_time=None, mcts_d
     plotting = config.plotting
 
     # Results instance for saving results to file
-    results = Results(method_name='mcts',
-                      global_start_time=global_start_time,
-                      num_iters=num_runs,
-                      plotting=plotting)
+    results = Results(
+        method_name="mcts",
+        global_start_time=global_start_time,
+        num_iters=num_runs,
+        plotting=plotting,
+    )
 
     run_data = []
 
     # trials
     mcts_loss = 0
     mcts_coll = 0
-    for i in range(1, num_runs+1):
+    for i in range(1, num_runs + 1):
         run_start_time = datetime.now()
-        result = mcts_trial(env, iterations, DEPTH, 20, plotting,
-                            simulations, fig=fig, ax=ax, results=results)
-        run_time = datetime.now()-run_start_time
+        result = mcts_trial(
+            env,
+            iterations,
+            DEPTH,
+            20,
+            plotting,
+            simulations,
+            fig=fig,
+            ax=ax,
+            results=results,
+        )
+        run_time = datetime.now() - run_start_time
         run_data.append([datetime.now(), run_time] + result[1:])
 
         # mcts_coll = result[6][-1]/iterations
         # mcts_loss = result[7][-1]/iterations
         mcts_coll = result[6][-1]
         mcts_loss = result[7][-1]
-        print('.')
-        print('\n==============================')
-        print(f'Runs: {i}')
-        print(f'SIMULATIONS: {simulations}')
-        print(f'MCTS Depth {DEPTH} Results')
-        print(f'Collision Rate: {mcts_coll/i}')
-        print(f'Loss Rate: {mcts_loss/i}')
-        print('==============================')
+        print(".")
+        print("\n==============================")
+        print(f"Runs: {i}")
+        print(f"SIMULATIONS: {simulations}")
+        print(f"MCTS Depth {DEPTH} Results")
+        print(f"Collision Rate: {mcts_coll/i}")
+        print(f"Loss Rate: {mcts_loss/i}")
+        print("==============================")
 
         # Saving results to CSV file
         results.write_dataframe(run_data=run_data)
@@ -96,26 +109,24 @@ def mcts(args=None, env=None, mcts_defaults={}):
 
     if args:
         config = configparser.ConfigParser(defaults)  # pytype: disable=wrong-arg-types
-        config.read_dict({section: dict(args[section])
-                         for section in args.sections()})
-        defaults = dict(config.items('Defaults'))
+        config.read_dict({section: dict(args[section]) for section in args.sections()})
+        defaults = dict(config.items("Defaults"))
         # Fix for boolean args
-        defaults['plotting'] = config.getboolean('Defaults', 'plotting')
+        defaults["plotting"] = config.getboolean("Defaults", "plotting")
 
-    parser = argparse.ArgumentParser(description='Monte Carlo Tree Search',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="Monte Carlo Tree Search",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.set_defaults(**defaults)
-    parser.add_argument('--lambda_arg', type=float, help='Lambda value')
-    parser.add_argument('--collision', type=float,
-                        help='Reward value for collision')
-    parser.add_argument('--loss', type=float,
-                        help='Reward value for loss function')
-    parser.add_argument('--depth', type=float, help='Tree depth')
-    parser.add_argument('--simulations', type=int,
-                        help='Number of simulations')
-    parser.add_argument('--plotting', type=bool, help='Flag to plot or not')
-    parser.add_argument('--trials', type=int, help='Number of runs')
-    parser.add_argument('--iterations', type=int, help='Number of iterations')
+    parser.add_argument("--lambda_arg", type=float, help="Lambda value")
+    parser.add_argument("--collision", type=float, help="Reward value for collision")
+    parser.add_argument("--loss", type=float, help="Reward value for loss function")
+    parser.add_argument("--depth", type=float, help="Tree depth")
+    parser.add_argument("--simulations", type=int, help="Number of simulations")
+    parser.add_argument("--plotting", type=bool, help="Flag to plot or not")
+    parser.add_argument("--trials", type=int, help="Number of runs")
+    parser.add_argument("--iterations", type=int, help="Number of iterations")
     args, _ = parser.parse_known_args()
 
     if not env:
@@ -125,24 +136,29 @@ def mcts(args=None, env=None, mcts_defaults={}):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    global_start_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
     if config:
-        write_header_log(config, 'mcts', global_start_time)
+        write_header_log(config, "mcts", global_start_time)
 
-    run_mcts(env=env, config=args, global_start_time=global_start_time, mcts_defaults=mcts_defaults)
+    run_mcts(
+        env=env,
+        config=args,
+        global_start_time=global_start_time,
+        mcts_defaults=mcts_defaults,
+    )
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     # Default MCTS inputs
     mcts_defaults = {
-        'lambda_arg': 0.8,
-        'collision': -2.,
-        'loss': -2.,
-        'depth': 10,
-        'simulations': 500,
-        'plotting': False,
-        'trials': 100,
-        'iterations': 500
+        "lambda_arg": 0.8,
+        "collision": -2.0,
+        "loss": -2.0,
+        "depth": 10,
+        "simulations": 500,
+        "plotting": False,
+        "trials": 100,
+        "iterations": 500,
     }
 
     mcts(mcts_defaults=mcts_defaults)

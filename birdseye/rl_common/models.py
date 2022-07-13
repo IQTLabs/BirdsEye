@@ -11,15 +11,17 @@ from birdseye.rl_common.util import Flatten
 
 
 class SmallRFPFQnet(nn.Module):
-    def __init__(self, n_targets, map_dim, state_dim, policy_dim, atom_num=1, dueling=True):
+    def __init__(
+        self, n_targets, map_dim, state_dim, policy_dim, atom_num=1, dueling=True
+    ):
         super().__init__()
         self.n_targets = n_targets
         self.atom_num = atom_num
         self.map_dim = map_dim
         self.state_dim = state_dim
         c, h, w = map_dim
-        cnn_out_dim = 32 * ((2*h - 21) // 8) * ((2*w - 21) // 8)
-        #cnn_out_dim = 32 * 47 * 47
+        cnn_out_dim = 32 * ((2 * h - 21) // 8) * ((2 * w - 21) // 8)
+        # cnn_out_dim = 32 * 47 * 47
         self.map_feature = nn.Sequential(
             nn.Conv2d(c, 32, 5),
             nn.ReLU(True),
@@ -33,7 +35,7 @@ class SmallRFPFQnet(nn.Module):
         )
 
         self.state_feature = nn.Sequential(
-            nn.Linear(n_targets*state_dim, 64),
+            nn.Linear(n_targets * state_dim, 64),
             nn.ReLU(True),
             nn.Linear(64, 50),
             nn.ReLU(True),
@@ -44,14 +46,10 @@ class SmallRFPFQnet(nn.Module):
             nn.ReLU(True),
         )
 
-        self.q = nn.Sequential(
-            nn.Linear(50, policy_dim * atom_num)
-        )
+        self.q = nn.Sequential(nn.Linear(50, policy_dim * atom_num))
 
         if dueling:
-            self.state = nn.Sequential(
-                nn.Linear(50, atom_num)
-            )
+            self.state = nn.Sequential(nn.Linear(50, atom_num))
 
         for _, m in self.named_modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -62,23 +60,23 @@ class SmallRFPFQnet(nn.Module):
         mean_belief_state_idxs = int(self.n_targets * self.state_dim)
         state = x[:, :mean_belief_state_idxs]
         pf_map = x[:, mean_belief_state_idxs:].view(
-            x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
+            x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2]
+        )
         assert state.size(0) == pf_map.size(0)
         batch_size = state.size(0)
         map_latent = self.map_feature(pf_map)
         state_latent = self.state_feature(state)
-        joint_latent = self.joint_feature(
-            torch.cat((state_latent, map_latent), dim=1))
+        joint_latent = self.joint_feature(torch.cat((state_latent, map_latent), dim=1))
         qvalue = self.q(joint_latent)
 
         if self.atom_num == 1:
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 svalue = self.state(joint_latent)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             return qvalue
         else:
             qvalue = qvalue.view(batch_size, -1, self.atom_num)
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 svalue = self.state(joint_latent).unsqueeze(1)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             logprobs = log_softmax(qvalue, -1)
@@ -119,14 +117,10 @@ class RFPFQnet(nn.Module):
             nn.ReLU(True),
         )
 
-        self.q = nn.Sequential(
-            nn.Linear(100, policy_dim * atom_num)
-        )
+        self.q = nn.Sequential(nn.Linear(100, policy_dim * atom_num))
 
         if dueling:
-            self.state = nn.Sequential(
-                nn.Linear(100, atom_num)
-            )
+            self.state = nn.Sequential(nn.Linear(100, atom_num))
 
         for _, m in self.named_modules():
             if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -134,25 +128,25 @@ class RFPFQnet(nn.Module):
                 nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
-        state = x[:, :self.state_dim]
-        pf_map = x[:, self.state_dim:].view(
-            x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2])
+        state = x[:, : self.state_dim]
+        pf_map = x[:, self.state_dim :].view(
+            x.size(0), self.map_dim[0], self.map_dim[1], self.map_dim[2]
+        )
         assert state.size(0) == pf_map.size(0)
         batch_size = state.size(0)
         map_latent = self.map_feature(pf_map)
         state_latent = self.state_feature(state)
-        joint_latent = self.joint_feature(
-            torch.cat((state_latent, map_latent), dim=1))
+        joint_latent = self.joint_feature(torch.cat((state_latent, map_latent), dim=1))
         qvalue = self.q(joint_latent)
 
         if self.atom_num == 1:
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 svalue = self.state(joint_latent)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             return qvalue
         else:
             qvalue = qvalue.view(batch_size, -1, self.atom_num)
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 svalue = self.state(joint_latent).unsqueeze(1)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             logprobs = log_softmax(qvalue, -1)
@@ -178,13 +172,11 @@ class CNN(nn.Module):
         self.q = nn.Sequential(
             nn.Linear(cnn_out_dim, 256),
             nn.ReLU(True),
-            nn.Linear(256, out_dim * atom_num)
+            nn.Linear(256, out_dim * atom_num),
         )
         if dueling:
             self.state = nn.Sequential(
-                nn.Linear(cnn_out_dim, 256),
-                nn.ReLU(True),
-                nn.Linear(256, atom_num)
+                nn.Linear(cnn_out_dim, 256), nn.ReLU(True), nn.Linear(256, atom_num)
             )
 
         for _, m in self.named_modules():
@@ -197,13 +189,13 @@ class CNN(nn.Module):
         latent = self.feature(x)
         qvalue = self.q(latent)
         if self.atom_num == 1:
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 svalue = self.state(latent)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             return qvalue
         else:
             qvalue = qvalue.view(batch_size, -1, self.atom_num)
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 svalue = self.state(latent).unsqueeze(1)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             logprobs = log_softmax(qvalue, -1)
@@ -215,11 +207,7 @@ class MLP(nn.Module):
         super().__init__()
         self.atom_num = atom_num
         self.feature = nn.Sequential(
-            Flatten(),
-            nn.Linear(in_dim, 64),
-            nn.Tanh(),
-            nn.Linear(64, 64),
-            nn.Tanh()
+            Flatten(), nn.Linear(in_dim, 64), nn.Tanh(), nn.Linear(64, 64), nn.Tanh()
         )
 
         self.q = nn.Linear(64, out_dim * atom_num)
@@ -236,12 +224,12 @@ class MLP(nn.Module):
         latent = self.feature(x)
         qvalue = self.q(latent)
         if self.atom_num == 1:
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 svalue = self.state(latent)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
             return qvalue
         else:
-            if hasattr(self, 'state'):
+            if hasattr(self, "state"):
                 qvalue = qvalue.view(batch_size, -1, self.atom_num)
                 svalue = self.state(latent).unsqueeze(1)
                 qvalue = svalue + qvalue - qvalue.mean(1, keepdim=True)
