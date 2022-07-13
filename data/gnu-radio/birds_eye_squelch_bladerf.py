@@ -8,15 +8,16 @@
 # GNU Radio version: 3.8.3.1
 from distutils.version import StrictVersion
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import ctypes
     import sys
-    if sys.platform.startswith('linux'):
+
+    if sys.platform.startswith("linux"):
         try:
-            x11 = ctypes.cdll.LoadLibrary('libX11.so')
+            x11 = ctypes.cdll.LoadLibrary("libX11.so")
             x11.XInitThreads()
         except:
-            print('Warning: failed to XInitThreads()')
+            print("Warning: failed to XInitThreads()")
 
 from PyQt5 import Qt
 from gnuradio import qtgui
@@ -38,14 +39,13 @@ from gnuradio import qtgui
 
 
 class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
-
     def __init__(self):
-        gr.top_block.__init__(self, 'Birds Eye Squelch (BladeRF)')
+        gr.top_block.__init__(self, "Birds Eye Squelch (BladeRF)")
         Qt.QWidget.__init__(self)
-        self.setWindowTitle('Birds Eye Squelch (BladeRF)')
+        self.setWindowTitle("Birds Eye Squelch (BladeRF)")
         qtgui.util.check_set_qss()
         try:
-            self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
+            self.setWindowIcon(Qt.QIcon.fromTheme("gnuradio-grc"))
         except:
             pass
         self.top_scroll_layout = Qt.QVBoxLayout()
@@ -60,14 +60,13 @@ class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings('GNU Radio', 'birds_eye_squelch_bladerf')
+        self.settings = Qt.QSettings("GNU Radio", "birds_eye_squelch_bladerf")
 
         try:
-            if StrictVersion(Qt.qVersion()) < StrictVersion('5.0.0'):
-                self.restoreGeometry(
-                    self.settings.value('geometry').toByteArray())
+            if StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
+                self.restoreGeometry(self.settings.value("geometry").toByteArray())
             else:
-                self.restoreGeometry(self.settings.value('geometry'))
+                self.restoreGeometry(self.settings.value("geometry"))
         except:
             pass
 
@@ -81,33 +80,34 @@ class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
         ##################################################
         # Blocks
         ##################################################
-        self._threshold_range = Range(-40, 0, .5, -9, 200)
+        self._threshold_range = Range(-40, 0, 0.5, -9, 200)
         self._threshold_win = RangeWidget(
-            self._threshold_range, self.set_threshold, 'threshhold', 'counter_slider', float)
+            self._threshold_range,
+            self.set_threshold,
+            "threshhold",
+            "counter_slider",
+            float,
+        )
         self.top_layout.addWidget(self._threshold_win)
         self.qtgui_waterfall_sink_x_0 = qtgui.waterfall_sink_c(
             1024,  # size
             firdes.WIN_BLACKMAN_hARRIS,  # wintype
             center_freq,  # fc
             samp_rate,  # bw
-            '',  # name
-            1  # number of inputs
+            "",  # name
+            1,  # number of inputs
         )
         self.qtgui_waterfall_sink_x_0.set_update_time(0.10)
         self.qtgui_waterfall_sink_x_0.enable_grid(False)
         self.qtgui_waterfall_sink_x_0.enable_axis_labels(True)
 
-        labels = ['', '', '', '', '',
-                  '', '', '', '', '']
-        colors = [0, 0, 0, 0, 0,
-                  0, 0, 0, 0, 0]
-        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
-                  1.0, 1.0, 1.0, 1.0, 1.0]
+        labels = ["", "", "", "", "", "", "", "", "", ""]
+        colors = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
         for i in range(1):
             if len(labels[i]) == 0:
-                self.qtgui_waterfall_sink_x_0.set_line_label(
-                    i, 'Data {0}'.format(i))
+                self.qtgui_waterfall_sink_x_0.set_line_label(i, "Data {0}".format(i))
             else:
                 self.qtgui_waterfall_sink_x_0.set_line_label(i, labels[i])
             self.qtgui_waterfall_sink_x_0.set_color_map(i, colors[i])
@@ -116,40 +116,46 @@ class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
         self.qtgui_waterfall_sink_x_0.set_intensity_range(-140, 10)
 
         self._qtgui_waterfall_sink_x_0_win = sip.wrapinstance(
-            self.qtgui_waterfall_sink_x_0.pyqwidget(), Qt.QWidget)
+            self.qtgui_waterfall_sink_x_0.pyqwidget(), Qt.QWidget
+        )
         self.top_layout.addWidget(self._qtgui_waterfall_sink_x_0_win)
         self.qtgui_freq_sink_x_0 = qtgui.freq_sink_c(
             1024,  # size
             firdes.WIN_HAMMING,  # wintype
             center_freq,  # fc
             samp_rate,  # bw
-            '',  # name
-            1
+            "",  # name
+            1,
         )
         self.qtgui_freq_sink_x_0.set_update_time(0.10)
         self.qtgui_freq_sink_x_0.set_y_axis(-140, 10)
-        self.qtgui_freq_sink_x_0.set_y_label('Relative Gain', 'dB')
-        self.qtgui_freq_sink_x_0.set_trigger_mode(
-            qtgui.TRIG_MODE_FREE, 0.0, 0, '')
+        self.qtgui_freq_sink_x_0.set_y_label("Relative Gain", "dB")
+        self.qtgui_freq_sink_x_0.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
         self.qtgui_freq_sink_x_0.enable_autoscale(False)
         self.qtgui_freq_sink_x_0.enable_grid(False)
         self.qtgui_freq_sink_x_0.set_fft_average(1.0)
         self.qtgui_freq_sink_x_0.enable_axis_labels(True)
         self.qtgui_freq_sink_x_0.enable_control_panel(False)
 
-        labels = ['', '', '', '', '',
-                  '', '', '', '', '']
-        widths = [1, 1, 1, 1, 1,
-                  1, 1, 1, 1, 1]
-        colors = ['blue', 'red', 'green', 'black', 'cyan',
-                  'magenta', 'yellow', 'dark red', 'dark green', 'dark blue']
-        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
-                  1.0, 1.0, 1.0, 1.0, 1.0]
+        labels = ["", "", "", "", "", "", "", "", "", ""]
+        widths = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        colors = [
+            "blue",
+            "red",
+            "green",
+            "black",
+            "cyan",
+            "magenta",
+            "yellow",
+            "dark red",
+            "dark green",
+            "dark blue",
+        ]
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 
         for i in range(1):
             if len(labels[i]) == 0:
-                self.qtgui_freq_sink_x_0.set_line_label(
-                    i, 'Data {0}'.format(i))
+                self.qtgui_freq_sink_x_0.set_line_label(i, "Data {0}".format(i))
             else:
                 self.qtgui_freq_sink_x_0.set_line_label(i, labels[i])
             self.qtgui_freq_sink_x_0.set_line_width(i, widths[i])
@@ -157,11 +163,10 @@ class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
             self.qtgui_freq_sink_x_0.set_line_alpha(i, alphas[i])
 
         self._qtgui_freq_sink_x_0_win = sip.wrapinstance(
-            self.qtgui_freq_sink_x_0.pyqwidget(), Qt.QWidget)
-        self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
-        self.osmosdr_source_0 = osmosdr.source(
-            args='numchan=' + str(1) + ' ' + ''
+            self.qtgui_freq_sink_x_0.pyqwidget(), Qt.QWidget
         )
+        self.top_layout.addWidget(self._qtgui_freq_sink_x_0_win)
+        self.osmosdr_source_0 = osmosdr.source(args="numchan=" + str(1) + " " + "")
         self.osmosdr_source_0.set_sample_rate(samp_rate)
         self.osmosdr_source_0.set_center_freq(center_freq, 0)
         self.osmosdr_source_0.set_freq_corr(0, 0)
@@ -171,31 +176,31 @@ class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
         self.osmosdr_source_0.set_gain(0, 0)
         self.osmosdr_source_0.set_if_gain(0, 0)
         self.osmosdr_source_0.set_bb_gain(0, 0)
-        self.osmosdr_source_0.set_antenna('', 0)
+        self.osmosdr_source_0.set_antenna("", 0)
         self.osmosdr_source_0.set_bandwidth(samp_rate, 0)
-        self.blocks_head_0 = blocks.head(gr.sizeof_gr_complex*1, 957500000)
+        self.blocks_head_0 = blocks.head(gr.sizeof_gr_complex * 1, 957500000)
         self.blocks_file_sink_0 = blocks.file_sink(
-            gr.sizeof_gr_complex*1, '/media/oem/data/ossia-ch25-2450mhz-4.raw', False)
+            gr.sizeof_gr_complex * 1, "/media/oem/data/ossia-ch25-2450mhz-4.raw", False
+        )
         self.blocks_file_sink_0.set_unbuffered(False)
         self.analog_pwr_squelch_xx_0 = analog.pwr_squelch_cc(
-            threshold, 5e-4, 1000, True)
+            threshold, 5e-4, 1000, True
+        )
 
         ##################################################
         # Connections
         ##################################################
-        self.connect((self.analog_pwr_squelch_xx_0, 0),
-                     (self.blocks_head_0, 0))
-        self.connect((self.analog_pwr_squelch_xx_0, 0),
-                     (self.qtgui_freq_sink_x_0, 0))
-        self.connect((self.analog_pwr_squelch_xx_0, 0),
-                     (self.qtgui_waterfall_sink_x_0, 0))
+        self.connect((self.analog_pwr_squelch_xx_0, 0), (self.blocks_head_0, 0))
+        self.connect((self.analog_pwr_squelch_xx_0, 0), (self.qtgui_freq_sink_x_0, 0))
+        self.connect(
+            (self.analog_pwr_squelch_xx_0, 0), (self.qtgui_waterfall_sink_x_0, 0)
+        )
         self.connect((self.blocks_head_0, 0), (self.blocks_file_sink_0, 0))
-        self.connect((self.osmosdr_source_0, 0),
-                     (self.analog_pwr_squelch_xx_0, 0))
+        self.connect((self.osmosdr_source_0, 0), (self.analog_pwr_squelch_xx_0, 0))
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings('GNU Radio', 'birds_eye_squelch_bladerf')
-        self.settings.setValue('geometry', self.saveGeometry())
+        self.settings = Qt.QSettings("GNU Radio", "birds_eye_squelch_bladerf")
+        self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
 
     def get_threshold(self):
@@ -212,10 +217,10 @@ class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
         self.samp_rate = samp_rate
         self.osmosdr_source_0.set_sample_rate(self.samp_rate)
         self.osmosdr_source_0.set_bandwidth(self.samp_rate, 0)
-        self.qtgui_freq_sink_x_0.set_frequency_range(
-            self.center_freq, self.samp_rate)
+        self.qtgui_freq_sink_x_0.set_frequency_range(self.center_freq, self.samp_rate)
         self.qtgui_waterfall_sink_x_0.set_frequency_range(
-            self.center_freq, self.samp_rate)
+            self.center_freq, self.samp_rate
+        )
 
     def get_center_freq(self):
         return self.center_freq
@@ -223,16 +228,16 @@ class birds_eye_squelch_bladerf(gr.top_block, Qt.QWidget):
     def set_center_freq(self, center_freq):
         self.center_freq = center_freq
         self.osmosdr_source_0.set_center_freq(self.center_freq, 0)
-        self.qtgui_freq_sink_x_0.set_frequency_range(
-            self.center_freq, self.samp_rate)
+        self.qtgui_freq_sink_x_0.set_frequency_range(self.center_freq, self.samp_rate)
         self.qtgui_waterfall_sink_x_0.set_frequency_range(
-            self.center_freq, self.samp_rate)
+            self.center_freq, self.samp_rate
+        )
 
 
 def main(top_block_cls=birds_eye_squelch_bladerf, options=None):
 
-    if StrictVersion('4.5.0') <= StrictVersion(Qt.qVersion()) < StrictVersion('5.0.0'):
-        style = gr.prefs().get_string('qtgui', 'style', 'raster')
+    if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
+        style = gr.prefs().get_string("qtgui", "style", "raster")
         Qt.QApplication.setGraphicsSystem(style)
     qapp = Qt.QApplication(sys.argv)
 
@@ -260,5 +265,5 @@ def main(top_block_cls=birds_eye_squelch_bladerf, options=None):
     qapp.exec_()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

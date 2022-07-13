@@ -8,18 +8,21 @@ Default logger folder is `os.path.join(__file__, '..', '..', 'logs')`
 """
 import logging.handlers
 import os
-__all__ = ['init_logger']
+
+__all__ = ["init_logger"]
 
 
 def init_logger(log_dir):
     os.makedirs(log_dir, exist_ok=True)
     log_level = logging.INFO
-    log_format = '%(levelname)s %(asctime)s %(processName)s %(process)s' \
-                 '| %(filename)s | [line:%(lineno)d] | %(message)s'
+    log_format = (
+        "%(levelname)s %(asctime)s %(processName)s %(process)s"
+        "| %(filename)s | [line:%(lineno)d] | %(message)s"
+    )
 
     logger = logging.getLogger(log_dir)
     logger.setLevel(log_level)
-    path = os.path.join(log_dir, 'main.log')
+    path = os.path.join(log_dir, "main.log")
 
     # file handler (log file)
     log_handler = logging.handlers.RotatingFileHandler(filename=path)

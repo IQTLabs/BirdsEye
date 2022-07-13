@@ -5,16 +5,16 @@ import random
 class Actions:
     """Common base class for action methods
 
-        Parameters
-        ----------
-        action_space : tuple
-            Set of tuples defining combinations of actions
-            for all dimensions
+    Parameters
+    ----------
+    action_space : tuple
+        Set of tuples defining combinations of actions
+        for all dimensions
     """
 
     def __init__(self, action_space=None, verbose=False, **kwargs):
         if action_space is None:
-            raise ValueError('Action space must be defined by action(s) (set)')
+            raise ValueError("Action space must be defined by action(s) (set)")
         self.action_space = action_space
         self.action_list = self.setup_action_list()
         self.verbose = verbose
@@ -23,13 +23,11 @@ class Actions:
             self.print_action_info()
 
     def avail_actions(self):
-        """Return set of available actions
-        """
+        """Return set of available actions"""
         return self.action_space
 
     def get_action_list(self):
-        """Return ordered list of actions
-        """
+        """Return ordered list of actions"""
         return self.action_list
 
     # returns index of action given an action
@@ -41,21 +39,19 @@ class Actions:
         return self.action_space[a_idx]
 
     def setup_action_list(self):
-        """Define ordered list of actions
-        """
+        """Define ordered list of actions"""
         return list(map(self.action_to_index, self.action_space))
 
     def get_random_action(self):
-        """Return random action and associated index
-        """
+        """Return random action and associated index"""
         random_action_index = random.choice(self.get_action_list())
         return self.index_to_action(random_action_index), random_action_index
 
     def print_action_info(self):
-        print('Available Actions:')
-        print('  ID, Values')
+        print("Available Actions:")
+        print("  ID, Values")
         for action_info in zip(self.get_action_list(), self.avail_actions()):
-            print(f'   {action_info[0]}   {action_info[1]}')
+            print(f"   {action_info[0]}   {action_info[1]}")
 
 
 class WalkingActions(Actions):
@@ -68,20 +64,17 @@ class WalkingActions(Actions):
         self.del_theta = [-45, 0, 45]
         # speed
         self.del_r = [0, 1.5]
-        simple_action_space = tuple(
-            itertools.product(self.del_theta, self.del_r))
+        simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=False)
 
 
 class SimpleActions(Actions):
-    """SimpleActions for testing purposes
-    """
+    """SimpleActions for testing purposes"""
 
     def __init__(self):
         self.del_theta = [-30, 0, 30]
         self.del_r = [0, 4]
-        simple_action_space = tuple(
-            itertools.product(self.del_theta, self.del_r))
+        simple_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=simple_action_space, verbose=False)
 
     # returns index of action given an action
@@ -94,14 +87,12 @@ class SimpleActions(Actions):
 
 
 class BaselineActions(Actions):
-    """SimpleActions for testing purposes
-    """
+    """SimpleActions for testing purposes"""
 
     def __init__(self):
         self.del_theta = [-30, 0, 30]
         self.del_r = [0, 4]
-        baseline_action_space = tuple(
-            itertools.product(self.del_theta, self.del_r))
+        baseline_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=baseline_action_space, verbose=False)
 
     # returns index of action given an action
@@ -113,13 +104,14 @@ class BaselineActions(Actions):
         return self.action_space[a_idx]
 
 
-AVAIL_ACTIONS = {'simpleactions': SimpleActions,
-                 'baselineactions': BaselineActions,
-                 'walkingactions': WalkingActions
-                 }
+AVAIL_ACTIONS = {
+    "simpleactions": SimpleActions,
+    "baselineactions": BaselineActions,
+    "walkingactions": WalkingActions,
+}
 
 
-def get_action(action_name=''):
+def get_action(action_name=""):
     """Convenience function for retrieving BirdsEye action methods
     Parameters
     ----------
@@ -134,5 +126,7 @@ def get_action(action_name=''):
     if action_name in AVAIL_ACTIONS:
         action_obj = AVAIL_ACTIONS[action_name]
         return action_obj
-    raise ValueError(f'Invalid action method name, {action_name}, entered. Must be '
-                     'in {AVAIL_ACTIONS.keys()}')
+    raise ValueError(
+        f"Invalid action method name, {action_name}, entered. Must be "
+        "in {AVAIL_ACTIONS.keys()}"
+    )

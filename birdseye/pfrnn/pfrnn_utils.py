@@ -15,7 +15,9 @@ class PFRNNBaseCell(nn.Module):
         All particles in PF-RNNs are processed in parallel to benefit from GPU parallelization.
     """
 
-    def __init__(self, num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha):
+    def __init__(
+        self, num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha
+    ):
         """
         :param num_particles: number of particles for a PF-RNN
         :param input_size: the size of input x_t
@@ -34,12 +36,10 @@ class PFRNNBaseCell(nn.Module):
         self.resamp_alpha = resamp_alpha
 
         self.obs_extractor = nn.Sequential(
-            nn.Linear(self.input_size, self.ext_obs),
-            nn.LeakyReLU()
+            nn.Linear(self.input_size, self.ext_obs), nn.LeakyReLU()
         )
         self.act_extractor = nn.Sequential(
-            nn.Linear(self.input_size, self.ext_act),
-            nn.LeakyReLU()
+            nn.Linear(self.input_size, self.ext_act), nn.LeakyReLU()
         )
 
         self.fc_obs = nn.Linear(self.ext_obs + self.h_dim, 1)
@@ -55,11 +55,16 @@ class PFRNNBaseCell(nn.Module):
         :param prob: weights for particles in the log space. Each tensor has a shape: [num_particles * batch_size, 1]
         :return: resampled particles and weights according to soft-resampling scheme.
         """
-        resamp_prob = self.resamp_alpha * torch.exp(prob) + (1 -
-                                                             self.resamp_alpha) * 1 / self.num_particles
+        resamp_prob = (
+            self.resamp_alpha * torch.exp(prob)
+            + (1 - self.resamp_alpha) * 1 / self.num_particles
+        )
         resamp_prob = resamp_prob.view(self.num_particles, -1)
-        indices = torch.multinomial(resamp_prob.transpose(0, 1),
-                                    num_samples=self.num_particles, replacement=True)
+        indices = torch.multinomial(
+            resamp_prob.transpose(0, 1),
+            num_samples=self.num_particles,
+            replacement=True,
+        )
         batch_size = indices.size(0)
         indices = indices.transpose(1, 0).contiguous()
         offset = torch.arange(batch_size).type(torch.LongTensor).unsqueeze(0)
@@ -70,15 +75,18 @@ class PFRNNBaseCell(nn.Module):
 
         # PFLSTM
         if type(particles) == tuple:
-            particles_new = (particles[0][flatten_indices],
-                             particles[1][flatten_indices])
+            particles_new = (
+                particles[0][flatten_indices],
+                particles[1][flatten_indices],
+            )
         # PFGRU
         else:
             particles_new = particles[flatten_indices]
 
         prob_new = torch.exp(prob.view(-1, 1)[flatten_indices])
-        prob_new = prob_new / (self.resamp_alpha * prob_new + (1 -
-                                                               self.resamp_alpha) / self.num_particles)
+        prob_new = prob_new / (
+            self.resamp_alpha * prob_new + (1 - self.resamp_alpha) / self.num_particles
+        )
         prob_new = torch.log(prob_new).view(self.num_particles, -1, 1)
         prob_new = prob_new - torch.logsumexp(prob_new, dim=0, keepdim=True)
         prob_new = prob_new.view(-1, 1)
@@ -103,9 +111,12 @@ class PFRNNBaseCell(nn.Module):
 
 
 class PFLSTMCell(PFRNNBaseCell):
-    def __init__(self, num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha):
-        super().__init__(num_particles, input_size,
-                         hidden_size, ext_obs, ext_act, resamp_alpha)
+    def __init__(
+        self, num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha
+    ):
+        super().__init__(
+            num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha
+        )
 
         self.fc_ih = nn.Linear(self.ext_act, 5 * self.h_dim)
         self.fc_hh = nn.Linear(self.h_dim, 5 * self.h_dim)
@@ -122,21 +133,23 @@ class PFLSTMCell(PFRNNBaseCell):
 
         wi = self.fc_ih(act)
         s = wh_b + wi
-        f, i, o, mu, var = torch.split(s, split_size_or_sections=self.h_dim,
-                                       dim=1)
-        g_ = self.reparameterize(mu, var).view(
-            self.num_particles, -1, self.h_dim).transpose(0, 1).contiguous()
-        g = self.batch_norm(g_).transpose(
-            0, 1).contiguous().view(-1, self.h_dim)
-        c1 = torch.sigmoid(f) * c0 + torch.sigmoid(i) * \
-            nn.functional.leaky_relu(g)
+        f, i, o, mu, var = torch.split(s, split_size_or_sections=self.h_dim, dim=1)
+        g_ = (
+            self.reparameterize(mu, var)
+            .view(self.num_particles, -1, self.h_dim)
+            .transpose(0, 1)
+            .contiguous()
+        )
+        g = self.batch_norm(g_).transpose(0, 1).contiguous().view(-1, self.h_dim)
+        c1 = torch.sigmoid(f) * c0 + torch.sigmoid(i) * nn.functional.leaky_relu(g)
         h1 = torch.sigmoid(o) * torch.tanh(c1)
 
         att = torch.cat((obs, h1), dim=1)
         logpdf_obs = self.fc_obs(att)
         # logpdf_obs = nn.functional.relu6(logpdf_obs).view(self.num_particles, -1, 1) - 3 # hack to shape the range obs logpdf_obs into [-3, 3] for numerical stability
-        p1 = logpdf_obs.view(self.num_particles, -1, 1) + \
-            p0.view(self.num_particles, -1, 1)
+        p1 = logpdf_obs.view(self.num_particles, -1, 1) + p0.view(
+            self.num_particles, -1, 1
+        )
 
         p1 = p1 - torch.logsumexp(p1, dim=0, keepdim=True)
 
@@ -146,9 +159,12 @@ class PFLSTMCell(PFRNNBaseCell):
 
 
 class PFGRUCell(PFRNNBaseCell):
-    def __init__(self, num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha):
-        super().__init__(num_particles, input_size,
-                         hidden_size, ext_obs, ext_act, resamp_alpha)
+    def __init__(
+        self, num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha
+    ):
+        super().__init__(
+            num_particles, input_size, hidden_size, ext_obs, ext_act, resamp_alpha
+        )
         self.fc_z = nn.Linear(self.h_dim + self.ext_act, self.h_dim)
         self.fc_r = nn.Linear(self.h_dim + self.ext_act, self.h_dim)
         self.fc_n = nn.Linear(self.h_dim + self.ext_act, self.h_dim * 2)
@@ -167,8 +183,7 @@ class PFGRUCell(PFRNNBaseCell):
         mu_n, var_n = torch.split(n, split_size_or_sections=self.h_dim, dim=1)
         n = self.reparameterize(mu_n, var_n)
 
-        n = n.view(self.num_particles, -1, self.h_dim).transpose(0,
-                                                                 1).contiguous()
+        n = n.view(self.num_particles, -1, self.h_dim).transpose(0, 1).contiguous()
         n = self.batch_norm(n)
         n = n.transpose(0, 1).contiguous().view(-1, self.h_dim)
         n = nn.functional.leaky_relu(n)
