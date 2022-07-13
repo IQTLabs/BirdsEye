@@ -10,5 +10,5 @@ def test_run_birdseye_main():
     """
     Test the main function
     """
-    sys.argv = ['', '-c', 'tests/test_mcts_multi.yaml']
+    sys.argv = ["", "-c", "tests/test_mcts_multi.yaml"]
     main()
