@@ -278,7 +278,7 @@ class GPSVis:
 
         # loop through every tile inside our bounded box
         for x_tile, y_tile in product(range(x0_tile, x1_tile), range(y0_tile, y1_tile)):
-            with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom)) as resp:
+            with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom), headers={'User-Agent': 'BirdsEye/0.1.1'}) as resp:
                 tile_img = Image.open(BytesIO(resp.content))
             # add each tile to the full size image
             img.paste(
