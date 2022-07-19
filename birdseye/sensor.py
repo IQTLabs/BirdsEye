@@ -289,14 +289,6 @@ class SingleRSSI(Sensor):
         rssi_front = power_to_dB(power_front)
         return [rssi_front]
 
-    # sample state from observation
-    def gen_state(self, obs):
-        r_dist = np.sqrt(1 / obs)
-        return [r_dist, random.randint(0, 359), random.randint(0, 11) * 30, 1]
-
-    def near_state(self, state):
-        return np.array(self.gen_state(self.observation(state)[0]))
-
 
 class DoubleRSSI(Sensor):
     """
@@ -367,14 +359,6 @@ class DoubleRSSI(Sensor):
         rssi_back = power_to_dB(power_back)
         return [rssi_front, rssi_back]
 
-    # sample state from observation
-    def gen_state(self, obs):
-        r_dist = np.sqrt(1 / obs)
-        return [r_dist, random.randint(0, 359), random.randint(0, 11) * 30, 1]
-
-    def near_state(self, state):
-        return np.array(self.gen_state(self.observation(state)))
-
 
 class SignalStrength(Sensor):
     """
@@ -397,14 +381,6 @@ class SignalStrength(Sensor):
     # samples observation given state
     def observation(self, state):
         return 1 / ((np.random.normal(state[0], self.std_dev)) ** 2)
-
-    # sample state from observation
-    def gen_state(self, obs):
-        r_dist = np.sqrt(1 / obs)
-        return [r_dist, random.randint(0, 359), random.randint(0, 11) * 30, 1]
-
-    def near_state(self, state):
-        return np.array(self.gen_state(self.observation(state)))
 
 
 class Drone(Sensor):
@@ -451,22 +427,6 @@ class Drone(Sensor):
             return 0.1
         return 0.5
 
-    # sample state from observation
-    def gen_state(self, obs):
-
-        if obs == 1:
-            heading = random.randint(-60, 60)
-        elif obs == 0:
-            heading = random.randint(120, 240)
-
-        if heading < 0:
-            heading += 360
-
-        return [random.randint(10, 150), heading, random.randint(0, 11) * 30, 1]
-
-    def near_state(self, state):
-        return np.array(self.gen_state(self.observation(state)))
-
 
 class Heading(Sensor):
     def __init__(self, sensor_range=150):
@@ -510,24 +470,6 @@ class Heading(Sensor):
         ]
         obsers = [0, 1, 2, 3]
         return random.choices(obsers, weights)[0]
-
-    def gen_state(self, obs):
-        """
-        Sample state from observation
-        """
-        if obs == 0:
-            heading = random.randint(-60, 60)
-        elif obs == 1:
-            heading = random.choice([random.randint(60, 90), random.randint(270, 300)])
-        elif obs == 2:
-            heading = random.choice([random.randint(90, 120), random.randint(240, 270)])
-        elif obs == 3:
-            heading = random.randint(120, 240)
-
-        if heading < 0:
-            heading += 360
-
-        return [random.randint(25, 100), heading, random.randint(0, 11) * 30, 1]
 
     def obs1(self, state):
         # rel_brg = state[1] - state[3]
