@@ -5,6 +5,7 @@ import signal
 
 import httpx
 import matplotlib.pyplot as plt
+import pytest
 
 from birdseye.utils import Results
 from sigscan import SigScan
@@ -36,7 +37,9 @@ def test_run_flask():
     instance.run_flask('127.0.0.1', 1111, fig, results)
     request = httpx.get('http://127.0.0.1:1111/')
     assert request.status_code == 200
-    signal.raise_signal(signal.SIGINT)
+    with pytest.raises(KeyboardInterrupt) as pytest_wrapped_e:
+        signal.raise_signal(signal.SIGINT)
+    assert pytest_wrapped_e.type == KeyboardInterrupt
 
     
 def test_sigscan():
