@@ -1,6 +1,9 @@
 """
 Tests for sigscan.py
 """
+import matplotlib.pyplot as plt
+
+from birdseye.utils import Results
 from sigscan import SigScan
 
 
@@ -16,6 +19,20 @@ class MockMessageObject:
         self.payload = payload
 
 
+def test_run_flask():
+    """
+    Test the run_flask function
+    """
+    instance = SigScan(config_path="tests/test_sigscan_config.ini")
+    results  = Results(
+        method_name="dqn", global_start_time="1656695290", plotting="True"
+    )
+    fig = plt.figure(figsize=(18, 10), dpi=50)
+    ax = fig.subplots()
+    fig.set_tight_layout(True)
+    instance.run_flask('host', 1111, fig, results).hello() 
+
+    
 def test_sigscan():
     """
     Test the SigScan class
