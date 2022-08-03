@@ -1,6 +1,7 @@
 """
 Tests for sigscan.py
 """
+import httpx
 import matplotlib.pyplot as plt
 
 from birdseye.utils import Results
@@ -30,7 +31,9 @@ def test_run_flask():
     fig = plt.figure(figsize=(18, 10), dpi=50)
     ax = fig.subplots()
     fig.set_tight_layout(True)
-    instance.run_flask('host', 1111, fig, results).hello() 
+    instance.run_flask('127.0.0.1', 1111, fig, results)
+    request = httpx.get('http://127.0.0.1:1111/')
+    assert r.status_code == 200
 
     
 def test_sigscan():
