@@ -35,7 +35,7 @@ def test_run_flask():
     fig.set_tight_layout(True)
     instance.run_flask('127.0.0.1', 1111, fig, results)
     request = httpx.get('http://127.0.0.1:1111/')
-    assert r.status_code == 200
+    assert request.status_code == 200
     signal.raise_signal(signal.SIGINT)
 
     
