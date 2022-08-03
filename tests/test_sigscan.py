@@ -1,6 +1,8 @@
 """
 Tests for sigscan.py
 """
+import signal
+
 import httpx
 import matplotlib.pyplot as plt
 
@@ -34,6 +36,7 @@ def test_run_flask():
     instance.run_flask('127.0.0.1', 1111, fig, results)
     request = httpx.get('http://127.0.0.1:1111/')
     assert r.status_code == 200
+    signal.raise_signal(signal.SIGINT)
 
     
 def test_sigscan():
