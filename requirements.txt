@@ -1,4 +1,4 @@
-flask==2.2.0
+flask==2.2.1
 imageio==2.21.0
 ipython==8.4.0
 matplotlib==3.5.2
