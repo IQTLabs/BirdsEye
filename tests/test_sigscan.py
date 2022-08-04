@@ -39,6 +39,8 @@ def test_run_flask():
     assert request.status_code == 200
     with pytest.raises(KeyboardInterrupt) as pytest_wrapped_e:
         signal.raise_signal(signal.SIGINT)
+        signal.raise_signal(signal.SIGINT)
+        signal.raise_signal(signal.SIGINT)
     assert pytest_wrapped_e.type == KeyboardInterrupt
 
     
