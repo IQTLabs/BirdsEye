@@ -462,7 +462,7 @@ class Results:
             for png_filename in sorted(
                 os.listdir(self.plot_dir + "/png/"), key=lambda x: (len(x), x)
             ):
-                image = imageio.imread(self.plot_dir + "/png/" + png_filename)
+                image = imageio.v2.imread(self.plot_dir + "/png/" + png_filename)
                 writer.append_data(image)
 
     def live_plot(self, env, time_step=None, fig=None, ax=None, data=None):
