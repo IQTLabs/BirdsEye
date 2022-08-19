@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.7.0-base-ubuntu20.04
+FROM nvidia/cuda:11.7.1-base-ubuntu20.04
 LABEL maintainer="Lucas Tindall <ltindall@iqt.org>"
 ENV PYTHONUNBUFFERED 1
 
