@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 from scipy.spatial import distance
+from tqdm.auto import trange
 
 import birdseye.utils
 import birdseye.sensor
@@ -19,7 +20,7 @@ def circ_tangents(point, center, radius):
 
     b = np.sqrt((px-cx)**2 + (py-cy)**2)
     if radius >= b:
-        print(f"Error: radius >= distance (point to center) ({radius} >= {b})")
+        ##print(f"Warning: No tangents are possible.  radius >= distance to circle center ({radius} >= {b})")
         return None
     th = np.arccos(radius / b)
     d = np.arctan2(py-cy, px-cx)
@@ -36,21 +37,21 @@ def circ_tangents(point, center, radius):
 def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
     control_action = None
     std_dev = np.amax(env.get_particle_std_dev_cartesian(env.pf.particles), axis=1) # get maximum standard deviation axis for each target
-    print(f"{std_dev=}")
+    #print(f"{std_dev=}")
     not_found = np.where(std_dev > min_std_dev)
     if len(not_found[0]):
         object_of_interest = np.argmin(std_dev[not_found])
     else:
         print(f"All objects localised!")
         return
-    print(f"{object_of_interest=}")
+    #print(f"{object_of_interest=}")
     # get tangents and min distance point proposals
     proposals = circ_tangents([0,0], env.get_particle_centroids(env.pf.particles)[object_of_interest],  r_min)
     #print(f"{env.get_particle_centroids(env.pf.particles)[object_of_interest]=}")
     if proposals:
         # convert proposal end points to polar coordinates 
         proposals = [birdseye.utils.cart2pol(p[0],p[1]) for p in proposals]
-        print(f"{proposals=}")
+        #print(f"{proposals=}")
 
         # create trajectories of length=horizon from proposal end points (first turn, then move straight)
         trajectories = []
@@ -65,7 +66,7 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
             void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
             if void_condition:
                 control_action = trj
-                print(f"found good trajectory!")
+                #print(f"Found good trajectory!")
                 break
                 
     deg_width = 40 
@@ -102,7 +103,7 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
 def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected=None):
     control_action = None
     std_dev = np.amax(env.get_particle_std_dev_cartesian(env.pf.particles), axis=1) # get maximum standard deviation axis for each target
-    print(f"{std_dev=}")
+    #print(f"{std_dev=}")
     not_found = np.where(std_dev > min_std_dev)
     not_found_sorted = np.argsort(std_dev[not_found])
     if len(not_found[0]):
@@ -113,7 +114,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
 
 
     # get tangents and min distance point proposals
-    print(f"{env.get_particle_centroids(env.pf.particles)=}")
+    #print(f"{env.get_particle_centroids(env.pf.particles)=}")
     centroids = env.get_particle_centroids(env.pf.particles)
     proposals = {}
     for i in range(env.state.n_targets):
@@ -149,7 +150,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
 
         # convert proposal end points to polar coordinates 
         proposals = {i:birdseye.utils.cart2pol(p[0],p[1]) for i,p in proposals.items()}
-        print(f"{proposals=}")
+        #print(f"{proposals=}")
 
         # create trajectories of length=horizon from proposal end points (first turn, then move straight)
         trajectories = {}
@@ -165,7 +166,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
             if void_condition and last_selected != i:
                 last_selected = i
                 control_action = trj
-                print(f"found good trajectory!")
+                #print(f"Found good trajectory!")
                 break
                 
     deg_width = 40 
@@ -202,8 +203,8 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
 
 def main(): 
 
-    n_simulations = 1
-    max_iterations = 500
+    n_simulations = 500
+    max_iterations = 400
     reward_func = lambda *args, **kwargs: None
     config_path = "lightweight_config.ini"
     n_targets = 2
@@ -261,7 +262,7 @@ def main():
 
         # Action space
         actions = birdseye.actions.BaselineActions()
-        actions.print_action_info()
+        #actions.print_action_info()
 
         # State managment
         state = birdseye.state.RFMultiState(
@@ -279,14 +280,15 @@ def main():
 
         last_selected = None
         control_actions = []
-        for i in range(max_iterations): 
+        #for i in range(max_iterations): 
+        for i in trange(max_iterations, desc='Time steps'):
             if i%horizon == 0:
                 control_action, last_selected = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected)
                 if control_action is None: 
                     break
                 control_actions.extend(control_action)
             action = control_actions[i]
-            print(f"{action=}")
+            #print(f"{action=}")
             (env_obs, reward, _, info) = env.step(action)
 
             if (local_plot == "true") or (make_gif == "true"):
@@ -342,7 +344,8 @@ def main():
         # print(f"{env.void_probability(trajectories[0], r_min)=}")
         # print(f"{control_action=}")
 
-    for i in range(n_simulations): 
+    for i in trange(n_simulations, desc='Experiments'):
+    #for i in range(n_simulations): 
         run_simulation()
 
 

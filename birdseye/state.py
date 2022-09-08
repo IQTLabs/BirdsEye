@@ -81,7 +81,10 @@ class RFMultiState(State):
             "entropy_collision_reward": self.entropy_collision_reward,
             "heuristic_reward": self.heuristic_reward,
         }
-        self.reward_func = self.AVAIL_REWARDS[reward]
+        if callable(reward):
+            self.reward_func = reward
+        else:
+            self.reward_func = self.AVAIL_REWARDS[reward]
         if reward == "range_reward":
             self.belief_mdp = False
         elif reward in ["entropy_collision_reward", "heuristic_reward"]:
