@@ -217,6 +217,9 @@ def main():
     config.read(config_path)
     config = config["lightweight"]
 
+    local_plot = config.get("native_plot", "false").lower()
+    make_gif = config.get("make_gif", "false").lower()
+
     antenna_type = config.get("antenna_type", "logp")
     planner_method = config.get("planner_method", "lightweight")
     power_tx = float(config.get("power_tx", str(26)))
@@ -243,9 +246,10 @@ def main():
             global_start_time=global_start_time,
             config=config,
         )
-        fig = plt.figure(figsize=(18, 10), dpi=50)
-        ax = fig.subplots()
-        fig.set_tight_layout(True)
+        if (local_plot == "true") or (make_gif == "true"):
+            fig = plt.figure(figsize=(18, 10), dpi=50)
+            ax = fig.subplots()
+            fig.set_tight_layout(True)
 
         sensor = birdseye.sensor.SingleRSSI(
             antenna_filename=antenna_filename,
@@ -285,9 +289,10 @@ def main():
             print(f"{action=}")
             (env_obs, reward, _, info) = env.step(action)
 
-            results.live_plot(
-                env=env, time_step=i, fig=fig, ax=ax, data={}
-            )
+            if (local_plot == "true") or (make_gif == "true"):
+                results.live_plot(
+                    env=env, time_step=i, fig=fig, ax=ax, data={}
+                )
 
             (
                 r_error,
@@ -318,10 +323,11 @@ def main():
             }
             results.data_to_json(data)
             
-        if config.get("make_gif", "false").lower() == "true":
+        if make_gif == "true":
             results.save_gif("tracking")
-        
-        plt.close(fig)
+
+        if (local_plot == "true") or (make_gif == "true"):
+            plt.close(fig)
                 
 
         # print(f"{env.pf.particles.shape=}")
