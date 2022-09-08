@@ -369,6 +369,11 @@ class GPSVis:
         self.y_ticks = list(self.y_ticks)  # sorted(y_ticks, reverse=True)
         self.x_ticks = list(self.x_ticks)
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 class Results:
     """
@@ -396,16 +401,14 @@ class Results:
         self.native_plot = config.get("native_plot", "false").lower()
         self.plot_every_n = int(config.get("plot_every_n", 1))
         self.make_gif = config.get("make_gif", "false").lower()
-
         self.namefile = f"{RUN_DIR}/{method_name}/{global_start_time}_data.csv"
-        self.plot_dir = config.get(
-            "plot_dir", f"{RUN_DIR}/{method_name}/{global_start_time}"
-        )
         self.logdir = f"{RUN_DIR}/{method_name}/{global_start_time}_logs/"
+        Path(self.logdir).mkdir(parents=True, exist_ok=True)
+        self.plot_dir = config.get("plot_dir", self.logdir)
         Path(self.plot_dir + "/png/").mkdir(parents=True, exist_ok=True)
         if self.make_gif == "true":
             Path(self.plot_dir + "/gif/").mkdir(parents=True, exist_ok=True)
-        Path(self.logdir).mkdir(parents=True, exist_ok=True)
+        
         self.col_names = [
             "time",
             "run_time",
@@ -440,7 +443,29 @@ class Results:
         self.expected_target_rssi = None
 
         if config:
-            write_header_log(config, self.method_name, self.global_start_time)
+            write_config_log(config, self.logdir)
+
+    def data_to_npy(self, array, label, timestep): 
+        """
+        Save npy array to file
+        """
+        Path(f"{self.logdir}/{label}/").mkdir(parents=True, exist_ok=True)
+        np.save(
+                f"{self.logdir}/{label}/{timestep}.npy",
+                array,
+            )
+            
+    def data_to_json(self, data):
+        """
+        Save data dict to log
+        """
+        with open(
+                f"{self.logdir}/data.log",
+                "a",
+                encoding="UTF-8",
+            ) as outfile:
+                json.dump(data, outfile, cls=NumpyEncoder)
+                outfile.write("\n")
 
     def write_dataframe(self, run_data):
         """
@@ -497,6 +522,9 @@ class Results:
         abs_sensor = env.state.sensor_state
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
+
+        if env.simulated:
+            self.target_hist.append(env.get_absolute_target())
 
         target_heading = None
         target_relative_heading = None
@@ -632,27 +660,40 @@ class Results:
                     (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
                 )
             )
-            target_np = np.array(self.target_hist)
-            if len(self.target_hist) > 1:
-                ax.plot(
-                    target_np[:, 0],
-                    target_np[:, 1],
-                    linewidth=3.0,
-                    color="maroon",
-                    zorder=3,
-                    markersize=4,
+        if self.target_hist:
+            
+            #target_np = np.array(self.target_hist)
+            #print(f"{self.target_hist[-1]=}")
+            #assert len(self.target_hist.shape) == 3
+            for t in range(env.state.n_targets): 
+                target_x, target_y = pol2cart(
+                    np.array(self.target_hist)[:, t, 0],
+                    np.radians(np.array(self.target_hist)[:, t, 1]),
                 )
-            (line5,) = ax.plot(
-                target_np[-1, 0],
-                target_np[-1, 1],
-                "o",
-                color="maroon",
-                markeredgecolor="black",
-                label="target",
-                markersize=10,
-                zorder=3,
-            )
-            lines.extend([line5])
+                if self.transform is not None:
+                    target_x += self.transform[0]
+                    target_y += self.transform[1]
+                    
+                if len(self.target_hist) > 1:
+                    ax.plot(
+                        target_x[:-1],
+                        target_y[:-1],
+                        linewidth=3.0,
+                        color="maroon",
+                        zorder=3,
+                        markersize=4,
+                    )
+                (line5,) = ax.plot(
+                    target_x[-1],
+                    target_y[-1],
+                    "o",
+                    color="maroon",
+                    markeredgecolor="black",
+                    label="target",
+                    markersize=10,
+                    zorder=3,
+                )
+                lines.extend([line5])
 
         # Legend
         ax.legend(
@@ -1480,18 +1521,16 @@ class Results:
         plt.close(fig)
 
 
-def write_header_log(config, method, global_start_time):
+def write_config_log(config, logdir):
 
     if isinstance(config, configparser.ConfigParser):
         config2log = {section: dict(config[section]) for section in config.sections()}
     else:
         config2log = dict(config)
 
-    # write output header
-    if not os.path.isdir(f"{RUN_DIR}/{method}/"):
-        os.makedirs(f"{RUN_DIR}/{method}/")
-    header_filename = f"{RUN_DIR}/{method}/{global_start_time}_header.txt"
-    with open(header_filename, "w", encoding="UTF-8") as f:
+    # write config to file
+    config_filename = f"{logdir}config.log"
+    with open(config_filename, "w", encoding="UTF-8") as f:
         f.write(json.dumps(config2log))
 
 

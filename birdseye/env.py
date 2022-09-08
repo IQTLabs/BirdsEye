@@ -113,9 +113,9 @@ class RFMultiEnv:
             ),
             n_particles=num_particles,
             dynamics_fn=self.dynamics,
-            resample_proportion=0.05,  # 0.005,
+            resample_proportion=0.005,  # 0.005,
             # noise_fn=lambda x, **kwargs: x,
-            noise_fn=lambda x, **kwargs: self.particle_noise(x),
+            noise_fn=lambda x, **kwargs: self.particle_noise(x, sigmas=[1, 2, 2]),
             #            gaussian_noise(x, sigmas=[0.2, 0.2, 0.1, 0.05, 0.05]),
             # [self.sensor.weight(None, o, state=x) for x in xp],
             weight_fn=lambda hyp, o, xp=None, **kwargs: self.sensor.weight(hyp, o),
@@ -169,8 +169,50 @@ class RFMultiEnv:
 
         return (belief_obs, reward, observation)
 
+    def void_probability(self, actions, r_min, min_bound=0.8):
+
+        particles = self.pf.particles
+        p_outside_void = []
+        for action in actions:
+            particles = self.dynamics(particles, control=action)
+            for t in range(self.state.n_targets):
+                #print(particles[:,4*t] )
+                B = 1-np.mean(particles[:,4*t] < r_min)
+                p_outside_void.append(B)
+                #print(f"probability outside void = {B}")
+        
+        if np.min(p_outside_void) >= min_bound:
+            return True, particles
+        return False, particles
+
+    def rollout(self, actions):
+        """Function to make n steps based on
+           list of action indexes 
+
+        Parameters
+        ----------
+        actions : array_like
+            Actions to perform rollout
+
+        Returns
+        -------
+        env_obs : array_like
+            Heatmap distribution of observed particles from filter
+        reward : float
+            Reward value for specified action
+        0 : int
+            Placeholder integer value
+        info : dict
+            Dictionary to track step specific values (reward, iteration)
+        """
+
+        particles = self.pf.particles
+        for action in actions: 
+            particles = self.dynamics(particles, control=action)
+        return particles
+
     # returns observation, reward, done, info
-    def step(self, action_idx):
+    def step(self, action):
         """Function to make step based on
            state variables and action index
 
@@ -192,7 +234,7 @@ class RFMultiEnv:
         """
 
         # Get action based on index
-        action = self.actions.index_to_action(action_idx)
+        #action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
         next_state = np.array(
             [
@@ -209,7 +251,7 @@ class RFMultiEnv:
         particle_swap(self)
         # Calculate reward based on updated state & action
         reward = self.state.reward_func(
-            state=next_state, action_idx=action_idx, particles=self.pf.particles
+            state=next_state, action=action, particles=self.pf.particles
         )
         # reward = -1. * self.get_distance_error()
         # Update the state variables
@@ -324,18 +366,33 @@ class RFMultiEnv:
             [self.state.get_absolute_state(state) for state in self.state.target_state]
         )
 
-    def get_particle_centroid(self):
-        particles = self.pf.particles
+    def get_particle_centroids(self, particles):
+        centroids = []
+        for t in range(self.state.n_targets):
+            particles_x, particles_y = pol2cart(
+                particles[:, 4 * t], np.radians(particles[:, (4 * t) + 1])
+            )
+            # centroid of particles x,y
+            centroids.append([np.mean(particles_x), np.mean(particles_y)])
 
-        particles_r = particles[:, 0]
-        particles_theta = np.radians(particles[:, 1])
-        particles_x, particles_y = pol2cart(particles_r, particles_theta)
+        return np.array(centroids)
 
-        # centroid of particles x,y
-        mean_x = np.mean(particles_x)
-        mean_y = np.mean(particles_y)
+    def get_particle_std_dev_cartesian(self, particles):
+        std_dev = []
+        for t in range(self.state.n_targets):
+            particles_x, particles_y = pol2cart(
+                particles[:, 4 * t], np.radians(particles[:, (4 * t) + 1])
+            )
+            std_dev.append([np.std(particles_x), np.std(particles_y)])
 
-        return mean_x, mean_y
+        return np.array(std_dev)
+
+    def get_particle_std_dev_polar(self, particles):
+        std_dev = []
+        for t in range(self.state.n_targets):
+            std_dev.append([np.std(particles[:, 4 * t]), np.std(particles[:, (4 * t) + 1])])
+
+        return np.array(std_dev)
 
     def get_distance_error(self):
         mean_x, mean_y = self.get_particle_centroid()

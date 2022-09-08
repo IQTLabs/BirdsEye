@@ -31,7 +31,6 @@ from .sensor import Drone
 from .state import RFState
 from .utils import Results
 from .utils import tracking_error
-from .utils import write_header_log
 
 
 def simple_prep(env, device, checkpoint_filename):
@@ -161,6 +160,7 @@ def run_dqn(env, config, global_start_time):
         global_start_time=global_start_time,
         num_iters=number_timesteps,
         plotting=plotting,
+        config=config,
     )
 
     # Setup logging
@@ -642,9 +642,7 @@ def dqn(args=None, env=None, dqn_defaults={}):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    if config:
-        write_header_log(config, "dqn", global_start_time)
+    global_start_time = datetime.utcnow().timestamp()
 
     # Run dqn method
     run_dqn(env=env, config=args, global_start_time=global_start_time)

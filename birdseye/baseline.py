@@ -15,7 +15,6 @@ from .state import RFState
 from .utils import particle_swap
 from .utils import Results
 from .utils import tracking_error
-from .utils import write_header_log
 
 # Default baseline inputs
 baseline_defaults = {"plotting": False, "trials": 500, "timesteps": 150}
@@ -227,6 +226,7 @@ def run_baseline(env, config=None, global_start_time=None):
         global_start_time=global_start_time,
         num_iters=num_trials,
         plotting=plotting,
+        config=config,
     )
 
     run_data = []
@@ -282,9 +282,7 @@ def baseline(args=None, env=None):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    if config:
-        write_header_log(config, "baseline", global_start_time)
+    global_start_time = datetime.utcnow().timestamp()
 
     env.actions = BaselineActions()
     run_baseline(env=env, config=args, global_start_time=global_start_time)

@@ -128,7 +128,7 @@ class RFMultiState(State):
         # state is [range, heading, relative course, own speed]
         return np.array(
             [
-                random.randint(5, 100),
+                random.randint(30, 200),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
                 random.randint(0, 1),
@@ -146,7 +146,8 @@ class RFMultiState(State):
         # state is [range, heading, relative course, own speed]
         return np.array(
             [
-                random.randint(50, self.target_start + 25),
+                #random.randint(50, self.target_start + 25),
+                random.randint(50,100),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
                 self.target_speed,
@@ -320,7 +321,7 @@ class RFMultiState(State):
         # Get current state vars
         r, theta, crs, spd = state
 
-        spd = random.randint(0, 1)
+        spd = 0.5 # random.randint(0, 1)
 
         control_spd = control[1]
 

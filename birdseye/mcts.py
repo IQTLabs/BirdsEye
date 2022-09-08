@@ -9,7 +9,6 @@ from .mcts_utils import mcts_trial
 from .sensor import Drone
 from .state import RFState
 from .utils import Results
-from .utils import write_header_log
 
 
 def run_mcts(
@@ -60,6 +59,7 @@ def run_mcts(
         global_start_time=global_start_time,
         num_iters=num_runs,
         plotting=plotting,
+        config=config,
     )
 
     run_data = []
@@ -136,9 +136,7 @@ def mcts(args=None, env=None, mcts_defaults={}):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    if config:
-        write_header_log(config, "mcts", global_start_time)
+    global_start_time = datetime.utcnow().timestamp()
 
     run_mcts(
         env=env,
