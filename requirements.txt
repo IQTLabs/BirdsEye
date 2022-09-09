@@ -2,7 +2,7 @@ flask==2.2.2
 imageio==2.21.2
 ipython==8.5.0
 matplotlib==3.5.3
-numpy==1.23.2
+numpy==1.23.3
 paho-mqtt==1.6.1
 pandas==1.4.4
 pfilter==0.2.5
