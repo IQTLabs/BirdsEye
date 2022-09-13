@@ -25,7 +25,7 @@ def init_logger(log_dir):
     path = os.path.join(log_dir, "main.log")
 
     # file handler (log file)
-    log_handler = logging.handlers.RotatingFileHandler(filename=path)
+    log_handler = logging.handlers.TimedRotatingFileHandler(filename=path, when="h", interval=24, backupCount=7)
     log_handler.setLevel(log_level)
     log_handler.setFormatter(logging.Formatter(log_format))
     logger.addHandler(log_handler)
