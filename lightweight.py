@@ -48,7 +48,7 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
     # get tangents and min distance point proposals
     proposals = circ_tangents([0,0], env.get_particle_centroids(env.pf.particles)[object_of_interest],  r_min)
     #print(f"{env.get_particle_centroids(env.pf.particles)[object_of_interest]=}")
-    if proposals:
+    if proposals is not None:
         # convert proposal end points to polar coordinates 
         proposals = [birdseye.utils.cart2pol(p[0],p[1]) for p in proposals]
         #print(f"{proposals=}")
@@ -283,8 +283,12 @@ def main():
         #for i in range(max_iterations): 
         for i in trange(max_iterations, desc='Time steps'):
             if i%horizon == 0:
-                control_action, last_selected = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected)
+                if planner_method == "lightweight_simple":
+                    control_action = get_control_actions(env, min_std_dev, r_min, horizon, min_bound)
+                else:
+                    control_action, last_selected = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected)
                 if control_action is None: 
+                    print(f"Error!: control_action should never be None")
                     break
                 control_actions.extend(control_action)
             action = control_actions[i]
