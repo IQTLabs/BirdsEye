@@ -43,7 +43,7 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
         object_of_interest = np.argmin(std_dev[not_found])
     else:
         print(f"All objects localised!")
-        return
+        return None
     #print(f"{object_of_interest=}")
     # get tangents and min distance point proposals
     proposals = circ_tangents([0,0], env.get_particle_centroids(env.pf.particles)[object_of_interest],  r_min)
@@ -288,7 +288,7 @@ def main():
                 else:
                     control_action, last_selected = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected)
                 if control_action is None: 
-                    print(f"Error!: control_action should never be None")
+                    # all objects localized 
                     break
                 control_actions.extend(control_action)
             action = control_actions[i]
