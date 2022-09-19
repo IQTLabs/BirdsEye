@@ -207,7 +207,7 @@ def main():
     max_iterations = 400
     reward_func = lambda *args, **kwargs: None
     config_path = "lightweight_config.ini"
-    n_targets = int(config.get("n_targets", str(2)))
+    
     r_min = 10
     horizon = 8
     min_bound = 0.82
@@ -221,6 +221,7 @@ def main():
     local_plot = config.get("native_plot", "false").lower()
     make_gif = config.get("make_gif", "false").lower()
 
+    n_targets = int(config.get("n_targets", str(2)))
     antenna_type = config.get("antenna_type", "logp")
     planner_method = config.get("planner_method", "lightweight")
     experiment_name = config.get("experiment_name", planner_method)
