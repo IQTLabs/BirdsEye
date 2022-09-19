@@ -134,7 +134,7 @@ class RFMultiState(State):
                 random.randint(30, 200),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
-                random.randint(0, 1),
+                self.target_speed,
             ]
         )
 
@@ -324,7 +324,7 @@ class RFMultiState(State):
         # Get current state vars
         r, theta, crs, spd = state
 
-        spd = 0.5 # random.randint(0, 1)
+        spd = self.target_speed # 0.5, random.randint(0, 1)
 
         control_spd = control[1]
 

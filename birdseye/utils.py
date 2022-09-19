@@ -375,6 +375,38 @@ class NumpyEncoder(json.JSONEncoder):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
+class ResultsReader:
+    """
+    ResultsReader class for loading run results
+    """
+
+    def __init__(
+        self,
+        experiment_name="",
+    ):
+        self.parent_logs_dir = f"{RUN_DIR}/{experiment_name}/"
+        self.log_dirs = [f"{self.parent_logs_dir}{d}" for d in os.listdir(self.parent_logs_dir) if d.endswith("_logs")]
+        self.log_data = {}
+        for d in self.log_dirs:
+            log_file = f"{d}/data.log"
+            if os.path.exists(log_file):
+                self.log_data[d] = self.load_log(f"{d}/data.log")
+
+    def load_log(self, log_file):
+        """
+        Load json log file 
+        """
+        data = []
+        with open(
+            log_file,
+            "r",
+            encoding="UTF-8",
+        ) as infile:
+            for line in infile:
+                data.append(json.loads(line))
+        return data 
+
+
 class Results:
     """
     Results class for saving run results
@@ -383,14 +415,14 @@ class Results:
 
     def __init__(
         self,
-        method_name="",
+        experiment_name="",
         global_start_time="",
         num_iters=0,
         plotting=False,
         config={},
     ):
         self.num_iters = num_iters
-        self.method_name = method_name
+        self.experiment_name = experiment_name
         self.global_start_time = global_start_time
         self.plotting = plotting
         if not isinstance(self.plotting, bool):
@@ -401,8 +433,8 @@ class Results:
         self.native_plot = config.get("native_plot", "false").lower()
         self.plot_every_n = int(config.get("plot_every_n", 1))
         self.make_gif = config.get("make_gif", "false").lower()
-        self.namefile = f"{RUN_DIR}/{method_name}/{global_start_time}_data.csv"
-        self.logdir = f"{RUN_DIR}/{method_name}/{global_start_time}_logs/"
+        self.namefile = f"{RUN_DIR}/{experiment_name}/{global_start_time}_data.csv"
+        self.logdir = f"{RUN_DIR}/{experiment_name}/{global_start_time}_logs/"
         Path(self.logdir).mkdir(parents=True, exist_ok=True)
         self.plot_dir = config.get("plot_dir", self.logdir)
         Path(self.plot_dir + "/png/").mkdir(parents=True, exist_ok=True)
@@ -460,12 +492,12 @@ class Results:
         Save data dict to log
         """
         with open(
-                f"{self.logdir}/data.log",
-                "a",
-                encoding="UTF-8",
-            ) as outfile:
-                json.dump(data, outfile, cls=NumpyEncoder)
-                outfile.write("\n")
+            f"{self.logdir}/data.log",
+            "a",
+            encoding="UTF-8",
+        ) as outfile:
+            json.dump(data, outfile, cls=NumpyEncoder)
+            outfile.write("\n")
 
     def write_dataframe(self, run_data):
         """

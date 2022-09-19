@@ -203,11 +203,11 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
 
 def main(): 
 
-    n_simulations = 500
+    n_simulations = 100
     max_iterations = 400
     reward_func = lambda *args, **kwargs: None
     config_path = "lightweight_config.ini"
-    n_targets = 2
+    n_targets = int(config.get("n_targets", str(2)))
     r_min = 10
     horizon = 8
     min_bound = 0.82
@@ -223,6 +223,8 @@ def main():
 
     antenna_type = config.get("antenna_type", "logp")
     planner_method = config.get("planner_method", "lightweight")
+    experiment_name = config.get("experiment_name", planner_method)
+    target_speed = float(config.get("target_speed", str(0.5)))
     power_tx = float(config.get("power_tx", str(26)))
     directivity_tx = float(config.get("directivity_tx", str(1)))
     freq = float(config.get("freq", str(5.7e9)))
@@ -243,7 +245,7 @@ def main():
     def run_simulation():
         global_start_time = datetime.utcnow().timestamp()
         results = birdseye.utils.Results(
-            method_name=planner_method,
+            experiment_name=experiment_name,
             global_start_time=global_start_time,
             config=config,
         )
@@ -266,7 +268,7 @@ def main():
 
         # State managment
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, reward=reward_func, simulated=True
+            n_targets=n_targets, target_speed=target_speed, reward=reward_func, simulated=True
         )
 
         # Environment
