@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 import configparser
 import matplotlib.pyplot as plt
@@ -201,12 +202,12 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
     return control_action, last_selected
 
 
-def main(): 
+def main(config_path="lightweight_config.ini"): 
 
     n_simulations = 100
     max_iterations = 400
     reward_func = lambda *args, **kwargs: None
-    config_path = "lightweight_config.ini"
+    config_path = config_path
     
     r_min = 10
     horizon = 8
@@ -357,4 +358,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config_path", type=str, default="lightweight_config.ini")
+    args = parser.parse_args()
+
+    main(config_path=args.config_path)
