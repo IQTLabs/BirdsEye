@@ -101,7 +101,7 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
         control_action = trajectories[np.random.randint(len(default_controls))]
     return control_action
 
-def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected=None):
+def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, target_selections):
     control_action = None
     std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
     #print(f"{std_dev=}")
@@ -111,7 +111,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
         object_of_interest = np.argmin(std_dev[not_found])
     else:
         print(f"All objects localised!")
-        return None, None
+        return None
 
 
     # get tangents and min distance point proposals
@@ -164,8 +164,10 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
         # check void probability contstraint for each trajectory, choose first that is sufficient 
         for i,trj in trajectories.items():
             void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
-            if void_condition and last_selected != i:
-                last_selected = i
+            if void_condition and (i in target_selections):
+                target_selections.remove(i)
+                if len(target_selections) == 0: 
+                    target_selections = {t for t in range(env.state.n_targets)}
                 control_action = trj
                 #print(f"Found good trajectory!")
                 break
@@ -199,7 +201,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
     if control_action is None:
         print(f"Error: No path satisfies void constraints. Choosing random path.")
         control_action = trajectories[np.random.randint(len(default_controls))]
-    return control_action, last_selected
+    return control_action
 
 
 def main(config_path="lightweight_separable_config.ini"): 
@@ -283,7 +285,7 @@ def main(config_path="lightweight_separable_config.ini"):
 
         #planner = birdseye.planner.LightweightPlanner(env, actions)
 
-        last_selected = None
+        target_selections = {t for t in range(n_targets)}
         control_actions = []
         #for i in range(max_iterations): 
         for i in trange(max_iterations, desc='Time steps'):
@@ -291,7 +293,7 @@ def main(config_path="lightweight_separable_config.ini"):
                 if planner_method == "lightweight_simple":
                     control_action = get_control_actions(env, min_std_dev, r_min, horizon, min_bound)
                 else:
-                    control_action, last_selected = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected)
+                    control_action = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, target_selections)
                 if control_action is None: 
                     # all objects localized 
                     break
