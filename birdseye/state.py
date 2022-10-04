@@ -131,7 +131,7 @@ class RFMultiState(State):
         # state is [range, heading, relative course, own speed]
         return np.array(
             [
-                random.randint(30, 200),
+                random.randint(1, 200),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
                 self.target_speed,

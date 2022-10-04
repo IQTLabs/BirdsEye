@@ -190,9 +190,9 @@ class GPSVis:
         if self.map_path is not None and self.bounds is not None:
             self.img = self.create_image_from_map()
         elif self.position is not None:
-            self.zoom = 17
+            self.zoom = 18
             self.TILE_SIZE = 256
-            distance = 100
+            distance = 200
 
             coord = self.position
 
@@ -346,7 +346,7 @@ class GPSVis:
         ) + new[0]
         # y must be reversed because the orientation of the image in the matplotlib.
         # image - (0, 0) in upper left corner; coordinate system - (0, 0) in lower left corner
-        return int(x), int(y)
+        return [int(x), int(y)]
 
     def set_origin(self, lat_lon):
         self.origin = self.scale_to_img(
@@ -631,6 +631,9 @@ class Results:
             target_heading = get_heading(data["position"], data["drone_position"])
             target_relative_heading = target_heading - data["heading"]
             target_distance = get_distance(data["position"], data["drone_position"])
+            print(f"Sensor position & heading = {data['position']},{data['heading']}")
+            print(f"Target distance & heading = {target_distance},{target_relative_heading}")
+            print(f"{self.expected_target_rssi=}")
             self.expected_target_rssi = env.sensor.observation(
                 [[target_distance, target_relative_heading, None, None]]
             )[0]
@@ -655,8 +658,11 @@ class Results:
 
         # Plot Particles
         for t in range(env.state.n_targets):
+            # particles_x, particles_y = pol2cart(
+            #     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
+            # )
             particles_x, particles_y = pol2cart(
-                abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
+                abs_particles[t,:,0], np.radians(abs_particles[t,:,1])
             )
             if self.transform is not None:
                 particles_x += self.transform[0]
@@ -665,7 +671,7 @@ class Results:
                 particles_x,
                 particles_y,
                 "o",
-                color=color_array[t][0],
+                color="salmon",
                 markersize=4,
                 markeredgecolor="black",
                 label="particles",
@@ -710,6 +716,53 @@ class Results:
                 lines.extend([])
 
         # Plot Sensor
+
+        if self.openstreetmap and data.get("position", None) is not None:
+            #print(f"{data['position']=}")
+            self.sensor_gps_hist.append(
+                self.openstreetmap.scale_to_img(
+                    data["position"],
+                    (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
+                )
+            )
+
+            temp_np = np.array(self.sensor_gps_hist)
+            sensor_x = temp_np[:,0]
+            sensor_y = temp_np[:,1]
+
+            if len(self.sensor_gps_hist) > 1:
+                #print(f"{data['heading']=}")
+                #print(f"{data['previous_heading']=}")
+                arrow_x,arrow_y = pol2cart(4,np.radians(data.get("heading", data["previous_heading"])))
+                ax.arrow(
+                    sensor_x[-1],
+                    sensor_y[-1],
+                    arrow_x,
+                    arrow_y,
+                    width=1.5,
+                    color="green",
+                    zorder=4,
+                )
+                ax.plot(
+                    sensor_x[:-1],
+                    sensor_y[:-1],
+                    linewidth=3.0,
+                    color="green",
+                    markeredgecolor="black",
+                    markersize=4,
+                    zorder=4,
+                )
+            (line4,) = ax.plot(
+                sensor_x[-1],
+                sensor_y[-1],
+                "H",
+                color="green",
+                label="sensor",
+                markersize=10,
+                zorder=4,
+            )
+            lines.extend([line4])
+
         sensor_x, sensor_y = pol2cart(
             np.array(self.sensor_hist)[:, 0],
             np.radians(np.array(self.sensor_hist)[:, 1]),
@@ -747,26 +800,35 @@ class Results:
         )
         lines.extend([line4])
 
+  
         if self.openstreetmap and data.get("drone_position", None) is not None:
+            #print(f"{data['drone_position']=}")
             self.target_hist.append(
                 self.openstreetmap.scale_to_img(
                     data["drone_position"],
                     (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
                 )
             )
+        #print(f"{self.target_hist=}")
         if self.target_hist:
             
             #target_np = np.array(self.target_hist)
             #print(f"{self.target_hist[-1]=}")
             #assert len(self.target_hist.shape) == 3
             for t in range(env.state.n_targets): 
-                target_x, target_y = pol2cart(
-                    np.array(self.target_hist)[:, t, 0],
-                    np.radians(np.array(self.target_hist)[:, t, 1]),
-                )
-                if self.transform is not None:
-                    target_x += self.transform[0]
-                    target_y += self.transform[1]
+                if env.simulated:
+                    target_x, target_y = pol2cart(
+                        np.array(self.target_hist)[:, t, 0],
+                        np.radians(np.array(self.target_hist)[:, t, 1]),
+                    )
+                else: 
+                    temp_np = np.array(self.target_hist)
+                    target_x = temp_np[:,0]
+                    target_y = temp_np[:,1]
+                    
+                # if self.transform is not None:
+                #     target_x += self.transform[0]
+                #     target_y += self.transform[1]
                     
                 if len(self.target_hist) > 1:
                     ax.plot(
@@ -1479,7 +1541,6 @@ class Results:
         fig=None,
         ax=None,
     ):
-        print(belief.shape)
         if len(self.abs_target_hist) < self.history_length:
             self.abs_target_hist = [abs_target] * self.history_length
             self.abs_sensor_hist = [abs_sensor] * self.history_length
@@ -1773,5 +1834,72 @@ def tracking_error(all_targets, all_particles):
         centroid_distance_error = results[3]
         rmse = results[4]
         mae = results[5]
+
+    return r_error, theta_error, heading_error, centroid_distance_error, rmse, mae
+
+def tracking_metrics_separable(all_targets, all_particles):
+    """
+    Calculate different tracking metrics
+    """
+    results = []
+    r_error = None
+    theta_error = None
+    heading_error = None
+    centroid_distance_error = None
+    rmse = None
+    mae = None
+    n_targets, n_particles, n_states = all_particles.shape
+
+
+    for t in range(n_targets):
+        target = all_targets[t]
+        particles = all_particles[t]
+
+        target_r = target[0]
+        target_theta = np.radians(target[1])
+        target_heading = target[2]
+        target_x, target_y = pol2cart(target_r, target_theta)
+
+        (
+            particles_x,
+            particles_y,
+            mean_x,
+            mean_y,
+            mean_r,
+            mean_theta,
+            mean_heading,
+            mean_spd,
+        ) = particles_mean_belief(particles)
+
+        r_error = np.mean(np.abs(target_r - particles[:, 0]))
+        theta_error = np.mean(np.abs(angle_diff(target[1] - particles[:, 1])))
+        heading_diff = np.abs(np.mean(target_heading - particles[:, 2])) % 360
+        heading_error = heading_diff if heading_diff <= 180 else 360 - heading_diff
+
+        # centroid euclidean distance error x,y
+        centroid_distance_error = np.sqrt(
+            (mean_x - target_x) ** 2 + (mean_y - target_y) ** 2
+        )
+
+        mae = np.mean(
+            np.sqrt((particles_x - target_x) ** 2 + (particles_y - target_y) ** 2)
+        )
+
+        # root mean square error
+        rmse = np.sqrt(
+            np.mean((particles_x - target_x) ** 2 + (particles_y - target_y) ** 2)
+        )
+
+        results.append(
+            [r_error, theta_error, heading_error, centroid_distance_error, rmse, mae]
+        )
+    results = np.array(results).T
+
+    r_error = results[0]
+    theta_error = results[1]
+    heading_error = results[2]
+    centroid_distance_error = results[3]
+    rmse = results[4]
+    mae = results[5]
 
     return r_error, theta_error, heading_error, centroid_distance_error, rmse, mae

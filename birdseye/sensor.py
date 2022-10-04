@@ -229,10 +229,77 @@ class DoubleRSSILofi(Sensor):
 
         return [rssi_front, rssi_back]
 
+class SingleRSSISeparable(Sensor):
+    """
+    Returns RSSI from a single antenna, with separate RSSI values for each target 
+    """
+
+    def __init__(
+        self,
+        antenna_filename=None,
+        power_tx=[26, 26],
+        directivity_tx=[1, 1],
+        freq=[5.7e9, 5.7e9],
+        n_targets=2,
+        fading_sigma=None,
+    ):
+        assert n_targets == len(power_tx)
+        assert n_targets == len(directivity_tx)
+        assert n_targets == len(freq)
+
+        self.radiation_pattern = get_radiation_pattern(
+            antenna_filename=antenna_filename
+        )
+
+        # TODO: why 15?
+        self.std_dev = 15
+
+        self.power_tx = power_tx
+        self.directivity_tx = directivity_tx
+        self.freq = freq
+
+        self.fading_sigma = fading_sigma
+        if self.fading_sigma is not None:
+            self.fading_sigma = float(self.fading_sigma)
+
+    def weight(self, hyp, obs):
+        # array of shape (# of particles)
+        expected_rssi = hyp
+        observed_rssi = obs
+        # Gaussian weighting function
+        numerator = np.power(expected_rssi - observed_rssi, 2.0)
+        denominator = 2 * np.power(self.std_dev, 2.0)
+        weight = np.exp(-numerator / denominator)  # + 0.000000001
+        weight = np.squeeze(weight)
+        return weight
+
+    # samples observation given state
+    def observation(self, state, target, fading_sigma=None):
+        if fading_sigma is None: 
+            fading_sigma = self.fading_sigma
+
+        # Calculate observation for specified target 
+        power = 0
+
+        distance = state[0]
+        theta = state[1] * np.pi / 180.0
+        directivity_rx = get_directivity(self.radiation_pattern, theta)
+        power += dB_to_power(
+            rssi(
+                distance,
+                directivity_rx,
+                power_tx=self.power_tx[target],
+                directivity_tx=self.directivity_tx[target],
+                freq=self.freq[target],
+                fading_sigma=self.fading_sigma,
+            )
+        )
+        rssi_power = power_to_dB(power)
+        return [rssi_power]
 
 class SingleRSSI(Sensor):
     """
-    Uses RSSI comparison from two opposite facing Yagi/directional antennas
+    Returns RSSI from a single antenna
     """
 
     def __init__(
@@ -246,6 +313,7 @@ class SingleRSSI(Sensor):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename
         )
+        # TODO: why 15? 
         self.std_dev = 15
 
         self.power_tx = power_tx
@@ -257,7 +325,7 @@ class SingleRSSI(Sensor):
             self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
-        # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+        # array [# of particles x 1 rssi reading]
         expected_rssi = hyp
         observed_rssi = obs
         # Gaussian weighting function
@@ -273,7 +341,6 @@ class SingleRSSI(Sensor):
             fading_sigma = self.fading_sigma
         # Calculate observation for multiple targets
         power_front = 0
-
         for ts in state:  # target_state, particle_state
             distance = ts[0]
             theta_front = ts[1] * np.pi / 180.0
