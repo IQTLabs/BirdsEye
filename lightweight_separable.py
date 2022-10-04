@@ -12,7 +12,7 @@ import birdseye.sensor
 import birdseye.actions
 import birdseye.state
 import birdseye.env
-from birdseye.utils import tracking_error
+from birdseye.utils import tracking_metrics_separable
 
 
 def circ_tangents(point, center, radius):
@@ -202,7 +202,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
     return control_action, last_selected
 
 
-def main(config_path="lightweight_config.ini"): 
+def main(config_path="lightweight_separable_config.ini"): 
 
     n_simulations = 100
     max_iterations = 400
@@ -227,9 +227,9 @@ def main(config_path="lightweight_config.ini"):
     planner_method = config.get("planner_method", "lightweight")
     experiment_name = config.get("experiment_name", planner_method)
     target_speed = float(config.get("target_speed", str(0.5)))
-    power_tx = float(config.get("power_tx", str(26)))
-    directivity_tx = float(config.get("directivity_tx", str(1)))
-    freq = float(config.get("freq", str(5.7e9)))
+    power_tx = [float(x) for x in config.get("power_tx", "26,26").split(",")]
+    directivity_tx = [float(x) for x in config.get("directivity_tx", "1,1").split(",")]
+    freq = [float(x) for x in config.get("freq", "5.7e9, 5.7e9").split(",")]
     fading_sigma = float(config.get("fading_sigma", str(8)))
     threshold = float(config.get("threshold", str(-120)))
 
@@ -256,11 +256,12 @@ def main(config_path="lightweight_config.ini"):
             ax = fig.subplots()
             fig.set_tight_layout(True)
 
-        sensor = birdseye.sensor.SingleRSSI(
+        sensor = birdseye.sensor.SingleRSSISeparable(
             antenna_filename=antenna_filename,
             power_tx=power_tx,
             directivity_tx=directivity_tx,
             freq=freq,
+            n_targets=n_targets,
             fading_sigma=fading_sigma
         )
 
@@ -274,7 +275,7 @@ def main(config_path="lightweight_config.ini"):
         )
 
         # Environment
-        env = birdseye.env.RFMultiEnv(
+        env = birdseye.env.RFMultiSeparableEnv(
             sensor=sensor, actions=actions, state=state, simulated=True
         )
 
@@ -311,7 +312,7 @@ def main(config_path="lightweight_config.ini"):
                 centroid_distance_error,
                 rmse,
                 mae,
-            ) = tracking_error(env.state.target_state, env.pf.particles)
+            ) = tracking_metrics_separable(env.state.target_state, env.get_all_particles())
 
             utc_time = datetime.utcnow().timestamp()
             results.data_to_npy(env.get_all_particles(), "particles", utc_time)
@@ -359,7 +360,7 @@ def main(config_path="lightweight_config.ini"):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_path", type=str, default="lightweight_config.ini")
+    parser.add_argument("--config_path", type=str, default="lightweight_separable_config.ini")
     args = parser.parse_args()
 
     main(config_path=args.config_path)
