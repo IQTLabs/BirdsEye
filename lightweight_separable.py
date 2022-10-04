@@ -106,6 +106,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
     std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
     #print(f"{std_dev=}")
     not_found = np.where(std_dev > min_std_dev)
+    std_dev_sorted = np.argsort(std_dev)
     not_found_sorted = np.argsort(std_dev[not_found])
     if len(not_found[0]):
         object_of_interest = np.argmin(std_dev[not_found])
@@ -162,7 +163,9 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
             trajectories[i] = trajectory
 
         # check void probability contstraint for each trajectory, choose first that is sufficient 
-        for i,trj in trajectories.items():
+        for i in std_dev_sorted:
+            trj = trajectories[i]
+        #for i,trj in trajectories.items():
             void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
             if void_condition and (i in target_selections):
                 target_selections.remove(i)
