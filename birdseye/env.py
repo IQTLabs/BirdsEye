@@ -106,7 +106,8 @@ class RFMultiEnv:
             observe_fn=lambda states, **kwargs: np.array(
                 [
                     self.sensor.observation(
-                        [x[4 * t : 4 * (t + 1)] for t in range(self.state.n_targets)]
+                        [x[4 * t : 4 * (t + 1)] for t in range(self.state.n_targets)], 
+                        fading_sigma=0
                     )
                     for x in states
                 ]

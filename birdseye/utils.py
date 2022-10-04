@@ -387,10 +387,72 @@ class ResultsReader:
         self.parent_logs_dir = f"{RUN_DIR}/{experiment_name}/"
         self.log_dirs = [f"{self.parent_logs_dir}{d}" for d in os.listdir(self.parent_logs_dir) if d.endswith("_logs")]
         self.log_data = {}
+        self.log_config = {}
         for d in self.log_dirs:
             log_file = f"{d}/data.log"
             if os.path.exists(log_file):
                 self.log_data[d] = self.load_log(f"{d}/data.log")
+            config_file = f"{d}/config.log"
+            self.log_config[d] = read_header_log(config_file)
+
+            # fix missing target_speed
+            if "target_speed" not in self.log_config[d]: 
+                self.log_config[d]["target_speed"] = 0.5 
+    
+    def average_std_dev(self):
+        """
+        Get average of the max standard deviation dimension of the particle distributions
+        """
+        std_dev_all = []
+        std_dev_success = []
+        for run, log_data in self.log_data.items(): 
+            std_dev = np.max(log_data[-1]["std_dev_cartesian"], axis=1)
+            if len(log_data) < 400: 
+                std_dev_success.extend(std_dev)
+            std_dev_all.extend(std_dev)
+        avg_std_dev_all = np.mean(std_dev_all)
+        avg_std_dev_success = np.mean(std_dev_success)
+        return avg_std_dev_success, avg_std_dev_all
+
+    def average_rmse(self):
+        """
+        Get average rmse for successful and all runs
+        """
+        rmse_success = []
+        rmse_all = []
+        for run, log_data in self.log_data.items():
+            rmse = np.sqrt(np.mean(np.array(log_data[-1]["centroid_distance_err"])**2))
+            if len(log_data) < 400:
+                rmse_success.append(rmse)
+            rmse_all.append(rmse)
+        
+        avg_rmse_success = np.mean(rmse_success)
+        avg_rmse_all = np.mean(rmse_all)
+        return avg_rmse_success, avg_rmse_all
+
+    def localization_probability(self): 
+        """
+        Get the probability of successful localizations from experiment run data. 
+        """
+        success_localize = 0
+        for run, log_data in self.log_data.items():
+            if len(log_data) < 400:
+                success_localize += 1
+        success_localize_prob = success_localize/len(self.log_data)  
+        return success_localize_prob
+
+    def average_localization_time(self):
+        """
+        Get the average run time of successful localization runs. 
+        """
+        success_localize = 0
+        average_localize_time = 0
+        for run, log_data in self.log_data.items():
+            if len(log_data) < 400:
+                success_localize += 1
+                average_localize_time += len(log_data)
+        average_localize_time /= success_localize
+        return average_localize_time
 
     def load_log(self, log_file):
         """

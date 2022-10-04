@@ -268,7 +268,9 @@ class SingleRSSI(Sensor):
         return likelihood
 
     # samples observation given state
-    def observation(self, state):
+    def observation(self, state, fading_sigma=None):
+        if fading_sigma is None: 
+            fading_sigma = self.fading_sigma
         # Calculate observation for multiple targets
         power_front = 0
 
@@ -283,7 +285,7 @@ class SingleRSSI(Sensor):
                     power_tx=self.power_tx,
                     directivity_tx=self.directivity_tx,
                     freq=self.freq,
-                    fading_sigma=self.fading_sigma,
+                    fading_sigma=fading_sigma,
                 )
             )
         rssi_front = power_to_dB(power_front)
