@@ -106,10 +106,16 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
     std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
     #print(f"{std_dev=}")
     not_found = np.where(std_dev > min_std_dev)
+    found = np.where(std_dev <= min_std_dev)
+    target_selections_not_found = target_selections.copy()
+    for f in found[0]: 
+        target_selections_not_found.discard(f)
+    if len(target_selections_not_found) == 0: 
+        target_selections_not_found = {t for t in not_found[0]}
     std_dev_sorted = np.argsort(std_dev)
     not_found_sorted = np.argsort(std_dev[not_found])
     if len(not_found[0]):
-        object_of_interest = np.argmin(std_dev[not_found])
+        object_of_interest = not_found[0][np.argmin(std_dev[not_found])]
     else:
         print(f"All objects localised!")
         return None
@@ -119,7 +125,8 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
     #print(f"{env.get_particle_centroids()=}")
     centroids = env.get_particle_centroids()
     proposals = {}
-    for i in range(env.state.n_targets):
+    for i in target_selections_not_found: 
+    #for i in range(env.state.n_targets):
         mean_other_centroids = [np.mean(np.delete(centroids,i,axis=0), axis=0)]
         target_proposals = circ_tangents([0,0], env.get_particle_centroids()[i],  r_min)
         # for p in proposals: 
@@ -164,11 +171,17 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
 
         # check void probability contstraint for each trajectory, choose first that is sufficient 
         for i in std_dev_sorted:
+            if i not in trajectories: 
+                continue
             trj = trajectories[i]
         #for i,trj in trajectories.items():
             void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
-            if void_condition and (i in target_selections):
-                target_selections.remove(i)
+            # if void_condition and (i in target_selections):
+            #     target_selections.remove(i)
+            #     if len(target_selections) == 0: 
+            #         target_selections = {t for t in range(env.state.n_targets)}
+            if void_condition: 
+                target_selections.discard(i)
                 if len(target_selections) == 0: 
                     target_selections = {t for t in range(env.state.n_targets)}
                 control_action = trj
