@@ -37,6 +37,7 @@ class RFMultiState(State):
         target_speed_range=None,
         target_movement=None,
         target_start=None,
+        sensor_speed=None,
         reward=None,
         simulated=True,
     ):
@@ -72,6 +73,7 @@ class RFMultiState(State):
             self.update_state = self.update_real_state
         # Setup an initial sensor state
         self.sensor_state = self.init_sensor_state()
+        self.sensor_speed = float(sensor_speed) if sensor_speed is not None else 1.0
 
         # Reward
         # Setup reward

@@ -58,7 +58,7 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
         trajectories = []
         for p in proposals:
             trajectory = np.zeros((horizon,2))
-            trajectory[:,1] = np.minimum(p[0]/horizon, 1)
+            trajectory[:,1] = np.minimum(p[0]/horizon, env.state.sensor_speed)
             trajectory[0,0] = np.degrees(p[1])
             trajectories.append(trajectory)
 
@@ -80,7 +80,7 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
         trajectories = []
         for c in default_controls:
             trajectory = np.zeros((horizon, 2))
-            trajectory[:,1] = 1
+            trajectory[:,1] = env.state.sensor_speed
             trajectory[0,0] = c
             trajectories.append(trajectory)
 
@@ -165,7 +165,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
         trajectories = {}
         for i,p in proposals.items():
             trajectory = np.zeros((horizon,2))
-            trajectory[:,1] = np.minimum(p[0]/horizon, 1)
+            trajectory[:,1] = np.minimum(p[0]/horizon, env.state.sensor_speed)
             trajectory[0,0] = np.degrees(p[1])
             trajectories[i] = trajectory
 
@@ -198,7 +198,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
         trajectories = []
         for c in default_controls:
             trajectory = np.zeros((horizon, 2))
-            trajectory[:,1] = 1
+            trajectory[:,1] = env.state.sensor_speed
             trajectory[0,0] = c
             trajectories.append(trajectory)
 
@@ -245,6 +245,7 @@ def main(config_path="lightweight_separable_config.ini"):
     planner_method = config.get("planner_method", "lightweight")
     experiment_name = config.get("experiment_name", planner_method)
     target_speed = float(config.get("target_speed", str(0.5)))
+    sensor_speed = float(config.get("sensor_speed", str(1.0)))
     power_tx = [float(x) for x in config.get("power_tx", "26,26").split(",")]
     directivity_tx = [float(x) for x in config.get("directivity_tx", "1,1").split(",")]
     freq = [float(x) for x in config.get("freq", "5.7e9, 5.7e9").split(",")]
@@ -280,7 +281,7 @@ def main(config_path="lightweight_separable_config.ini"):
             directivity_tx=directivity_tx,
             freq=freq,
             n_targets=n_targets,
-            fading_sigma=fading_sigma
+            fading_sigma=fading_sigma,
         )
 
         # Action space
@@ -289,7 +290,11 @@ def main(config_path="lightweight_separable_config.ini"):
 
         # State managment
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, target_speed=target_speed, reward=reward_func, simulated=True
+            n_targets=n_targets, 
+            target_speed=target_speed, 
+            sensor_speed=sensor_speed, 
+            reward=reward_func, 
+            simulated=True,
         )
 
         # Environment
