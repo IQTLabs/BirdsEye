@@ -338,7 +338,7 @@ def main(config_path="lightweight_separable_config.ini"):
             ) = tracking_metrics_separable(env.state.target_state, env.get_all_particles())
 
             utc_time = datetime.utcnow().timestamp()
-            results.data_to_npy(env.get_all_particles(), "particles", utc_time)
+            #results.data_to_npy(env.get_all_particles(), "particles", utc_time)
             ### save results
             data = {
                 "time": utc_time,

@@ -10,6 +10,8 @@ from io import BytesIO
 from itertools import permutations
 from itertools import product
 from pathlib import Path
+import pandas as pd
+
 
 import imageio
 import matplotlib.pyplot as plt
@@ -414,7 +416,49 @@ class ResultsReader:
         avg_std_dev_success = np.mean(std_dev_success)
         return avg_std_dev_success, avg_std_dev_all
 
+    def std_dev_plot(self, ax=None, color=None):
+        """
+        Get average of the max standard deviation dimension of the particle distributions
+        """
+        std_dev_all = []
+        std_dev_success = []
+        for run, log_data in self.log_data.items(): 
+            std_dev = [np.mean(np.max(np.array(d["std_dev_cartesian"]), axis=1)) for d in log_data]
+            std_dev_all.append(std_dev)
+        if ax is None: 
+            fig = plt.figure()
+            ax = fig.subplots()
+        if color is None: 
+            color="blue"
+        for sd in std_dev_all: 
+            ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
+        # plt.show()
+
+        plt.figure()
+        df = pd.DataFrame(std_dev_all)
+        df.boxplot()
+        # plt.show()
+
+# df.boxplot()
+        
+
     def average_rmse(self):
+        """
+        Get average rmse for successful and all runs
+        """
+        rmse_success = []
+        rmse_all = []
+        for run, log_data in self.log_data.items():
+            rmse = np.sqrt(np.mean(np.array(log_data[-1]["centroid_distance_err"])**2))
+            if len(log_data) < 400:
+                rmse_success.append(rmse)
+            rmse_all.append(rmse)
+        
+        avg_rmse_success = np.mean(rmse_success)
+        avg_rmse_all = np.mean(rmse_all)
+        return avg_rmse_success, avg_rmse_all
+
+    def rmse_plot(self):
         """
         Get average rmse for successful and all runs
         """
