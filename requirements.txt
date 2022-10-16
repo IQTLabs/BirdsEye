@@ -1,5 +1,5 @@
 flask==2.2.2
-imageio==2.22.1
+imageio==2.22.2
 ipython==8.5.0
 matplotlib==3.6.1
 numpy==1.23.4
