@@ -11,6 +11,8 @@ from itertools import permutations
 from itertools import product
 from pathlib import Path
 import pandas as pd
+from pyparsing import col
+import seaborn as sns
 
 
 import imageio
@@ -416,7 +418,7 @@ class ResultsReader:
         avg_std_dev_success = np.mean(std_dev_success)
         return avg_std_dev_success, avg_std_dev_all
 
-    def std_dev_plot(self, ax=None, color=None):
+    def std_dev_plot(self, ax=None, color=None, facecolor=None):
         """
         Get average of the max standard deviation dimension of the particle distributions
         """
@@ -425,18 +427,35 @@ class ResultsReader:
         for run, log_data in self.log_data.items(): 
             std_dev = [np.mean(np.max(np.array(d["std_dev_cartesian"]), axis=1)) for d in log_data]
             std_dev_all.append(std_dev)
-        if ax is None: 
-            fig = plt.figure()
-            ax = fig.subplots()
-        if color is None: 
-            color="blue"
-        for sd in std_dev_all: 
-            ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
+        # if ax is None: 
+        #     fig = plt.figure()
+        #     ax = fig.subplots()
+        # if color is None: 
+        #     color="blue"
+        # for sd in std_dev_all: 
+        #     ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
         # plt.show()
 
-        plt.figure()
+        
         df = pd.DataFrame(std_dev_all)
-        df.boxplot()
+        if df.shape[1] < 400: 
+            df = df.reindex(columns = list(range(400)))
+        df = df[:][list(range(0,400,20))]
+        df.boxplot(
+            ax=ax, 
+            notch=True,
+            patch_artist=True,
+            boxprops=dict(facecolor=facecolor, color=color, alpha=0.75),
+            capprops=dict(color=color),
+            whiskerprops=dict(color=color),
+            flierprops=dict(color=color, markeredgecolor=color),
+            medianprops=dict(color=color),
+            #color=color, 
+            showfliers=False
+        )
+
+        # if experiment_name is not None: 
+        #     plt.title(experiment_name)
         # plt.show()
 
 # df.boxplot()
@@ -457,8 +476,46 @@ class ResultsReader:
         avg_rmse_success = np.mean(rmse_success)
         avg_rmse_all = np.mean(rmse_all)
         return avg_rmse_success, avg_rmse_all
+    
+    def rmse_plot(self, ax=None, color=None, facecolor=None):
+        """
+        Get average of the max standard deviation dimension of the particle distributions
+        """
+        rmse_all = []
+        for run, log_data in self.log_data.items(): 
+            rmse = [np.sqrt(np.mean(np.array(d["centroid_distance_err"])**2)) for d in log_data]
+            rmse_all.append(rmse)
+        # if ax is None: 
+        #     fig = plt.figure()
+        #     ax = fig.subplots()
+        # if color is None: 
+        #     color="blue"
+        # for sd in std_dev_all: 
+        #     ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
+        # plt.show()
 
-    def rmse_plot(self):
+        df = pd.DataFrame(rmse_all)
+        if df.shape[1] < 400: 
+            df = df.reindex(columns = list(range(400)))
+        df = df[:][list(range(0,400,20))]
+        df.boxplot(
+            ax=ax, 
+            notch=True,
+            patch_artist=True,
+            boxprops=dict(facecolor=facecolor, color=color, alpha=0.75),
+            capprops=dict(color=color),
+            whiskerprops=dict(color=color),
+            flierprops=dict(color=color, markeredgecolor=color),
+            medianprops=dict(color=color),
+            #color=color, 
+            showfliers=False
+        )
+        # if experiment_name is not None: 
+        #     plt.title(experiment_name)
+        # plt.show()
+
+
+    def rmse_plot2(self):
         """
         Get average rmse for successful and all runs
         """
@@ -497,6 +554,18 @@ class ResultsReader:
                 average_localize_time += len(log_data)
         average_localize_time /= success_localize
         return average_localize_time
+
+    def localization_histogram(self, ax=None, color=None):
+        """
+        Get the average run time of successful localization runs. 
+        """
+
+        runtime = []
+        for run, log_data in self.log_data.items():
+            runtime.append(len(log_data))
+        
+       # ax.hist(runtime, color=color, bins=400)
+        sns.histplot(data=runtime, kde=True, ax=ax, color=color, bins=np.arange(0,420,20))
 
     def load_log(self, log_file):
         """

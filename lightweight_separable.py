@@ -125,8 +125,9 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
     #print(f"{env.get_particle_centroids()=}")
     centroids = env.get_particle_centroids()
     proposals = {}
-    for i in target_selections_not_found: 
+    #for i in target_selections_not_found: 
     #for i in range(env.state.n_targets):
+    for i in target_selections:
         mean_other_centroids = [np.mean(np.delete(centroids,i,axis=0), axis=0)]
         target_proposals = circ_tangents([0,0], env.get_particle_centroids()[i],  r_min)
         # for p in proposals: 
@@ -170,18 +171,19 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
             trajectories[i] = trajectory
 
         # check void probability contstraint for each trajectory, choose first that is sufficient 
-        for i in std_dev_sorted:
-            if i not in trajectories: 
-                continue
-            trj = trajectories[i]
-        #for i,trj in trajectories.items():
+        # for i in std_dev_sorted:
+        #     if i not in trajectories: 
+        #         continue
+        #     trj = trajectories[i]
+        for i,trj in trajectories.items():
             void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
             # if void_condition and (i in target_selections):
             #     target_selections.remove(i)
             #     if len(target_selections) == 0: 
             #         target_selections = {t for t in range(env.state.n_targets)}
             if void_condition: 
-                target_selections.discard(i)
+                #target_selections.discard(i)
+                target_selections.remove(i)
                 if len(target_selections) == 0: 
                     target_selections = {t for t in range(env.state.n_targets)}
                 control_action = trj
