@@ -6,6 +6,7 @@ import torch
 import numpy as np
 from scipy.spatial import distance
 from tqdm.auto import trange
+from timeit import default_timer as timer
 
 import birdseye.utils
 import birdseye.sensor
@@ -125,6 +126,7 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
     #print(f"{env.get_particle_centroids()=}")
     centroids = env.get_particle_centroids()
     proposals = {}
+    trajectories = {}
     #for i in target_selections_not_found: 
     #for i in range(env.state.n_targets):
     for i in target_selections:
@@ -142,41 +144,13 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
             min_dist_proposal = target_proposals[np.argmin(distances_to_other)]
             proposals[i] = min_dist_proposal
 
-        #
-        # print(f"{distances_to_other=}")
-        # print(f"{np.argmin(distances_to_other)=}")
-        # print(f"{np.argsort(distances_to_other)=}")
-        # print(f"{target_proposals=}")
-        # print(f"{sorted_proposals.shape=}")
-        # print(f"{min_dist_proposal=}")
-    # print(f"{proposals=}")
-    # print(f"{not_found_sorted=}")
-
-    #print(f"{env.get_particle_centroids()[object_of_interest]=}")
-    if proposals:
-
-
-        ####################
-
-        # convert proposal end points to polar coordinates 
-        proposals = {i:birdseye.utils.cart2pol(p[0],p[1]) for i,p in proposals.items()}
-        #print(f"{proposals=}")
-
-        # create trajectories of length=horizon from proposal end points (first turn, then move straight)
-        trajectories = {}
-        for i,p in proposals.items():
+            proposals[i] = birdseye.utils.cart2pol(min_dist_proposal[0],min_dist_proposal[1])
             trajectory = np.zeros((horizon,2))
-            trajectory[:,1] = np.minimum(p[0]/horizon, env.state.sensor_speed)
-            trajectory[0,0] = np.degrees(p[1])
+            trajectory[:,1] = np.minimum(proposals[i][0]/horizon, env.state.sensor_speed)
+            trajectory[0,0] = np.degrees(proposals[i][1])
             trajectories[i] = trajectory
 
-        # check void probability contstraint for each trajectory, choose first that is sufficient 
-        # for i in std_dev_sorted:
-        #     if i not in trajectories: 
-        #         continue
-        #     trj = trajectories[i]
-        for i,trj in trajectories.items():
-            void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
+            void_condition, particles = env.void_probability(trajectory, r_min, min_bound=min_bound)
             # if void_condition and (i in target_selections):
             #     target_selections.remove(i)
             #     if len(target_selections) == 0: 
@@ -185,17 +159,52 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
                 #target_selections.discard(i)
                 target_selections.remove(i)
                 if len(target_selections) == 0: 
-                    target_selections = {t for t in range(env.state.n_targets)}
-                control_action = trj
+                    target_selections.update([t for t in range(env.state.n_targets)])
+                control_action = trajectory
                 #print(f"Found good trajectory!")
                 break
+
+    # if proposals:
+    #     ####################
+
+    #     # convert proposal end points to polar coordinates 
+    #     proposals = {i:birdseye.utils.cart2pol(p[0],p[1]) for i,p in proposals.items()}
+    #     #print(f"{proposals=}")
+
+    #     # create trajectories of length=horizon from proposal end points (first turn, then move straight)
+    #     trajectories = {}
+    #     for i,p in proposals.items():
+    #         trajectory = np.zeros((horizon,2))
+    #         trajectory[:,1] = np.minimum(p[0]/horizon, env.state.sensor_speed)
+    #         trajectory[0,0] = np.degrees(p[1])
+    #         trajectories[i] = trajectory
+
+    #     # check void probability contstraint for each trajectory, choose first that is sufficient 
+    #     # for i in std_dev_sorted:
+    #     #     if i not in trajectories: 
+    #     #         continue
+    #     #     trj = trajectories[i]
+    #     for i,trj in trajectories.items():
+    #         void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
+    #         # if void_condition and (i in target_selections):
+    #         #     target_selections.remove(i)
+    #         #     if len(target_selections) == 0: 
+    #         #         target_selections = {t for t in range(env.state.n_targets)}
+    #         if void_condition: 
+    #             #target_selections.discard(i)
+    #             target_selections.remove(i)
+    #             if len(target_selections) == 0: 
+    #                 target_selections = {t for t in range(env.state.n_targets)}
+    #             control_action = trj
+    #             #print(f"Found good trajectory!")
+    #             break
                 
     deg_width = 40 
     default_controls = np.linspace(-180,int(180-deg_width),int(360/deg_width))
 
     # if no optimal trajectory meets void constraint 
     if control_action is None:
-
+        print('no optimal control')
         # create trajectories from default controls 
         trajectories = []
         for c in default_controls:
@@ -313,10 +322,12 @@ def main(config_path="lightweight_separable_config.ini"):
         #for i in range(max_iterations): 
         for i in trange(max_iterations, desc='Time steps'):
             if i%horizon == 0:
+                plan_start_time = timer()
                 if planner_method == "lightweight_simple":
                     control_action = get_control_actions(env, min_std_dev, r_min, horizon, min_bound)
                 else:
                     control_action = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, target_selections)
+                plan_end_time = timer()
                 if control_action is None: 
                     # all objects localized 
                     break
@@ -355,7 +366,8 @@ def main(config_path="lightweight_separable_config.ini"):
                 "heading_err": heading_error,
                 "centroid_distance_err": centroid_distance_error,
                 "rmse": rmse,
-                "mae": mae
+                "mae": mae, 
+                "plan_time": plan_end_time - plan_start_time,
             }
             results.data_to_json(data)
             
