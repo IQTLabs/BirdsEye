@@ -17,6 +17,9 @@ import seaborn as sns
 
 import imageio
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+import matplotlib.patheffects as pe
+import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import requests
@@ -697,7 +700,7 @@ class Results:
                 image = imageio.v2.imread(self.plot_dir + "/png/" + png_filename)
                 writer.append_data(image)
 
-    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None):
+    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, sidebar=False, separable=False):
         """
         Create a live plot
         """
@@ -755,11 +758,16 @@ class Results:
         if self.openstreetmap is not None:
             self.openstreetmap.plot_map(axis1=ax)
         # TODO get variables
-        ax.set_title(
-            "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
-                time_step, None, None, None
+        if separable: 
+            ax.set_title(
+                "Time = {}".format(time_step)
             )
-        )
+        else:
+            ax.set_title(
+                "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
+                    time_step, None, None, None
+                )
+            )
 
         color_array = [
             ["salmon", "darkred", "red"],
@@ -769,8 +777,17 @@ class Results:
             []
         )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
 
-        # Plot Particles
+        separable_color_array = [
+            ["lightgreen","green"],
+            ["lightblue", "blue"],
+            ["pink", "red"],
+            ["wheat", "orange"],
+        ]
+
+
         for t in range(env.state.n_targets):
+            
+            # PLOT PARTICLES 
             # particles_x, particles_y = pol2cart(
             #     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
             # )
@@ -780,18 +797,23 @@ class Results:
             if self.transform is not None:
                 particles_x += self.transform[0]
                 particles_y += self.transform[1]
+            if separable: 
+                particle_color = separable_color_array[t][0]
+            else: 
+                particle_color = "salmon"
             (line1,) = ax.plot(
                 particles_x,
                 particles_y,
                 "o",
-                color="salmon",
+                color=particle_color,
                 markersize=4,
                 markeredgecolor="black",
-                label="particles",
-                alpha=0.3,
+                label="Particles",
+                alpha=0.4,
                 zorder=1,
             )
-
+            
+            # PLOT HEATMAP OVER STREET MAP 
             if self.openstreetmap:
                 heatmap, xedges, yedges = np.histogram2d(
                     particles_x,
@@ -810,17 +832,23 @@ class Results:
                 )
                 # plt.colorbar(im)
 
+            # PLOT CENTROIDS
             centroid_x = np.mean(particles_x)
             centroid_y = np.mean(particles_y)
+            if separable: 
+                centroid_color = separable_color_array[t][1]
+            else: 
+                centroid_color = "magenta"
+
             (line2,) = ax.plot(
                 centroid_x,
                 centroid_y,
-                "*",
-                color="magenta",
+                "^",
+                color=centroid_color,
                 markeredgecolor="black",
-                label="centroid",
+                label="Mean Estimate",
                 markersize=12,
-                zorder=2,
+                zorder=7,
             )
 
             if t == 0:
@@ -828,8 +856,7 @@ class Results:
             else:
                 lines.extend([])
 
-        # Plot Sensor
-
+        # PLOT SENSOR 
         if self.openstreetmap and data.get("position", None) is not None:
             #print(f"{data['position']=}")
             self.sensor_gps_hist.append(
@@ -868,9 +895,9 @@ class Results:
             (line4,) = ax.plot(
                 sensor_x[-1],
                 sensor_y[-1],
-                "H",
+                "p",
                 color="green",
-                label="sensor",
+                label="Sensor",
                 markersize=10,
                 zorder=4,
             )
@@ -884,36 +911,43 @@ class Results:
             sensor_x += self.transform[0]
             sensor_y += self.transform[1]
         if len(self.sensor_hist) > 1:
-            ax.arrow(
+            line4 = mpatches.FancyArrow(
                 sensor_x[-2],
                 sensor_y[-2],
                 4 * (sensor_x[-1] - sensor_x[-2]),
                 4 * (sensor_y[-1] - sensor_y[-2]),
-                width=1.5,
-                color="blue",
-                zorder=4,
+                width=2.5,
+                head_width=9,
+                head_length=6,
+                facecolor="rebeccapurple",
+                zorder=7,
+                #edgecolor="black",
+                label="Sensor",
+                linewidth=1,
             )
+            ax.add_patch(line4)
             ax.plot(
                 sensor_x[:-1],
                 sensor_y[:-1],
-                linewidth=3.0,
-                color="blue",
-                markeredgecolor="black",
-                markersize=4,
-                zorder=4,
+                linewidth=5,
+                color="rebeccapurple",
+                #markeredgecolor="black",
+                #markersize=4,
+                zorder=6,
+                #path_effects=[pe.Stroke(linewidth=7, foreground='black')]
             )
-        (line4,) = ax.plot(
-            sensor_x[-1],
-            sensor_y[-1],
-            "H",
-            color="blue",
-            label="sensor",
-            markersize=10,
-            zorder=4,
-        )
-        lines.extend([line4])
+        # (line4,) = ax.plot(
+        #     sensor_x[-1],
+        #     sensor_y[-1],
+        #     "p",
+        #     color="blue",
+        #     label="sensor",
+        #     markersize=10,
+        #     zorder=4,
+        # )
+            lines.extend([line4])
 
-  
+        
         if self.openstreetmap and data.get("drone_position", None) is not None:
             #print(f"{data['drone_position']=}")
             self.target_hist.append(
@@ -922,7 +956,8 @@ class Results:
                     (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
                 )
             )
-        #print(f"{self.target_hist=}")
+
+        # PLOT TARGETS
         if self.target_hist:
             
             #target_np = np.array(self.target_hist)
@@ -948,135 +983,177 @@ class Results:
                         target_x[:-1],
                         target_y[:-1],
                         linewidth=3.0,
-                        color="maroon",
+                        color="black",
                         zorder=3,
                         markersize=4,
                     )
                 (line5,) = ax.plot(
                     target_x[-1],
                     target_y[-1],
-                    "o",
-                    color="maroon",
+                    "X",
+                    color="black",
                     markeredgecolor="black",
-                    label="target",
+                    label="Targets",
                     markersize=10,
                     zorder=3,
                 )
-                lines.extend([line5])
+            lines.extend([line5])
 
         # Legend
+        legend_elements = [
+            Line2D(
+                [0], [0], 
+                marker="o",
+                color="white",
+                markersize=4,
+                markeredgecolor="black",
+                label="Particles",
+            ),
+            Line2D(
+                [0], [0], 
+                marker="^",
+                color="white",
+                markeredgecolor="black",
+                markerfacecolor="white",
+                label="Mean Estimates",
+                markersize=12,
+            ),
+            Line2D(
+                [0], [0], 
+                marker="X",
+                color="white",
+                markerfacecolor="black",
+                markeredgecolor="black",
+                label="Targets",
+                markersize=10,
+            ),
+            mpatches.Patch(
+                facecolor="rebeccapurple", 
+                edgecolor="black",
+                label="Sensor")
+        ]
+        
+        # ax.legend(
+        #     handles=legend_elements,
+        #     loc="upper left",
+        #     bbox_to_anchor=(1.04, 1.0),
+        #     fancybox=True,
+        #     shadow=True,
+        #     ncol=1,
+        # )
         ax.legend(
-            handles=lines,
-            loc="upper left",
-            bbox_to_anchor=(1.04, 1.0),
-            fancybox=True,
-            shadow=True,
-            ncol=1,
-        )
+                handles=legend_elements,
+                loc="upper center",
+                bbox_to_anchor=(0.5, -0.05),
+                fancybox=True,
+                shadow=True,
+                ncol=4,
+            )
 
         # X/Y Limits
         if self.openstreetmap is None:
-            map_width = 600
+            map_width = 500
             min_map = -1 * int(map_width / 2)
             max_map = int(map_width / 2)
             ax.set_xlim(min_map, max_map)
             ax.set_ylim(min_map, max_map)
 
         # Sidebar Text
-        # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
-        actual_str = "Actual\n"
-        actual_str += (
-            "Heading = {:.0f} deg\n".format(data.get("heading", None))
-            if data.get("heading", None)
-            else "Heading = unknown\n"
-        )
-        actual_str += (
-            "Speed = {:.2f} m/s".format(data.get("action_taken", None)[1])
-            if data.get("action_taken", None)
-            else "Speed = unknown\n"
-        )
-
-        proposal_str = "Proposed\n"
-        proposal_str += (
-            "Heading = {:.0f} deg\n".format(data.get("action_proposal", None)[0])
-            if None not in data.get("action_proposal", (None, None))
-            else "Heading = unknown\n"
-        )
-        proposal_str += (
-            "Speed = {:.2f} m/s".format(data.get("action_proposal", None)[1])
-            if None not in data.get("action_proposal", (None, None))
-            else "Speed = unknown\n"
-        )
-
-        last_mean_hyp = self.pf_stats["mean_hypothesis"][-1][0]
-        last_map_hyp = self.pf_stats["map_hypothesis"][-1][0]
-
-        rssi_str = "RSSI\n"
-        rssi_str += (
-            "Observed = {:.1f} dB\n".format(env.last_observation)
-            if env.last_observation
-            else "Observed = unknown\n"
-        )
-        rssi_str += (
-            "Expected = {:.1f} dB\n".format(self.expected_target_rssi)
-            if self.expected_target_rssi
-            else "Expected = unknown\n"
-        )
-        rssi_str += (
-            "Difference = {:.1f} dB\n".format(
-                env.last_observation - self.expected_target_rssi
+        if sidebar:
+            # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
+            actual_str = "Actual\n"
+            actual_str += (
+                "Heading = {:.0f} deg\n".format(data.get("heading", None))
+                if data.get("heading", None)
+                else "Heading = unknown\n"
             )
-            if (env.last_observation and self.expected_target_rssi)
-            else ""
-        )
-        # rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
-        # rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
-        rssi_str += (
-            "MLE estimate = {:.1f} dB\n".format(last_mean_hyp)
-            if last_mean_hyp
-            else "MLE estimate = unknown"
-        )
-        rssi_str += (
-            "MAP estimate = {:.1f} dB".format(last_map_hyp)
-            if last_map_hyp
-            else "MAP estimate = unknown"
-        )
+            actual_str += (
+                "Speed = {:.2f} m/s".format(data.get("action_taken", None)[1])
+                if data.get("action_taken", None)
+                else "Speed = unknown\n"
+            )
 
-        if len(fig.texts) == 0:
-            props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
-            text = fig.text(
-                1.04,
-                0.75,
-                actual_str,
-                transform=ax.transAxes,
-                fontsize=14,
-                verticalalignment="top",
-                bbox=props,
+            proposal_str = "Proposed\n"
+            proposal_str += (
+                "Heading = {:.0f} deg\n".format(data.get("action_proposal", None)[0])
+                if None not in data.get("action_proposal", (None, None))
+                else "Heading = unknown\n"
             )
-            props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
-            text = fig.text(
-                1.04,
-                0.5,
-                proposal_str,
-                transform=ax.transAxes,
-                fontsize=14,
-                verticalalignment="top",
-                bbox=props,
+            proposal_str += (
+                "Speed = {:.2f} m/s".format(data.get("action_proposal", None)[1])
+                if None not in data.get("action_proposal", (None, None))
+                else "Speed = unknown\n"
             )
-            props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
-            text = fig.text(
-                1.04,
-                0.25,
-                rssi_str,
-                transform=ax.transAxes,
-                fontsize=14,
-                verticalalignment="top",
-                bbox=props,
+
+            last_mean_hyp = self.pf_stats["mean_hypothesis"][-1][0]
+            last_map_hyp = self.pf_stats["map_hypothesis"][-1][0]
+
+            rssi_str = "RSSI\n"
+            rssi_str += (
+                "Observed = {:.1f} dB\n".format(env.last_observation)
+                if env.last_observation
+                else "Observed = unknown\n"
             )
-        else:
-            fig.texts[0].set_text(actual_str)
-            fig.texts[1].set_text(proposal_str)
-            fig.texts[2].set_text(rssi_str)
+            rssi_str += (
+                "Expected = {:.1f} dB\n".format(self.expected_target_rssi)
+                if self.expected_target_rssi
+                else "Expected = unknown\n"
+            )
+            rssi_str += (
+                "Difference = {:.1f} dB\n".format(
+                    env.last_observation - self.expected_target_rssi
+                )
+                if (env.last_observation and self.expected_target_rssi)
+                else ""
+            )
+            # rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
+            # rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
+            rssi_str += (
+                "MLE estimate = {:.1f} dB\n".format(last_mean_hyp)
+                if last_mean_hyp
+                else "MLE estimate = unknown"
+            )
+            rssi_str += (
+                "MAP estimate = {:.1f} dB".format(last_map_hyp)
+                if last_map_hyp
+                else "MAP estimate = unknown"
+            )
+
+            if len(fig.texts) == 0:
+                props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
+                text = fig.text(
+                    1.04,
+                    0.75,
+                    actual_str,
+                    transform=ax.transAxes,
+                    fontsize=14,
+                    verticalalignment="top",
+                    bbox=props,
+                )
+                props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
+                text = fig.text(
+                    1.04,
+                    0.5,
+                    proposal_str,
+                    transform=ax.transAxes,
+                    fontsize=14,
+                    verticalalignment="top",
+                    bbox=props,
+                )
+                props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
+                text = fig.text(
+                    1.04,
+                    0.25,
+                    rssi_str,
+                    transform=ax.transAxes,
+                    fontsize=14,
+                    verticalalignment="top",
+                    bbox=props,
+                )
+            else:
+                fig.texts[0].set_text(actual_str)
+                fig.texts[1].set_text(proposal_str)
+                fig.texts[2].set_text(rssi_str)
 
         self.native_plot = "true" if time_step % self.plot_every_n == 0 else "false"
         if self.native_plot == "true":

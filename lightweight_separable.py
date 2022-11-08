@@ -185,17 +185,17 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
                 #target_selections.discard(i)
                 target_selections.remove(i)
                 if len(target_selections) == 0: 
-                    target_selections = {t for t in range(env.state.n_targets)}
+                    target_selections.update([t for t in range(env.state.n_targets)])
                 control_action = trj
                 #print(f"Found good trajectory!")
                 break
-                
+    
     deg_width = 40 
     default_controls = np.linspace(-180,int(180-deg_width),int(360/deg_width))
 
     # if no optimal trajectory meets void constraint 
     if control_action is None:
-
+        print("NO OPTIMAL CONTROL FOUND")
         # create trajectories from default controls 
         trajectories = []
         for c in default_controls:
@@ -273,7 +273,7 @@ def main(config_path="lightweight_separable_config.ini"):
             config=config,
         )
         if (local_plot == "true") or (make_gif == "true"):
-            fig = plt.figure(figsize=(18, 10), dpi=50)
+            fig = plt.figure(figsize=(14, 10), dpi=100)
             ax = fig.subplots()
             fig.set_tight_layout(True)
 
@@ -327,7 +327,7 @@ def main(config_path="lightweight_separable_config.ini"):
 
             if (local_plot == "true") or (make_gif == "true"):
                 results.live_plot(
-                    env=env, time_step=i, fig=fig, ax=ax, data={}
+                    env=env, time_step=i, fig=fig, ax=ax, data={}, separable=True
                 )
 
             (

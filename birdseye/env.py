@@ -168,11 +168,11 @@ class RFMultiSeparableEnv:
     def void_probability(self, actions, r_min, min_bound=0.8):
 
         p_outside_void = []
+        updated_particles = [self.pf[t].particles.copy() for t in range(self.state.n_targets)]
         for action in actions:
-            updated_particles = []
             for t in range(self.state.n_targets):
-                target_particles = self.dynamics(self.pf[t].particles, control=action)
-                updated_particles.append(target_particles)
+                target_particles = self.dynamics(updated_particles[t], control=action)
+                updated_particles[t] = target_particles
                 B = 1-np.mean(target_particles[:,0] < r_min)
                 p_outside_void.append(B)
                 #print(f"probability outside void = {B}")
