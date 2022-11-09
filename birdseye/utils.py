@@ -406,6 +406,18 @@ class ResultsReader:
             if "target_speed" not in self.log_config[d]: 
                 self.log_config[d]["target_speed"] = 0.5 
     
+    def average_plantime(self):
+        """
+        Get average planning time
+        """
+        plan_time = []
+        for run, log_data in self.log_data.items(): 
+            times = [data['plan_time'] for data in log_data]
+            plan_time.append(np.mean(times))
+        avg_plan_time = np.mean(plan_time)
+        return avg_plan_time
+
+
     def average_std_dev(self):
         """
         Get average of the max standard deviation dimension of the particle distributions
