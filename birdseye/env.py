@@ -9,7 +9,7 @@ from .utils import particles_mean_belief
 from .utils import pol2cart
 
 class RFMultiSeparableEnv:
-    def __init__(self, sensor=None, actions=None, state=None, simulated=True):
+    def __init__(self, sensor=None, actions=None, state=None, simulated=True, num_particles=2000):
         # Sensor definitions
         self.sensor = sensor
         # Action space and function to convert from action to index and vice versa
@@ -18,6 +18,7 @@ class RFMultiSeparableEnv:
         self.state = state
         # Flag for simulation vs real data
         self.simulated = simulated
+        self.n_particles = num_particles 
 
         #self.pfrnn = pfrnn()
 
@@ -71,7 +72,7 @@ class RFMultiSeparableEnv:
 
         return particles
 
-    def reset(self, num_particles=2000):
+    def reset(self,):
         """Reset initial state and particle filter
 
         Parameters
@@ -109,7 +110,7 @@ class RFMultiSeparableEnv:
                         for x in states
                     ]
                 ),
-                n_particles=num_particles,
+                n_particles=self.n_particles,
                 dynamics_fn=self.dynamics,
                 resample_proportion=0.005,
                 noise_fn=lambda x, **kwargs: self.particle_noise(x, sigmas=[1, 2, 2]),
@@ -120,6 +121,62 @@ class RFMultiSeparableEnv:
             )
             self.pf.append(target_pf)
 
+    def pffilter_copy(self, pf): 
+        """Modified from https://github.com/johnhw/pfilter/blob/master/pfilter/pfilter.py, because missing noise_fn
+        Copy this filter at its current state. Returns
+        an exact copy, that can be run forward indepedently of the first.
+        Beware that if your passed in functions (e.g. dynamics) are stateful, behaviour
+        might not be independent! (tip: write stateless functions!)
+        Returns:
+        ---------
+            A new, independent copy of this filter.
+        """
+        # construct the filter
+        new_copy = ParticleFilter(
+            observe_fn=pf.observe_fn,
+            resample_fn=pf.resample_fn,
+            n_particles=pf.n_particles,
+            prior_fn=pf.prior_fn,
+            dynamics_fn=pf.dynamics_fn,
+            noise_fn=pf.noise_fn,
+            weight_fn=pf.weight_fn,
+            resample_proportion=pf.resample_proportion,
+            column_names=pf.column_names,
+            internal_weight_fn=pf.internal_weight_fn,
+            transform_fn=pf.transform_fn,
+            n_eff_threshold=pf.n_eff_threshold,
+        )
+
+        # copy particle state
+        for array in ["particles", "original_particles", "original_weights", "weights"]:
+            setattr(new_copy, array, np.array(getattr(pf, array)))
+
+        # copy any attributes
+        for array in [
+            "mean_hypothesis",
+            "mean_state",
+            "map_state",
+            "map_hypothesis",
+            "hypotheses",
+            "n_eff",
+            "weight_informational_energy",
+            "weight_entropy",
+        ]:
+            if hasattr(pf, array):
+                setattr(new_copy, array, getattr(pf, array).copy())
+
+        return new_copy
+
+    def pf_copy(self,): 
+        return [self.pffilter_copy(pf) for pf in self.pf]
+    
+    def random_state(self, pf): 
+        state = ([
+            pf[i].particles[np.random.choice(pf[i].particles.shape[0], 1, False)][0] 
+            for i in range(self.state.n_targets)
+        ])
+        return state 
+    
     # returns observation, reward, done, info
     def real_step(self, data):
         # action = data['action_taken'] if data.get('action_taken', None) else (0,0)

@@ -323,8 +323,10 @@ def main(config_path="lightweight_separable_config.ini"):
         for i in trange(max_iterations, desc='Time steps'):
             if i%horizon == 0:
                 plan_start_time = timer()
-                if planner_method == "lightweight_simple":
+                if planner_method == "lightweight_simple": # LAVAPilot
                     control_action = get_control_actions(env, min_std_dev, r_min, horizon, min_bound)
+                elif planner_method == "mcts": # mcts
+                    pass # TODO add mcts action selection; mcts(env.pf, action_space)
                 else:
                     control_action = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, target_selections)
                 plan_end_time = timer()
