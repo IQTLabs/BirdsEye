@@ -14,6 +14,7 @@ import birdseye.actions
 import birdseye.state
 import birdseye.env
 from birdseye.utils import tracking_metrics_separable
+from light_mcts import LightMCTS
 
 
 def circ_tangents(point, center, radius):
@@ -230,19 +231,25 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, ta
         control_action = trajectories[np.random.randint(len(default_controls))]
     return control_action
 
+def targets_found(env, min_std_dev):
+    std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
+    not_found = np.where(std_dev > min_std_dev)
+    if len(not_found[0]) == 0:
+        return True
+    return False
 
 def main(config_path="lightweight_separable_config.ini"): 
 
     n_simulations = 100
     max_iterations = 400
-    reward_func = lambda *args, **kwargs: None
+    reward_func = lambda pf: pf.weight_entropy #lambda *args, **kwargs: None
     config_path = config_path
     
     r_min = 10
-    horizon = 8
+    horizon = 1#8
     min_bound = 0.82
     min_std_dev = 35
-    num_particles = 3000
+    num_particles = 3000#3000
 
     config = configparser.ConfigParser()
     config.read(config_path)
@@ -262,6 +269,10 @@ def main(config_path="lightweight_separable_config.ini"):
     freq = [float(x) for x in config.get("freq", "5.7e9, 5.7e9").split(",")]
     fading_sigma = float(config.get("fading_sigma", str(8)))
     threshold = float(config.get("threshold", str(-120)))
+    depth = int(config.get("depth", str(3)))
+    c = float(config.get("c", str(20.0)))
+    mcts_simulations = int(config.get("mcts_simulations", str(100)))
+    n_downsample = int(config.get("n_downsample", str(400)))
 
     # Sensor
     if antenna_type in ["directional", "yagi", "logp"]:
@@ -296,7 +307,7 @@ def main(config_path="lightweight_separable_config.ini"):
         )
 
         # Action space
-        actions = birdseye.actions.BaselineActions()
+        actions = birdseye.actions.BaselineActions(sensor_speed=sensor_speed)
         #actions.print_action_info()
 
         # State managment
@@ -310,10 +321,12 @@ def main(config_path="lightweight_separable_config.ini"):
 
         # Environment
         env = birdseye.env.RFMultiSeparableEnv(
-            sensor=sensor, actions=actions, state=state, simulated=True
+            sensor=sensor, actions=actions, state=state, simulated=True, num_particles=num_particles
         )
 
-        belief = env.reset(num_particles=num_particles)
+        belief = env.reset()
+
+        mcts = LightMCTS(env, depth=depth, c=c, simulations=mcts_simulations, n_downsample=n_downsample)
 
         #planner = birdseye.planner.LightweightPlanner(env, actions)
 
@@ -326,13 +339,18 @@ def main(config_path="lightweight_separable_config.ini"):
                 if planner_method == "lightweight_simple": # LAVAPilot
                     control_action = get_control_actions(env, min_std_dev, r_min, horizon, min_bound)
                 elif planner_method == "mcts": # mcts
-                    pass # TODO add mcts action selection; mcts(env.pf, action_space)
+                    if targets_found(env, min_std_dev): 
+                        control_action = None
+                    else: 
+                        control_action = mcts.get_action()
                 else:
                     control_action = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, target_selections)
                 plan_end_time = timer()
+
                 if control_action is None: 
                     # all objects localized 
                     break
+
                 control_actions.extend(control_action)
             action = control_actions[i]
             #print(f"{action=}")
@@ -393,7 +411,6 @@ def main(config_path="lightweight_separable_config.ini"):
         # print(f"{control_action=}")
 
     for i in trange(n_simulations, desc='Experiments'):
-    #for i in range(n_simulations): 
         run_simulation()
 
 

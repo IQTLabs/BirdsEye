@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 from scipy.constants import speed_of_light
+from timeit import default_timer as timer
 
 
 class Sensor:
@@ -40,11 +41,13 @@ def get_radiation_pattern(antenna_filename=None):
 
     radiation_pattern = shift(radiation_pattern, 90)
 
-    return radiation_pattern
+    return np.array(radiation_pattern)
 
 
 def get_directivity(radiation_pattern, theta):
-    return radiation_pattern[int(theta * 180 / np.pi) % len(radiation_pattern)]
+    theta_degrees = theta * 180 / np.pi 
+    theta_degrees = theta_degrees.astype(int)
+    return radiation_pattern[theta_degrees % len(radiation_pattern)]
 
 
 def rssi(
@@ -263,6 +266,7 @@ class SingleRSSISeparable(Sensor):
             self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
+        start = timer() 
         # array of shape (# of particles)
         expected_rssi = hyp
         observed_rssi = obs
@@ -271,7 +275,37 @@ class SingleRSSISeparable(Sensor):
         denominator = 2 * np.power(self.std_dev, 2.0)
         weight = np.exp(-numerator / denominator)  # + 0.000000001
         weight = np.squeeze(weight)
+        end = timer() 
+        #print(f"weight: {end-start}")
         return weight
+
+    # samples observation given state
+    def observation_vectorized(self, states, target, fading_sigma=None):
+        start = timer() 
+        if fading_sigma is None: 
+            fading_sigma = self.fading_sigma
+
+        # Calculate observation for specified target 
+        power = 0
+
+        distance = states[:,0]
+        theta = states[:,1] * np.pi / 180.0
+        directivity_rx = get_directivity(self.radiation_pattern, theta)
+        power += dB_to_power(
+            rssi(
+                distance,
+                directivity_rx,
+                power_tx=self.power_tx[target],
+                directivity_tx=self.directivity_tx[target],
+                freq=self.freq[target],
+                fading_sigma=self.fading_sigma,
+            )
+        )
+        rssi_power = power_to_dB(power)
+        #return [rssi_power]
+        end = timer() 
+        #print(f"observation: {end-start}")
+        return rssi_power
 
     # samples observation given state
     def observation(self, state, target, fading_sigma=None):

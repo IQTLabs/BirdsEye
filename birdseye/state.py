@@ -2,6 +2,8 @@ import random
 
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
+from timeit import default_timer as timer
+
 
 from .utils import cart2pol
 from .utils import pol2cart
@@ -304,6 +306,100 @@ class RFMultiState(State):
 
         return -1.0 * cost
 
+    def update_state_vectorized(self, state, control):
+        """Update state based on state and action
+
+        Parameters
+        ----------
+        state_vars : list
+            List of current state variables
+        control : action (tuple)
+            Action tuple
+
+        Returns
+        -------
+        State (array_like)
+            Updated state values array
+        """
+        total_start = timer() 
+        # Get current state vars
+        start = timer() 
+        r = state[:,0]
+        theta = state[:,1]
+        crs = state[:,2]
+        spd = state[:,3]
+        
+
+        #r, theta, crs, spd = state
+        #spd = self.target_speed
+
+        control_theta = control[0]
+        control_spd = control[1]
+        end = timer() 
+        #print(f"1: {end-start}")
+
+        start = timer() 
+        theta = theta % 360
+        theta -= control_theta
+        theta = theta % 360
+        theta[theta<0] += 360
+        end = timer() 
+        #print(f"2: {end-start}")
+        # if theta < 0:
+        #     theta += 360
+
+        start = timer()
+        crs = crs % 360
+        crs -= control[0]
+        crs[crs<0] += 360
+        # if crs < 0:
+        #     crs += 360
+        crs = crs % 360
+        end = timer() 
+        #print(f"3: {end-start}")
+        start = timer()
+        # Get cartesian coords
+        x, y = pol2cart(r, np.radians(theta))
+        end = timer() 
+        #print(f"4: {end-start}")
+        start = timer()
+        # Generate next course given current course
+        crs += np.random.choice([0,-30,30],size=len(crs),p=[self.prob_target_change_crs,(1-self.prob_target_change_crs)/2,(1-self.prob_target_change_crs)/2])
+        #crs += 30 * np.ones(len(crs))
+        # if random.random() >= self.prob_target_change_crs:
+        #     crs += random.choice([-1, 1]) * 30
+
+        crs %= 360
+        crs[crs<0] += 360
+        end = timer() 
+        #print(f"5: {end-start}")
+        start = timer()
+        # if crs < 0:
+        #     crs += 360
+
+        # Transform changes to coords to cartesian
+        dx, dy = pol2cart(spd, np.radians(crs))
+        end = timer() 
+        #print(f"6: {end-start}")
+        start = timer()
+        new_x = x + dx - control_spd
+        new_y = y + dy
+        #pos = [x + dx - control_spd, y + dy]
+
+        r = np.sqrt(new_x ** 2 + new_y ** 2)
+        theta_rad = np.arctan2(new_y, new_x)
+        theta = np.degrees(theta_rad)
+        theta[theta<0] += 360
+        end = timer() 
+        #print(f"7: {end-start}")
+        #print(f"total: {end-total_start}")
+        # if theta < 0:
+        #     theta += 360
+
+        #return (r, theta, crs, spd)
+
+        return np.stack((r, theta, crs, spd), axis=-1)
+
     # returns new state given last state and action (control)
 
     def update_sim_state(
@@ -346,8 +442,10 @@ class RFMultiState(State):
         x, y = pol2cart(r, np.radians(theta))
 
         # Generate next course given current course
-        if random.random() >= self.prob_target_change_crs:
-            crs += random.choice([-1, 1]) * 30
+        # if random.random() >= self.prob_target_change_crs:
+        #     crs += random.choice([-1, 1]) * 30
+        crs += 30
+
         crs %= 360
         if crs < 0:
             crs += 360
@@ -643,7 +741,6 @@ class RFState(State):
         return -1.0 * cost
 
     # returns new state given last state and action (control)
-
     def update_state(self, state, control, target_update=False):
         """Update state based on state and action
 

@@ -2,6 +2,7 @@ import numpy as np
 from pfilter import ParticleFilter
 from pfilter import systematic_resample
 from scipy.ndimage.filters import gaussian_filter
+from timeit import default_timer as timer
 
 from .pfrnn.pfrnn import pfrnn
 from .utils import particle_swap
@@ -42,34 +43,47 @@ class RFMultiSeparableEnv:
         array_like
             Updated particle state information
         """
+        start = timer() 
         n_particles, n_states = particles.shape
         assert n_states == self.state.state_dim
 
         updated_particles = []
 
-        for p in range(n_particles):
-            updated_particles.append(
-                self.state.update_state(
-                    particles[p],
-                    control=control,
-                    distance=distance,
-                    course=course,
-                    heading=heading,
-                )
-            )
-            
-        return np.array(updated_particles)
+        # for p in range(n_particles):
+        #     updated_particles.append(
+        #         self.state.update_state(
+        #             particles[p],
+        #             control=control,
+        #             distance=distance,
+        #             course=course,
+        #             heading=heading,
+        #         )
+        #     )
+        updated_particles2 = self.state.update_state_vectorized(particles, control=control)
+        # if not np.allclose(updated_particles, updated_particles2): 
+        # #if not np.all(updated_particles==updated_particles2): 
+        #     print(f"{updated_particles=}")
+        #     print(f"{updated_particles2=}")
+        #     print(updated_particles==updated_particles2)
+        end = timer() 
+        #print(f"dynamics: {end-start}")
+        return np.array(updated_particles2)
+
+        
 
     def particle_noise(self, particles, sigmas=[1, 2, 2], xp=None):
-        
+        start = timer() 
         n_particles, n_states = particles.shape
         assert n_states == self.state.state_dim
 
-        particles[:,0] += np.random.normal(0, sigmas[0], (n_particles))
+        # particles[:,0] += np.random.normal(0, sigmas[0], (n_particles))
+        # particles[:,0] = np.clip(particles[:,0], a_min=1, a_max=None)
+        # particles[:,1] += np.random.normal(0, sigmas[1], (n_particles))
+        # particles[:,2] += np.random.normal(0, sigmas[2], (n_particles))
+        particles[:,[0,1,2]] += np.random.normal([0,0,0],sigmas, (n_particles,3))
         particles[:,0] = np.clip(particles[:,0], a_min=1, a_max=None)
-        particles[:,1] += np.random.normal(0, sigmas[1], (n_particles))
-        particles[:,2] += np.random.normal(0, sigmas[2], (n_particles))
-
+        end = timer() 
+        #print(f"noise = {end-start}")
         return particles
 
     def reset(self,):
@@ -100,15 +114,18 @@ class RFMultiSeparableEnv:
                         for _ in range(n)
                     ]
                 ),
+                # observe_fn=lambda states, **kwargs: np.array(
+                #     [
+                #         self.sensor.observation(
+                #             x, 
+                #             t,
+                #             fading_sigma=0
+                #         )
+                #         for x in states
+                #     ]
+                # ),
                 observe_fn=lambda states, **kwargs: np.array(
-                    [
-                        self.sensor.observation(
-                            x, 
-                            t,
-                            fading_sigma=0
-                        )
-                        for x in states
-                    ]
+                    self.sensor.observation_vectorized(states, t)
                 ),
                 n_particles=self.n_particles,
                 dynamics_fn=self.dynamics,
@@ -121,7 +138,7 @@ class RFMultiSeparableEnv:
             )
             self.pf.append(target_pf)
 
-    def pffilter_copy(self, pf): 
+    def pffilter_copy(self, pf, n_downsample=None): 
         """Modified from https://github.com/johnhw/pfilter/blob/master/pfilter/pfilter.py, because missing noise_fn
         Copy this filter at its current state. Returns
         an exact copy, that can be run forward indepedently of the first.
@@ -165,10 +182,14 @@ class RFMultiSeparableEnv:
             if hasattr(pf, array):
                 setattr(new_copy, array, getattr(pf, array).copy())
 
+        if n_downsample: 
+            new_copy.n_particles = n_downsample
+            new_copy.weights = np.ones(n_downsample) / n_downsample
+            new_copy.particles = new_copy.particles[np.random.randint(len(new_copy.particles), size=n_downsample)]
         return new_copy
 
-    def pf_copy(self,): 
-        return [self.pffilter_copy(pf) for pf in self.pf]
+    def pf_copy(self, n_downsample=None): 
+        return [self.pffilter_copy(pf, n_downsample=n_downsample) for pf in self.pf]
     
     def random_state(self, pf): 
         state = ([

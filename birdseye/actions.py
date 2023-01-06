@@ -89,9 +89,9 @@ class SimpleActions(Actions):
 class BaselineActions(Actions):
     """SimpleActions for testing purposes"""
 
-    def __init__(self):
-        self.del_theta = [-30, 0, 30]
-        self.del_r = [0, 4]
+    def __init__(self, sensor_speed=1):
+        self.del_theta = [-90, -45, 0, 45, 90]
+        self.del_r = [sensor_speed]
         baseline_action_space = tuple(itertools.product(self.del_theta, self.del_r))
         super().__init__(action_space=baseline_action_space, verbose=False)
 

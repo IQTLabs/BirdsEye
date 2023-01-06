@@ -2,6 +2,7 @@
 # Imports
 import random
 from datetime import datetime
+from timeit import default_timer as timer
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -56,7 +57,7 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
 # Rollout
 ##################################################################
 def rollout_random(env, state, depth, pf_copy):
-    print(f"Rollout: {depth=}")
+    #print(f"Rollout: {depth=}")
     if depth == 0:
         return 0
 
@@ -95,46 +96,95 @@ def rollout_random(env, state, depth, pf_copy):
 # Simulate
 ##################################################################
 def simulate(env, Q, N, state, history, depth, c, pf_copy):
-    print(f"Simulate: {history=}, {depth=} \n {Q=} \n {N=}\n\n")
+    #print(f"Simulate: {history=}, {depth=} \n {Q=}")
     
     if depth == 0:
         return (Q, N, 0)
 
     # expansion
-    test_index = history.copy()
-    test_index.append(1) # TODO: why 1?
+    new_tree = history.copy()
+    new_tree.append(np.random.randint(len(env.actions.get_action_list()))) # TODO: why 1?
 
-    if tuple(test_index) not in Q:
-        print("Expansion")
+    if tuple(new_tree) not in Q:
+        expansion_start = timer()
+        # Q[tuple(new_tree)] = 0
+        # N[tuple(new_tree)] = 0
         for action in env.actions.get_action_list():
             # initialize Q and N to zeros
             new_index = history.copy()
             new_index.append(action)
             Q[tuple(new_index)] = 0
             N[tuple(new_index)] = 0
-
+        ret = rollout_random(env, state, depth, pf_copy)
+        expansion_end = timer()
+        
+        #print(f"expansion time = {expansion_end-expansion_start}")
+        
+        return (Q, N, ret)
         # rollout
-        return (Q, N, rollout_random(env, state, depth, pf_copy))
+        #return (Q, N, rollout_random(env, state, depth, pf_copy))
 
+    select_start = timer()
     # search: find optimal action to explore
     search_action_index = arg_max_action(env.actions, Q, N, history, c, True)
-    print("Selected action = ",search_action_index)
+    
     action = env.actions.index_to_action(search_action_index)
+    select_end = timer() 
+    
+    #print(f"selection time = {select_end-select_start}")
+    
+    #print("Selected action = ",search_action_index)
 
     # take action; get new state, observation, and reward
     # state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)]) # env.state.update_state(state, action)
-    next_state = np.array([env.state.update_sim_state(s, action) for s in state])
 
+    state_start = timer() 
+    next_state = np.array([env.state.update_sim_state(s, action) for s in state])
+    state_end = timer() 
+   
+    #print(f"state time = {state_end-state_start}")
+
+    # pf_start = timer() 
+    # o_start = timer() 
+    # observations = [env.sensor.observation(next_state[t], t)[0] for t in range(env.state.n_targets)]
+    # o_end = timer() 
+    # p_start = timer() 
+    # for t in range(env.state.n_targets):
+    #     pf_copy[t].update(np.array(observations[t]), control=action) #for t in range(env.state.n_targets)
+    # p_end = timer() 
+    # r_start = timer() 
+    # reward = np.mean([env.state.reward_func(pf_copy[t]) for t in range(env.state.n_targets)])
+    # r_end = timer() 
+    # pf_end = timer()
+    # print(f"r time = {r_end-r_start}")
+    # print(f"o time = {o_end-o_start}")
+    # print(f"p time = {p_end-p_start}")
+    # print(f"pf time = {pf_end-pf_start}")
     observations = []
-    rewards = []
+    rewards = 0
+    pf_start = timer() 
     for t in range(env.state.n_targets):
         # Get sensor observation
+        o_start = timer() 
         observation = env.sensor.observation(next_state[t], t)[0]
         observations.append(observation)
+        o_end = timer() 
         # Update particle filter
+        p_start = timer() 
         pf_copy[t].update(np.array(observation), xp=pf_copy[t].particles, control=action)
-        rewards.append(env.state.reward_func(pf_copy[t]))
-    reward = np.mean(rewards)
+        p_end = timer() 
+        r_start = timer() 
+        #rewards.append(env.state.reward_func(pf_copy[t]))
+        rewards += env.state.reward_func(pf_copy[t])
+        r_end = timer() 
+    pf_end = timer()
+    reward = rewards/env.state.n_targets
+     
+    #print(f"r time = {r_end-r_start}")
+    #print(f"o time = {o_end-o_start}")
+    #print(f"p time = {p_end-p_start}")
+    #print(f"pf time = {pf_end-pf_start}")
+    
     # if env.state.belief_mdp:
     #     env.pf.particles = belief
     #     env.pf.update(np.array(observation), xp=belief, control=action)
@@ -143,11 +193,11 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
     # reward = env.state.reward_func(
     #     state=state_prime, action_idx=search_action_index, particles=belief
     # )
-    print(f"{observations=}")
     # recursive call after taking action and getting observation
+    tree_start = timer() 
     new_history = history.copy()
     new_history.append(search_action_index)
-    new_history.append(tuple([int(o) for o in observations]))
+    #new_history.append(tuple([int(o) for o in observations]))
     (Q, N, successor_reward) = simulate(
         env, Q, N, next_state, new_history, depth - 1, c, pf_copy
     )
@@ -158,7 +208,11 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
     update_index.append(search_action_index)
     N[tuple(update_index)] += 1
     Q[tuple(update_index)] += (q - Q[tuple(update_index)]) / N[tuple(update_index)]
-    print("Q update = ",Q[tuple(update_index)])
+    tree_end = timer() 
+    
+    #print(f"tree time = {tree_end-tree_start}")
+    
+    #print("Q update = ",Q[tuple(update_index)])
     return (Q, N, q)
 
 
@@ -206,7 +260,7 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
 
-def select_action_light(env, Q={}, N={}, depth=4, c=20, iterations=500):
+def select_action_light(env, Q={}, N={}, depth=2, c=20, iterations=100, n_downsample=500):
 
     # empty history at top recursive call
     history = []
@@ -215,8 +269,8 @@ def select_action_light(env, Q={}, N={}, depth=4, c=20, iterations=500):
     counter = 0
     
     while counter < iterations:
-        print(f"{counter}/{iterations} simulations")
-        pf_copy = env.pf_copy()
+        #print(f"{counter}/{iterations} simulations")
+        pf_copy = env.pf_copy(n_downsample=n_downsample)
         # draw state randomly based on belief state (pick a random particle)
         state = env.random_state(pf_copy)
         #converted_state = state.reshape(env.state.n_targets, 4)
@@ -233,10 +287,22 @@ def select_action_light(env, Q={}, N={}, depth=4, c=20, iterations=500):
         )
 
         counter += 1
-
+    # print(f"{Q=}")
+    # print(f"{N=}")
     best_action_index = arg_max_action(env.actions, Q, N, history)
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
+
+def trim_tree(Q, N, action):
+    assert Q.keys() == N.keys()
+    for k in list(Q): 
+        if len(k) <= 1 or k[0] != action: 
+            Q.pop(k)
+            N.pop(k)
+        else: 
+            Q[(k[1],)] = Q.pop(k)
+            N[(k[1],)] = N.pop(k)
+
 
 class MCTSRunner:
     def __init__(self, env, depth, c, simulations=1000):
