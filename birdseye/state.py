@@ -69,7 +69,8 @@ class RFMultiState(State):
         # Setup an initial random state
         self.target_state = None
         if simulated:
-            self.update_state = self.update_sim_state
+            self.update_state = self.update_state_vectorized
+            #self.update_state = self.update_sim_state
             self.target_state = self.init_target_state()
         else:
             self.update_state = self.update_real_state
@@ -335,6 +336,7 @@ class RFMultiState(State):
 
         control_theta = control[0]
         control_spd = control[1]
+        
         end = timer() 
         #print(f"1: {end-start}")
 
@@ -442,10 +444,8 @@ class RFMultiState(State):
         x, y = pol2cart(r, np.radians(theta))
 
         # Generate next course given current course
-        # if random.random() >= self.prob_target_change_crs:
-        #     crs += random.choice([-1, 1]) * 30
-        crs += 30
-
+        if random.random() >= self.prob_target_change_crs:
+            crs += random.choice([-1, 1]) * 30
         crs %= 360
         if crs < 0:
             crs += 360

@@ -284,12 +284,13 @@ class RFMultiSeparableEnv:
         # Get action based on index
         #action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
-        next_state = np.array(
-            [
-                self.state.update_state(target_state, action)
-                for target_state in self.state.target_state
-            ]
-        )
+        # next_state = np.array(
+        #     [
+        #         self.state.update_state(target_state, action)
+        #         for target_state in self.state.target_state
+        #     ]
+        # )
+        next_state = self.state.update_state_vectorized(np.array(self.state.target_state), control=action)
         # Update absolute position of sensor
         self.state.update_sensor(action)
 
