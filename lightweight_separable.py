@@ -7,6 +7,8 @@ import numpy as np
 from scipy.spatial import distance
 from tqdm.auto import trange
 from timeit import default_timer as timer
+from multiprocessing import Process
+import itertools
 
 import birdseye.utils
 import birdseye.sensor
@@ -238,41 +240,66 @@ def targets_found(env, min_std_dev):
         return True
     return False
 
-def main(config_path="lightweight_separable_config.ini"): 
+def main(config=None, config_path=None): 
 
     n_simulations = 100
     max_iterations = 400
-    reward_func = lambda pf: pf.weight_entropy #lambda *args, **kwargs: None
-    config_path = config_path
-    
+    reward_func = lambda pf: pf.weight_entropy #lambda *args, **kwargs: None    
     r_min = 10
     horizon = 1#8
     min_bound = 0.82
     min_std_dev = 35
     num_particles = 3000#3000
 
-    config = configparser.ConfigParser()
-    config.read(config_path)
-    config = config["lightweight"]
+    default_config = ({
+        "native_plot": "false", 
+        "make_gif": "false",
+        "n_targets": "2", 
+        "antenna_type": "logp", 
+        "planner_method": "lightweight",
+        "target_speed": "0.5", 
+        "sensor_speed": "1.0", 
+        "power_tx": "26.0", 
+        "directivity_tx": "1.0",
+        "freq": "5.7e9",
+        "fading_sigma": "8.0",
+        "threshold": "-120",
+        "mcts_depth": "3",
+        "mcts_c": "20.0",
+        "mcts_simulations": "100", 
+        "mcts_n_downsample": "400",
+    })
+    assert config is None or config_path is None, "config and config_path cannot both be defined"
 
-    local_plot = config.get("native_plot", "false").lower()
-    make_gif = config.get("make_gif", "false").lower()
+    if config is None and config_path: 
+        config = configparser.ConfigParser()
+        config.read(config_path)
+        config = config["lightweight"]
 
-    n_targets = int(config.get("n_targets", str(2)))
-    antenna_type = config.get("antenna_type", "logp")
-    planner_method = config.get("planner_method", "lightweight")
+    config = default_config | config
+    local_plot = config.get("native_plot", default_config["native_plot"]).lower()
+    make_gif = config.get("make_gif", default_config["make_gif"]).lower()
+    n_targets = int(config.get("n_targets", default_config["n_targets"]))
+    antenna_type = config.get("antenna_type", default_config["antenna_type"])
+    planner_method = config.get("planner_method", default_config["planner_method"])
     experiment_name = config.get("experiment_name", planner_method)
-    target_speed = float(config.get("target_speed", str(0.5)))
-    sensor_speed = float(config.get("sensor_speed", str(1.0)))
-    power_tx = [float(x) for x in config.get("power_tx", "26,26").split(",")]
-    directivity_tx = [float(x) for x in config.get("directivity_tx", "1,1").split(",")]
-    freq = [float(x) for x in config.get("freq", "5.7e9, 5.7e9").split(",")]
-    fading_sigma = float(config.get("fading_sigma", str(8)))
-    threshold = float(config.get("threshold", str(-120)))
-    depth = int(config.get("depth", str(3)))
-    c = float(config.get("c", str(20.0)))
-    mcts_simulations = int(config.get("mcts_simulations", str(100)))
-    n_downsample = int(config.get("n_downsample", str(400)))
+    target_speed = float(config.get("target_speed", default_config["target_speed"]))
+    sensor_speed = float(config.get("sensor_speed", default_config["sensor_speed"]))
+    if len(config.get("power_tx").split(",")) == 1: 
+        config["power_tx"] = ",".join([config["power_tx"] for _ in range(n_targets)])
+    power_tx = [float(x) for x in config.get("power_tx", ",".join(default_config["power_tx"] for _ in range(n_targets))).split(",")]
+    if len(config.get("directivity_tx").split(",")) == 1: 
+        config["directivity_tx"] = ",".join([config["directivity_tx"] for _ in range(n_targets)])
+    directivity_tx = [float(x) for x in config.get("directivity_tx", ",".join(default_config["directivity_tx"] for _ in range(n_targets))).split(",")]
+    if len(config.get("freq").split(",")) == 1: 
+        config["freq"] = ",".join([config["freq"] for _ in range(n_targets)])
+    freq = [float(x) for x in config.get("freq", ",".join(default_config["freq"] for _ in range(n_targets))).split(",")]
+    fading_sigma = float(config.get("fading_sigma", default_config["fading_sigma"]))
+    threshold = float(config.get("threshold", default_config["threshold"]))
+    depth = int(config.get("depth", default_config["mcts_depth"]))
+    c = float(config.get("c", default_config["mcts_c"]))
+    mcts_simulations = int(config.get("mcts_simulations", default_config["mcts_simulations"]))
+    n_downsample = int(config.get("n_downsample", default_config["mcts_n_downsample"]))
 
     # Sensor
     if antenna_type in ["directional", "yagi", "logp"]:
@@ -336,15 +363,17 @@ def main(config_path="lightweight_separable_config.ini"):
         for i in trange(max_iterations, desc='Time steps'):
             if i%horizon == 0:
                 plan_start_time = timer()
-                if planner_method == "lightweight_simple": # LAVAPilot
+                if planner_method == "lavapilot": # LAVAPilot
                     control_action = get_control_actions(env, min_std_dev, r_min, horizon, min_bound)
                 elif planner_method == "mcts": # mcts
                     if targets_found(env, min_std_dev): 
                         control_action = None
                     else: 
                         control_action = mcts.get_action()
-                else:
+                elif planner_method == "repp":
                     control_action = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, target_selections)
+                else: 
+                    raise Exception
                 plan_end_time = timer()
 
                 if control_action is None: 
@@ -416,7 +445,32 @@ def main(config_path="lightweight_separable_config.ini"):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
+    parser.add_argument('--batch_mode', action='store_true')
     parser.add_argument("--config_path", type=str, default="lightweight_separable_config.ini")
     args = parser.parse_args()
 
-    main(config_path=args.config_path)
+    if args.batch_mode:
+        procs = []
+        n_targets = [8]
+        target_speeds = [0.1, 0.5, 1]
+        sensor_speeds = [1, 2, 3]
+        planner_methods = ["repp","lavapilot"] #"mcts"
+        for conf in list(itertools.product(n_targets, target_speeds, sensor_speeds, planner_methods)): 
+            n_target, target_speed, sensor_speed, planner_method = conf
+            config = ({
+                "experiment_name": f"{planner_method}_{target_speed}targetspeed_{sensor_speed}sensorspeed_{n_target}",
+                "n_targets": str(n_target),
+                "target_speed": str(target_speed),
+                "sensor_speed": str(sensor_speed), 
+                "planner_method": planner_method,
+            }) 
+            proc = Process(target=main, kwargs=({"config":config}))
+            procs.append(proc)
+            proc.start()
+
+        # complete the processes
+        for proc in procs:
+            proc.join()
+
+    else: 
+        main(config_path=args.config_path)
