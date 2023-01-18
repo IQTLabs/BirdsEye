@@ -451,18 +451,20 @@ if __name__ == '__main__':
 
     if args.batch_mode:
         procs = []
-        n_targets = [8]
+        n_targets = [4,8]
         target_speeds = [0.1, 0.5, 1]
         sensor_speeds = [1, 2, 3]
         planner_methods = ["repp","lavapilot"] #"mcts"
-        for conf in list(itertools.product(n_targets, target_speeds, sensor_speeds, planner_methods)): 
-            n_target, target_speed, sensor_speed, planner_method = conf
+        fading_sigmas = [5,10]
+        for conf in list(itertools.product(n_targets, target_speeds, sensor_speeds, planner_methods, fading_sigmas)): 
+            n_target, target_speed, sensor_speed, planner_method, fading_sigma = conf
             config = ({
-                "experiment_name": f"{planner_method}_{target_speed}targetspeed_{sensor_speed}sensorspeed_{n_target}",
+                "experiment_name": f"{planner_method}_{target_speed}targetspeed_{sensor_speed}sensorspeed_{n_target}targets_{fading_sigma}fading",
                 "n_targets": str(n_target),
                 "target_speed": str(target_speed),
                 "sensor_speed": str(sensor_speed), 
                 "planner_method": planner_method,
+                "fading_sigma": str(fading_sigma),
             }) 
             proc = Process(target=main, kwargs=({"config":config}))
             procs.append(proc)
