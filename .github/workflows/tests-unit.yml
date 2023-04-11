@@ -28,5 +28,5 @@ jobs:
           PATH=/home/runner/.local/bin:$PATH coverage report && \
           PATH=/home/runner/.local/bin:$PATH coverage xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3.1.1
+        uses: codecov/codecov-action@v3.1.2
         if: github.repository == 'iqtlabs/birdseye'
