@@ -461,7 +461,7 @@ class Results:
         filename = run if sub_run is None else "{}_{}".format(run, sub_run)
         # Build GIF
         with imageio.get_writer(
-            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", fps=5
+            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", duration=int(1000 * 1/5)
         ) as writer:
             for png_filename in sorted(
                 os.listdir(self.plot_dir + "/png/"), key=lambda x: (len(x), x)
