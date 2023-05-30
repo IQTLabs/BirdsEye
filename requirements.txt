@@ -4,7 +4,7 @@ ipython==8.13.0
 matplotlib==3.7.1
 numpy==1.24.3
 paho-mqtt==1.6.1
-pandas==2.0.1
+pandas==2.0.2
 pfilter==0.2.5
 requests==2.31.0
 scipy==1.10.1
