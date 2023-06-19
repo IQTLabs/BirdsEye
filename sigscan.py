@@ -81,6 +81,8 @@ class SigScan:
         config = configparser.ConfigParser()
         config.read(config_path)
         self.config = config["sigscan"]
+        self.static_position = None
+        self.static_heading = None
 
     def data_handler(self, message_data):
         """
