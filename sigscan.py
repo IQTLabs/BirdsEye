@@ -86,6 +86,11 @@ class SigScan:
         """
         Generic data processor
         """
+        if self.static_position:
+            message_data["position"] = self.static_position
+        if self.static_heading is not None:
+            message_data["heading"] = self.static_heading
+
         self.data["previous_position"] = (
             self.data.get("position", None)
             if not self.data.get("needs_processing", True)
@@ -190,6 +195,16 @@ class SigScan:
         """
         Main loop
         """
+        static_position = self.config.get("static_position", None)
+        if static_position:
+            static_position = [float(i) for i in static_position.split(",")]
+        self.static_position = static_position
+
+        static_heading = self.config.get("static_heading", None)
+        if static_heading is not None:
+            static_heading = float(static_heading)
+        self.static_heading = static_heading
+
         replay_file = self.config.get("replay_file", None)
 
         mqtt_host = self.config.get("mqtt_host", "localhost")
