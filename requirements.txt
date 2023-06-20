@@ -1,6 +1,6 @@
 flask==2.3.2
 imageio==2.31.1
-ipython==8.13.0
+ipython==8.14.0
 matplotlib==3.7.1
 numpy==1.25.0
 paho-mqtt==1.6.1
