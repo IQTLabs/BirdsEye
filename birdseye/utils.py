@@ -28,10 +28,15 @@ from scipy.ndimage.filters import gaussian_filter
 
 from .definitions import RUN_DIR
 
-
+def targets_found(env, min_std_dev):
+    std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
+    not_found = np.where(std_dev > min_std_dev)
+    if len(not_found[0]) == 0:
+        return True
+    return False
+    
 def permute_particle(particle):
     return np.hstack((particle[4:], particle[:4]))
-
 
 def particle_swap(env):
     # 2000 x 8
@@ -95,6 +100,25 @@ def particle_swap(env):
 
     env.pf.particles = particles
 
+def circ_tangents(point, center, radius):
+    px, py = point
+    cx, cy = center
+
+    b = np.sqrt((px-cx)**2 + (py-cy)**2)
+    if radius >= b:
+        ##print(f"Warning: No tangents are possible.  radius >= distance to circle center ({radius} >= {b})")
+        return None
+    th = np.arccos(radius / b)
+    d = np.arctan2(py-cy, px-cx)
+    d1 = d + th
+    d2 = d - th
+
+    tangents = [[cx+radius*np.cos(d1), cy+radius*np.sin(d1)],[cx+radius*np.cos(d2), cy+radius*np.sin(d2)]]
+    v = np.array(point) - np.array(center) 
+    v /= np.linalg.norm(v)
+    intersection = np.array(center) + radius*v
+    tangents.append(list(intersection))
+    return np.array(tangents)
 
 def pol2cart(rho, phi):
     """
