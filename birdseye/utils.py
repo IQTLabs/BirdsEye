@@ -27,6 +27,7 @@ import requests
 from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
 
+from .definitions import REPO_DIR
 from .definitions import RUN_DIR
 
 def targets_found(env, min_std_dev):
@@ -310,8 +311,11 @@ class GPSVis:
 
         # loop through every tile inside our bounded box
         for x_tile, y_tile in product(range(x0_tile, x1_tile), range(y0_tile, y1_tile)):
-            with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom), headers={'User-Agent': 'BirdsEye/0.1.1'}) as resp:
-                tile_img = Image.open(BytesIO(resp.content))
+            try:
+                with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom), headers={'User-Agent': 'BirdsEye/0.1.1'}) as resp:
+                    tile_img = Image.open(BytesIO(resp.content))
+            except Exception as e:
+                tile_img = Image.open(f'{REPO_DIR}/data/0.png')
             # add each tile to the full size image
             img.paste(
                 im=tile_img,
@@ -729,7 +733,7 @@ class Results:
         filename = run if sub_run is None else "{}_{}".format(run, sub_run)
         # Build GIF
         with imageio.get_writer(
-            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", fps=5
+            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", duration=int(1000 * 1/5)
         ) as writer:
             for png_filename in sorted(
                 os.listdir(self.plot_dir + "/png/"), key=lambda x: (len(x), x)
