@@ -81,6 +81,7 @@ class SigScan:
         config = configparser.ConfigParser()
         config.read(config_path)
         self.config = config["sigscan"]
+        self.config_path = config_path
 
     def data_handler(self, message_data):
         """
@@ -98,7 +99,7 @@ class SigScan:
         )
 
         self.data["rssi"] = message_data.get("rssi", None)
-        self.data["position"] = message_data.get("position", None)
+        self.data["position"] = message_data.get("position", self.data["position"])
         self.data["course"] = get_heading(
             self.data["previous_position"], self.data["position"]
         )
@@ -256,7 +257,7 @@ class SigScan:
             "cuda" if torch.cuda.is_available() else "cpu"
         )  # pylint: disable=no-member
         results = birdseye.utils.Results(
-            method_name=planner_method,
+            experiment_name=self.config_path,
             global_start_time=global_start_time,
             config=self.config,
         )
@@ -341,7 +342,7 @@ class SigScan:
 
             plot_start = timer()
             results.live_plot(
-                env=env, time_step=time_step, fig=fig, ax=ax, data=self.data
+                env=env, time_step=time_step, fig=fig, ax=ax, data=self.data, sidebar=True
             )
             plot_end = timer()
 

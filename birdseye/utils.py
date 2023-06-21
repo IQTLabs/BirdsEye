@@ -5,6 +5,7 @@ import configparser
 import json
 import math
 import os
+import datetime
 from collections import defaultdict
 from io import BytesIO
 from itertools import permutations
@@ -799,11 +800,16 @@ class Results:
                 "Time = {}".format(time_step)
             )
         else:
+            abs_particles = np.moveaxis(abs_particles, 1, 0)
+            # ax.set_title(
+            #     "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
+            #         time_step, None, None, None
+            #     )
+            # )
             ax.set_title(
-                "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
-                    time_step, None, None, None
-                )
+                f"Time = {str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}"
             )
+            
 
         color_array = [
             ["salmon", "darkred", "red"],
@@ -822,7 +828,6 @@ class Results:
 
 
         for t in range(env.state.n_targets):
-            
             # PLOT PARTICLES 
             # particles_x, particles_y = pol2cart(
             #     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
@@ -1096,100 +1101,128 @@ class Results:
 
         # Sidebar Text
         if sidebar:
+
+            map_r, map_theta = env.pf.map_state[0], env.pf.map_state[1]
+            map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+            rel_centroid_x, rel_centroid_y = env.get_particle_centroids()[t]
+            centroid_r, centroid_theta = cart2pol(rel_centroid_x, rel_centroid_y)
+            centroid_theta = np.degrees(centroid_theta)
+            mean_estimate_str = (
+                f"TARGET ESTIMATE (mean)\n"
+                f"Distance = {centroid_r:.0f} m\n"
+                f"Bearing = {centroid_theta:.0f} deg"
+            )
+            map_estimate_str = (
+                f"TARGET ESTIMATE (MAP)\n"
+                f"Distance = {map_r:.0f} m\n"
+                f"Bearing = {map_theta:.0f} deg"
+            )
+
             # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
-            actual_str = "Actual\n"
-            actual_str += (
-                "Heading = {:.0f} deg\n".format(data.get("heading", None))
-                if data.get("heading", None)
-                else "Heading = unknown\n"
-            )
-            actual_str += (
-                "Speed = {:.2f} m/s".format(data.get("action_taken", None)[1])
-                if data.get("action_taken", None)
-                else "Speed = unknown\n"
+            actual_heading_str = f"{data.get('heading'):.0f}" if data.get("heading", None) else f"unknown"
+            actual_speed_str = f"{data.get('action_taken')[1]:.2f}" if data.get("action_taken", None) else f"unknown"
+            actual_str = (
+                f"SENSOR ACTUAL\n"
+                f"Heading = {actual_heading_str} deg\n"
+                f"Speed = {actual_speed_str} m/s"
             )
 
-            proposal_str = "Proposed\n"
-            proposal_str += (
-                "Heading = {:.0f} deg\n".format(data.get("action_proposal", None)[0])
-                if None not in data.get("action_proposal", (None, None))
-                else "Heading = unknown\n"
-            )
-            proposal_str += (
-                "Speed = {:.2f} m/s".format(data.get("action_proposal", None)[1])
-                if None not in data.get("action_proposal", (None, None))
-                else "Speed = unknown\n"
+            proposal_heading_str = f"{data.get('action_proposal')[0]:.0f}" if None not in data.get("action_proposal", (None, None)) else f"unknown"
+            proposal_speed_str = f"{data.get('action_proposal')[1]:.2f}" if None not in data.get("action_proposal", (None, None)) else f"unknown"
+            proposal_str = (
+                f"SENSOR PROPOSAL\n"
+                f"Heading = {proposal_heading_str} deg\n"
+                f"Speed = {proposal_speed_str} m/s"
             )
 
-            last_mean_hyp = self.pf_stats["mean_hypothesis"][-1][0]
-            last_map_hyp = self.pf_stats["map_hypothesis"][-1][0]
-
-            rssi_str = "RSSI\n"
-            rssi_str += (
-                "Observed = {:.1f} dB\n".format(env.last_observation)
-                if env.last_observation
-                else "Observed = unknown\n"
-            )
-            rssi_str += (
-                "Expected = {:.1f} dB\n".format(self.expected_target_rssi)
-                if self.expected_target_rssi
-                else "Expected = unknown\n"
-            )
-            rssi_str += (
-                "Difference = {:.1f} dB\n".format(
-                    env.last_observation - self.expected_target_rssi
-                )
-                if (env.last_observation and self.expected_target_rssi)
-                else ""
+            rssi_observed_str = f"{env.last_observation:.0f}" if env.last_observation else f"unknown"
+            rssi_expected_str = f"{self.expected_target_rssi:.0f}" if self.expected_target_rssi else f"unknown"
+            rssi_difference_str = f"Difference = {env.last_observation - self.expected_target_rssi:.0f} dB\n" if (env.last_observation and self.expected_target_rssi) else ""
+            rssi_mean_str = f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f}" if self.pf_stats["mean_hypothesis"][-1][0] else f"unknown"
+            rssi_map_str = f"{self.pf_stats['map_hypothesis'][-1][0]:.0f}" if self.pf_stats["map_hypothesis"][-1][0] else f"unknown"
+            rssi_str = (
+                f"RSSI\n"
+                f"Observed = {rssi_observed_str} dB\n"
+                f"Expected = {rssi_expected_str} dB\n"
+                #f"{rssi_difference_str}"
+                f"Mean estimate = {rssi_mean_str} dB\n"
+                f"MAP estimate = {rssi_map_str} dB"
             )
             # rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
             # rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
-            rssi_str += (
-                "MLE estimate = {:.1f} dB\n".format(last_mean_hyp)
-                if last_mean_hyp
-                else "MLE estimate = unknown"
-            )
-            rssi_str += (
-                "MAP estimate = {:.1f} dB".format(last_map_hyp)
-                if last_map_hyp
-                else "MAP estimate = unknown"
+
+            sidebar_str = (
+                f"{mean_estimate_str}"
+                f"\n\n===============\n\n"
+                f"{map_estimate_str}"
+                f"\n\n===============\n\n"
+                f"{actual_str}"
+                f"\n\n===============\n\n"
+                f"{proposal_str}"
+                f"\n\n===============\n\n"
+                f"{rssi_str}"
             )
 
             if len(fig.texts) == 0:
-                props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
-                text = fig.text(
-                    1.04,
-                    0.75,
-                    actual_str,
-                    transform=ax.transAxes,
-                    fontsize=14,
-                    verticalalignment="top",
-                    bbox=props,
-                )
                 props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
                 text = fig.text(
                     1.04,
-                    0.5,
-                    proposal_str,
-                    transform=ax.transAxes,
-                    fontsize=14,
-                    verticalalignment="top",
-                    bbox=props,
-                )
-                props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
-                text = fig.text(
-                    1.04,
-                    0.25,
-                    rssi_str,
+                    1,
+                    sidebar_str,
                     transform=ax.transAxes,
                     fontsize=14,
                     verticalalignment="top",
                     bbox=props,
                 )
             else:
-                fig.texts[0].set_text(actual_str)
-                fig.texts[1].set_text(proposal_str)
-                fig.texts[2].set_text(rssi_str)
+                fig.texts[0].set_text(sidebar_str)
+  
+            # if len(fig.texts) == 0:
+            #     props = dict(boxstyle="round", facecolor="mistyrose", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         1,
+            #         estimate_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.85,
+            #         actual_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.70,
+            #         proposal_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.55,
+            #         rssi_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            # else:
+            #     fig.texts[0].set_text(estimate_str)
+            #     fig.texts[1].set_text(actual_str)
+            #     fig.texts[2].set_text(proposal_str)
+            #     fig.texts[3].set_text(rssi_str)
 
         self.native_plot = "true" if time_step % self.plot_every_n == 0 else "false"
         if self.native_plot == "true":
