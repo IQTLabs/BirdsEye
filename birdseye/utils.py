@@ -1113,8 +1113,18 @@ class Results:
         # Sidebar Text
         if sidebar:
 
-            map_r, map_theta = env.pf.map_state[0], env.pf.map_state[1]
-            map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+            self.pf_stats["map_state"][-1][0]
+            map_r = f"{self.pf_stats['map_state'][-1][0]:.0f} m" if self.pf_stats["map_state"][-1][0] is not None else f"unknown"
+            
+            if self.pf_stats["map_state"][-1][0] is not None: 
+                map_theta = self.pf_stats["map_state"][-1][1]
+                map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+                map_theta = f"{map_theta:.0f} deg"
+            else: 
+                map_theta = f"unknown"
+        
+            
+            #map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
             rel_centroid_x, rel_centroid_y = env.get_particle_centroids()[t]
             centroid_r, centroid_theta = cart2pol(rel_centroid_x, rel_centroid_y)
             centroid_theta = np.degrees(centroid_theta)
@@ -1125,39 +1135,39 @@ class Results:
             )
             map_estimate_str = (
                 f"TARGET ESTIMATE (MAP)\n"
-                f"Distance = {map_r:.0f} m\n"
-                f"Bearing = {map_theta:.0f} deg"
+                f"Distance = {map_r}\n"
+                f"Bearing = {map_theta}"
             )
 
             # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
-            actual_heading_str = f"{data.get('heading'):.0f}" if data.get("heading", None) else f"unknown"
-            actual_speed_str = f"{data.get('action_taken')[1]:.2f}" if data.get("action_taken", None) else f"unknown"
+            actual_heading_str = f"{data.get('heading'):.0f} deg" if data.get("heading", None) else f"unknown"
+            actual_speed_str = f"{data.get('action_taken')[1]:.2f} m/s" if data.get("action_taken", None) else f"unknown"
             actual_str = (
                 f"SENSOR ACTUAL\n"
-                f"Heading = {actual_heading_str} deg\n"
-                f"Speed = {actual_speed_str} m/s"
+                f"Heading = {actual_heading_str}\n"
+                f"Speed = {actual_speed_str}"
             )
 
-            proposal_heading_str = f"{data.get('action_proposal')[0]:.0f}" if None not in data.get("action_proposal", (None, None)) else f"unknown"
-            proposal_speed_str = f"{data.get('action_proposal')[1]:.2f}" if None not in data.get("action_proposal", (None, None)) else f"unknown"
+            proposal_heading_str = f"{data.get('action_proposal')[0]:.0f} deg" if None not in data.get("action_proposal", (None, None)) else f"unknown"
+            proposal_speed_str = f"{data.get('action_proposal')[1]:.2f} m/s" if None not in data.get("action_proposal", (None, None)) else f"unknown"
             proposal_str = (
                 f"SENSOR PROPOSAL\n"
-                f"Heading = {proposal_heading_str} deg\n"
-                f"Speed = {proposal_speed_str} m/s"
+                f"Heading = {proposal_heading_str}\n"
+                f"Speed = {proposal_speed_str}"
             )
 
-            rssi_observed_str = f"{env.last_observation:.0f}" if env.last_observation else f"unknown"
-            rssi_expected_str = f"{self.expected_target_rssi:.0f}" if self.expected_target_rssi else f"unknown"
+            rssi_observed_str = f"{env.last_observation:.0f} dB" if env.last_observation else f"unknown"
+            rssi_expected_str = f"{self.expected_target_rssi:.0f} dB" if self.expected_target_rssi else f"unknown"
             rssi_difference_str = f"Difference = {env.last_observation - self.expected_target_rssi:.0f} dB\n" if (env.last_observation and self.expected_target_rssi) else ""
-            rssi_mean_str = f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f}" if self.pf_stats["mean_hypothesis"][-1][0] else f"unknown"
-            rssi_map_str = f"{self.pf_stats['map_hypothesis'][-1][0]:.0f}" if self.pf_stats["map_hypothesis"][-1][0] else f"unknown"
+            rssi_mean_str = f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f} dB" if self.pf_stats["mean_hypothesis"][-1][0] else f"unknown"
+            rssi_map_str = f"{self.pf_stats['map_hypothesis'][-1][0]:.0f} dB" if self.pf_stats["map_hypothesis"][-1][0] else f"unknown"
             rssi_str = (
                 f"RSSI\n"
-                f"Observed = {rssi_observed_str} dB\n"
-                f"Expected = {rssi_expected_str} dB\n"
+                f"Observed = {rssi_observed_str}\n"
+                f"Expected = {rssi_expected_str}\n"
                 #f"{rssi_difference_str}"
-                f"Mean estimate = {rssi_mean_str} dB\n"
-                f"MAP estimate = {rssi_map_str} dB"
+                f"Mean estimate = {rssi_mean_str}\n"
+                f"MAP estimate = {rssi_map_str}"
             )
             # rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
             # rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
