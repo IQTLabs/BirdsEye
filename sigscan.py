@@ -226,6 +226,7 @@ class SigScan:
         threshold = float(self.config.get("threshold", str(-120)))
         reward_func = self.config.get("reward", "heuristic_reward")
         n_targets = int(self.config.get("n_targets", str(2)))
+        particle_distance = float(self.config.get("particle_distance", str(200)))
         dqn_checkpoint = self.config.get("dqn_checkpoint", None)
         if planner_method in ["dqn", "DQN"] and dqn_checkpoint is None:
             if n_antennas == 1 and antenna_type == "directional" and n_targets == 2:
@@ -301,7 +302,7 @@ class SigScan:
 
         # State managment
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, reward=reward_func, simulated=False
+            n_targets=n_targets, reward=reward_func, simulated=False, particle_distance=particle_distance,
         )
 
         # Environment
@@ -359,7 +360,7 @@ class SigScan:
 
             plot_start = timer()
             results.live_plot(
-                env=env, time_step=time_step, fig=fig, ax=ax, data=self.data, sidebar=True
+                env=env, time_step=time_step, fig=fig, ax=ax, data=self.data, sidebar=True, map_distance=particle_distance,
             )
             plot_end = timer()
 

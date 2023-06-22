@@ -209,7 +209,7 @@ class GPSVis:
     Class for GPS data visualization using pre-downloaded OSM map in image format.
     """
 
-    def __init__(self, position=None, map_path=None, bounds=None):
+    def __init__(self, position=None, map_path=None, bounds=None, distance=200):
         """
         :param data_path: Path to file containing GPS records.
         :param map_path: Path to pre-downloaded OSM map in image format.
@@ -223,9 +223,16 @@ class GPSVis:
         if self.map_path is not None and self.bounds is not None:
             self.img = self.create_image_from_map()
         elif self.position is not None:
-            self.zoom = 18
+            if distance <= 200: 
+                self.zoom = 18
+            elif distance <= 1000: 
+                self.zoom = 16
+            elif distance <= 2000:
+                self.zoom = 14
+            else: 
+                self.zoom = 12
             self.TILE_SIZE = 256
-            distance = 200
+            distance = distance
 
             coord = self.position
 
@@ -741,7 +748,7 @@ class Results:
                 image = imageio.v2.imread(self.plot_dir + "/png/" + png_filename)
                 writer.append_data(image)
 
-    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, sidebar=False, separable=False):
+    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, sidebar=False, separable=False, map_distance=200):
         """
         Create a live plot
         """
@@ -750,7 +757,7 @@ class Results:
             and data.get("position", None) is not None
             and data.get("heading", None) is not None
         ):
-            self.openstreetmap = GPSVis(position=data["position"])
+            self.openstreetmap = GPSVis(position=data["position"], distance=map_distance)
             self.openstreetmap.set_origin(data["position"])
             self.transform = np.array(
                 [self.openstreetmap.origin[0], self.openstreetmap.origin[1]]
@@ -1097,7 +1104,7 @@ class Results:
 
         # X/Y Limits
         if self.openstreetmap is None:
-            map_width = 500
+            map_width = map_distance * 2.1
             min_map = -1 * int(map_width / 2)
             max_map = int(map_width / 2)
             ax.set_xlim(min_map, max_map)

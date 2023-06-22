@@ -40,6 +40,7 @@ class RFMultiState(State):
         target_movement=None,
         target_start=None,
         sensor_speed=None,
+        particle_distance=None,
         reward=None,
         simulated=True,
     ):
@@ -55,6 +56,7 @@ class RFMultiState(State):
             if target_speed_range is not None
             else [self.target_speed]
         )
+        self.particle_distance = float(particle_distance) if particle_distance is not None else 200
         # Target movement pattern
         self.target_movement = (
             target_movement if target_movement is not None else "random"
@@ -136,7 +138,7 @@ class RFMultiState(State):
         # state is [range, heading, relative course, own speed]
         return np.array(
             [
-                random.randint(1, 200),
+                random.randint(1, self.particle_distance),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
                 self.target_speed,
