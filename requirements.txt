@@ -9,4 +9,4 @@ pfilter==0.2.5
 requests==2.31.0
 scipy==1.11.1
 torch==2.0.1
-tqdm==4.65.2
+tqdm==4.66.1
