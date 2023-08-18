@@ -7,6 +7,6 @@ paho-mqtt==1.6.1
 pandas==2.0.3
 pfilter==0.2.5
 requests==2.31.0
-scipy==1.11.1
+scipy==1.11.2
 torch==2.0.1
 tqdm==4.66.1
