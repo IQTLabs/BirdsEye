@@ -5,6 +5,7 @@ import configparser
 import json
 import math
 import os
+import datetime
 from collections import defaultdict
 from io import BytesIO
 from itertools import permutations
@@ -26,6 +27,7 @@ import requests
 from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
 
+from .definitions import REPO_DIR
 from .definitions import RUN_DIR
 
 def targets_found(env, min_std_dev):
@@ -207,7 +209,7 @@ class GPSVis:
     Class for GPS data visualization using pre-downloaded OSM map in image format.
     """
 
-    def __init__(self, position=None, map_path=None, bounds=None):
+    def __init__(self, position=None, map_path=None, bounds=None, distance=200):
         """
         :param data_path: Path to file containing GPS records.
         :param map_path: Path to pre-downloaded OSM map in image format.
@@ -221,9 +223,16 @@ class GPSVis:
         if self.map_path is not None and self.bounds is not None:
             self.img = self.create_image_from_map()
         elif self.position is not None:
-            self.zoom = 18
+            if distance <= 200: 
+                self.zoom = 18
+            elif distance <= 1000: 
+                self.zoom = 16
+            elif distance <= 2000:
+                self.zoom = 14
+            else: 
+                self.zoom = 12
             self.TILE_SIZE = 256
-            distance = 200
+            distance = distance
 
             coord = self.position
 
@@ -309,8 +318,11 @@ class GPSVis:
 
         # loop through every tile inside our bounded box
         for x_tile, y_tile in product(range(x0_tile, x1_tile), range(y0_tile, y1_tile)):
-            with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom), headers={'User-Agent': 'BirdsEye/0.1.1'}) as resp:
-                tile_img = Image.open(BytesIO(resp.content))
+            try:
+                with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom), headers={'User-Agent': 'BirdsEye/0.1.1'}) as resp:
+                    tile_img = Image.open(BytesIO(resp.content))
+            except Exception as e:
+                tile_img = Image.open(f'{REPO_DIR}/data/0.png')
             # add each tile to the full size image
             img.paste(
                 im=tile_img,
@@ -728,7 +740,7 @@ class Results:
         filename = run if sub_run is None else "{}_{}".format(run, sub_run)
         # Build GIF
         with imageio.get_writer(
-            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", fps=5
+            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", duration=int(1000 * 1/5)
         ) as writer:
             for png_filename in sorted(
                 os.listdir(self.plot_dir + "/png/"), key=lambda x: (len(x), x)
@@ -736,7 +748,7 @@ class Results:
                 image = imageio.v2.imread(self.plot_dir + "/png/" + png_filename)
                 writer.append_data(image)
 
-    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, sidebar=False, separable=False):
+    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, sidebar=False, separable=False, map_distance=200):
         """
         Create a live plot
         """
@@ -745,7 +757,7 @@ class Results:
             and data.get("position", None) is not None
             and data.get("heading", None) is not None
         ):
-            self.openstreetmap = GPSVis(position=data["position"])
+            self.openstreetmap = GPSVis(position=data["position"], distance=map_distance)
             self.openstreetmap.set_origin(data["position"])
             self.transform = np.array(
                 [self.openstreetmap.origin[0], self.openstreetmap.origin[1]]
@@ -799,11 +811,16 @@ class Results:
                 "Time = {}".format(time_step)
             )
         else:
+            abs_particles = np.moveaxis(abs_particles, 1, 0)
+            # ax.set_title(
+            #     "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
+            #         time_step, None, None, None
+            #     )
+            # )
             ax.set_title(
-                "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
-                    time_step, None, None, None
-                )
+                f"Time = {str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}"
             )
+            
 
         color_array = [
             ["salmon", "darkred", "red"],
@@ -822,7 +839,6 @@ class Results:
 
 
         for t in range(env.state.n_targets):
-            
             # PLOT PARTICLES 
             # particles_x, particles_y = pol2cart(
             #     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
@@ -1088,7 +1104,7 @@ class Results:
 
         # X/Y Limits
         if self.openstreetmap is None:
-            map_width = 500
+            map_width = map_distance * 2.1
             min_map = -1 * int(map_width / 2)
             max_map = int(map_width / 2)
             ax.set_xlim(min_map, max_map)
@@ -1096,100 +1112,138 @@ class Results:
 
         # Sidebar Text
         if sidebar:
+
+            self.pf_stats["map_state"][-1][0]
+            map_r = f"{self.pf_stats['map_state'][-1][0]:.0f} m" if self.pf_stats["map_state"][-1][0] is not None else f"unknown"
+            
+            if self.pf_stats["map_state"][-1][0] is not None: 
+                map_theta = self.pf_stats["map_state"][-1][1]
+                map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+                map_theta = f"{map_theta:.0f} deg"
+            else: 
+                map_theta = f"unknown"
+        
+            
+            #map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+            rel_centroid_x, rel_centroid_y = env.get_particle_centroids()[t]
+            centroid_r, centroid_theta = cart2pol(rel_centroid_x, rel_centroid_y)
+            centroid_theta = np.degrees(centroid_theta)
+            mean_estimate_str = (
+                f"TARGET ESTIMATE (mean)\n"
+                f"Distance = {centroid_r:.0f} m\n"
+                f"Bearing = {centroid_theta:.0f} deg"
+            )
+            map_estimate_str = (
+                f"TARGET ESTIMATE (MAP)\n"
+                f"Distance = {map_r}\n"
+                f"Bearing = {map_theta}"
+            )
+
             # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
-            actual_str = "Actual\n"
-            actual_str += (
-                "Heading = {:.0f} deg\n".format(data.get("heading", None))
-                if data.get("heading", None)
-                else "Heading = unknown\n"
-            )
-            actual_str += (
-                "Speed = {:.2f} m/s".format(data.get("action_taken", None)[1])
-                if data.get("action_taken", None)
-                else "Speed = unknown\n"
+            actual_heading_str = f"{data.get('heading'):.0f} deg" if data.get("heading", None) else f"unknown"
+            actual_speed_str = f"{data.get('action_taken')[1]:.2f} m/s" if data.get("action_taken", None) else f"unknown"
+            actual_str = (
+                f"SENSOR ACTUAL\n"
+                f"Heading = {actual_heading_str}\n"
+                f"Speed = {actual_speed_str}"
             )
 
-            proposal_str = "Proposed\n"
-            proposal_str += (
-                "Heading = {:.0f} deg\n".format(data.get("action_proposal", None)[0])
-                if None not in data.get("action_proposal", (None, None))
-                else "Heading = unknown\n"
-            )
-            proposal_str += (
-                "Speed = {:.2f} m/s".format(data.get("action_proposal", None)[1])
-                if None not in data.get("action_proposal", (None, None))
-                else "Speed = unknown\n"
+            proposal_heading_str = f"{data.get('action_proposal')[0]:.0f} deg" if None not in data.get("action_proposal", (None, None)) else f"unknown"
+            proposal_speed_str = f"{data.get('action_proposal')[1]:.2f} m/s" if None not in data.get("action_proposal", (None, None)) else f"unknown"
+            proposal_str = (
+                f"SENSOR PROPOSAL\n"
+                f"Heading = {proposal_heading_str}\n"
+                f"Speed = {proposal_speed_str}"
             )
 
-            last_mean_hyp = self.pf_stats["mean_hypothesis"][-1][0]
-            last_map_hyp = self.pf_stats["map_hypothesis"][-1][0]
-
-            rssi_str = "RSSI\n"
-            rssi_str += (
-                "Observed = {:.1f} dB\n".format(env.last_observation)
-                if env.last_observation
-                else "Observed = unknown\n"
-            )
-            rssi_str += (
-                "Expected = {:.1f} dB\n".format(self.expected_target_rssi)
-                if self.expected_target_rssi
-                else "Expected = unknown\n"
-            )
-            rssi_str += (
-                "Difference = {:.1f} dB\n".format(
-                    env.last_observation - self.expected_target_rssi
-                )
-                if (env.last_observation and self.expected_target_rssi)
-                else ""
+            rssi_observed_str = f"{env.last_observation:.0f} dB" if env.last_observation else f"unknown"
+            rssi_expected_str = f"{self.expected_target_rssi:.0f} dB" if self.expected_target_rssi else f"unknown"
+            rssi_difference_str = f"Difference = {env.last_observation - self.expected_target_rssi:.0f} dB\n" if (env.last_observation and self.expected_target_rssi) else ""
+            rssi_mean_str = f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f} dB" if self.pf_stats["mean_hypothesis"][-1][0] else f"unknown"
+            rssi_map_str = f"{self.pf_stats['map_hypothesis'][-1][0]:.0f} dB" if self.pf_stats["map_hypothesis"][-1][0] else f"unknown"
+            rssi_str = (
+                f"RSSI\n"
+                f"Observed = {rssi_observed_str}\n"
+                f"Expected = {rssi_expected_str}\n"
+                #f"{rssi_difference_str}"
+                f"Mean estimate = {rssi_mean_str}\n"
+                f"MAP estimate = {rssi_map_str}"
             )
             # rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
             # rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
-            rssi_str += (
-                "MLE estimate = {:.1f} dB\n".format(last_mean_hyp)
-                if last_mean_hyp
-                else "MLE estimate = unknown"
-            )
-            rssi_str += (
-                "MAP estimate = {:.1f} dB".format(last_map_hyp)
-                if last_map_hyp
-                else "MAP estimate = unknown"
+
+            sidebar_str = (
+                f"{mean_estimate_str}"
+                f"\n\n===============\n\n"
+                f"{map_estimate_str}"
+                f"\n\n===============\n\n"
+                f"{actual_str}"
+                f"\n\n===============\n\n"
+                f"{proposal_str}"
+                f"\n\n===============\n\n"
+                f"{rssi_str}"
             )
 
             if len(fig.texts) == 0:
-                props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
-                text = fig.text(
-                    1.04,
-                    0.75,
-                    actual_str,
-                    transform=ax.transAxes,
-                    fontsize=14,
-                    verticalalignment="top",
-                    bbox=props,
-                )
                 props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
                 text = fig.text(
                     1.04,
-                    0.5,
-                    proposal_str,
-                    transform=ax.transAxes,
-                    fontsize=14,
-                    verticalalignment="top",
-                    bbox=props,
-                )
-                props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
-                text = fig.text(
-                    1.04,
-                    0.25,
-                    rssi_str,
+                    1,
+                    sidebar_str,
                     transform=ax.transAxes,
                     fontsize=14,
                     verticalalignment="top",
                     bbox=props,
                 )
             else:
-                fig.texts[0].set_text(actual_str)
-                fig.texts[1].set_text(proposal_str)
-                fig.texts[2].set_text(rssi_str)
+                fig.texts[0].set_text(sidebar_str)
+  
+            # if len(fig.texts) == 0:
+            #     props = dict(boxstyle="round", facecolor="mistyrose", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         1,
+            #         estimate_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.85,
+            #         actual_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.70,
+            #         proposal_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.55,
+            #         rssi_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            # else:
+            #     fig.texts[0].set_text(estimate_str)
+            #     fig.texts[1].set_text(actual_str)
+            #     fig.texts[2].set_text(proposal_str)
+            #     fig.texts[3].set_text(rssi_str)
 
         self.native_plot = "true" if time_step % self.plot_every_n == 0 else "false"
         if self.native_plot == "true":

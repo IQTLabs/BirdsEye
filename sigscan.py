@@ -81,11 +81,19 @@ class SigScan:
         config = configparser.ConfigParser()
         config.read(config_path)
         self.config = config["sigscan"]
+        self.config_path = config_path
+        self.static_position = None
+        self.static_heading = None
 
     def data_handler(self, message_data):
         """
         Generic data processor
         """
+        if self.static_position:
+            message_data["position"] = self.static_position
+        if self.static_heading is not None:
+            message_data["heading"] = self.static_heading
+
         self.data["previous_position"] = (
             self.data.get("position", None)
             if not self.data.get("needs_processing", True)
@@ -98,7 +106,7 @@ class SigScan:
         )
 
         self.data["rssi"] = message_data.get("rssi", None)
-        self.data["position"] = message_data.get("position", None)
+        self.data["position"] = message_data.get("position", self.data["position"])
         self.data["course"] = get_heading(
             self.data["previous_position"], self.data["position"]
         )
@@ -190,6 +198,16 @@ class SigScan:
         """
         Main loop
         """
+        static_position = self.config.get("static_position", None)
+        if static_position:
+            static_position = [float(i) for i in static_position.split(",")]
+        self.static_position = static_position
+
+        static_heading = self.config.get("static_heading", None)
+        if static_heading is not None:
+            static_heading = float(static_heading)
+        self.static_heading = static_heading
+
         replay_file = self.config.get("replay_file", None)
 
         mqtt_host = self.config.get("mqtt_host", "localhost")
@@ -208,6 +226,7 @@ class SigScan:
         threshold = float(self.config.get("threshold", str(-120)))
         reward_func = self.config.get("reward", "heuristic_reward")
         n_targets = int(self.config.get("n_targets", str(2)))
+        particle_distance = float(self.config.get("particle_distance", str(200)))
         dqn_checkpoint = self.config.get("dqn_checkpoint", None)
         if planner_method in ["dqn", "DQN"] and dqn_checkpoint is None:
             if n_antennas == 1 and antenna_type == "directional" and n_targets == 2:
@@ -256,7 +275,7 @@ class SigScan:
             "cuda" if torch.cuda.is_available() else "cpu"
         )  # pylint: disable=no-member
         results = birdseye.utils.Results(
-            method_name=planner_method,
+            experiment_name=self.config_path,
             global_start_time=global_start_time,
             config=self.config,
         )
@@ -283,7 +302,7 @@ class SigScan:
 
         # State managment
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, reward=reward_func, simulated=False
+            n_targets=n_targets, reward=reward_func, simulated=False, particle_distance=particle_distance,
         )
 
         # Environment
@@ -341,7 +360,7 @@ class SigScan:
 
             plot_start = timer()
             results.live_plot(
-                env=env, time_step=time_step, fig=fig, ax=ax, data=self.data
+                env=env, time_step=time_step, fig=fig, ax=ax, data=self.data, sidebar=True, map_distance=particle_distance,
             )
             plot_end = timer()
 

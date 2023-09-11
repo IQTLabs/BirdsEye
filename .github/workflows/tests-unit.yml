@@ -19,7 +19,6 @@ jobs:
       - name: Tests
         run: |
           pip3 install -r requirements.txt -r tests/requirements.txt && \
-          pip3 install codecov && \
           PYTHONPATH=. python3 -m birdseye.baseline --help \
           PYTHONPATH=. python3 -m birdseye.dqn --help && \
           PYTHONPATH=. python3 -m birdseye.mcts --help && \
@@ -28,5 +27,5 @@ jobs:
           PATH=/home/runner/.local/bin:$PATH coverage report && \
           PATH=/home/runner/.local/bin:$PATH coverage xml
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3.1.0
+        uses: codecov/codecov-action@v3.1.4
         if: github.repository == 'iqtlabs/birdseye'
