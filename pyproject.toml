@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "birdseye"
+version = "0.2.2-dev"
+description = "The BirdsEye project demonstrates the simulated tracking of radio frequency (RF) signals via reinforcement learning (RL) techniques implemented on low-fidelity sensors."
+authors = ["Your Name <you@example.com>"]
+license = "Apache-2"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+flask = "2.3.3"
+imageio = "2.31.3"
+ipython = "8.15.0"
+matplotlib = "3.8.0"
+numpy = "1.26.0"
+paho-mqtt = "1.6.1"
+pandas = "2.1.0"
+pfilter = "0.2.5"
+requests = "2.31.0"
+scipy = "1.11.2"
+torch = "2.0.1"
+tqdm = "4.66.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
