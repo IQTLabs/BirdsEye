@@ -24,7 +24,7 @@ jobs:
           version: 1.4.2
       - name: poetry install
         run: |
-          poetry build && poetry install --extras=dev --no-root
+          poetry build && poetry install --with=dev --no-root
       - name: Run code checks
         run: |
           export PYTHONPATH=$PWD/birdseye:$PYTHONPATH && \
