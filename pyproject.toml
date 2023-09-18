@@ -7,7 +7,7 @@ license = "Apache-2"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9,<3.11"
 flask = "2.3.3"
 imageio = "2.31.3"
 ipython = "8.15.0"
@@ -21,6 +21,11 @@ scipy = "1.11.2"
 torch = "2.0.1"
 tqdm = "4.66.1"
 
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^2.17.5"
+pytype = "^2023.9.11"
+pytest = "^7.4.2"
 
 [build-system]
 requires = ["poetry-core"]
