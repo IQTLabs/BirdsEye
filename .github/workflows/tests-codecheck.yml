@@ -16,9 +16,17 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.CODECHECK_PY_VER }}
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+          virtualenvs-in-project: false
+          version: 1.4.2
+      - name: poetry install
+        run: |
+          poetry build && poetry install --with=dev --no-root
       - name: Run code checks
         run: |
-          pip3 install -r requirements.txt -r tests/requirements.txt && \
           export PYTHONPATH=$PWD/birdseye:$PYTHONPATH && \
           pylint --fail-under=7.5 *py tests/*py birdseye/*py && \
           pytype -k -P . -V ${{ env.CODECHECK_PY_VER }} birdseye/*py *py telemetry-data/*/*py
