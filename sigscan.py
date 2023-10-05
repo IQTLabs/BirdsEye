@@ -172,7 +172,7 @@ class SigScan:
                 return '<html><head><meta http-equiv="refresh" content="1"></head><body><p>No image, refreshing...</p></body></html>'
 
             # Embed the result in the html output.
-            data = base64.b64encode(buf.getbuffer()).decode("ascii")
+            data = base64.b64encode(buf.getvalue()).decode("ascii")
             flask_end_time = timer()
 
             logging.debug("=======================================")
