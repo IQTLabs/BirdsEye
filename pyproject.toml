@@ -8,7 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.11"
-flask = "2.3.3"
+flask = "3.0.0"
 imageio = "2.31.3"
 ipython = "8.15.0"
 matplotlib = "3.8.0"
