@@ -13,19 +13,19 @@ class Sensor:
 
     def observation(self, state):
         """Undefined observation sample method"""
-        pass
+        raise NotImplementedError
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
         """Undefined method for importance
         weight of a state given observation
         """
-        pass
+        raise NotImplementedError
 
     def acceptance(self, state):
         """Undefined method for defining
         detector acceptance pattern
         """
-        pass
+        raise NotImplementedError
 
 
 def get_radiation_pattern(antenna_filename=None):
@@ -122,7 +122,7 @@ class DoubleRSSILofi(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs):
+    def weight(self, hyp, obs, state=None):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
@@ -256,7 +256,7 @@ class SingleRSSI(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs):
+    def weight(self, hyp, obs, state=None):
         # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs
@@ -314,7 +314,7 @@ class DoubleRSSI(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs):
+    def weight(self, hyp, obs, state=None):
         # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs
@@ -369,7 +369,9 @@ class SignalStrength(Sensor):
         self.num_avail_obs = 1
         self.std_dev = 10
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
+        if not state:
+            raise ValueError
         expected_r = state[0]
         obs_r = np.sqrt(1 / obs[0][0])
         # Gaussian weighting function
@@ -390,7 +392,9 @@ class Drone(Sensor):
         self.num_avail_obs = 2
 
     # importance weight of state given observation
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
+        if not state:
+            raise ValueError
 
         # Get acceptance value for state value
         obs_weight = self.acceptance(state)
@@ -434,7 +438,9 @@ class Heading(Sensor):
         self.num_avail_obs = 4
 
     # importance weight of state given observation
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
+        if not state:
+            raise ValueError
 
         # Get acceptance value for state value
         obs_weight = self.acceptance(state)
