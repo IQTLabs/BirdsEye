@@ -15,7 +15,7 @@ class Sensor:
         """Undefined observation sample method"""
         raise NotImplementedError
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
         """Undefined method for importance
         weight of a state given observation
         """
@@ -122,7 +122,7 @@ class DoubleRSSILofi(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
@@ -256,7 +256,7 @@ class SingleRSSI(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
         # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs
@@ -314,7 +314,7 @@ class DoubleRSSI(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
         # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs
