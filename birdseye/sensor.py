@@ -369,7 +369,9 @@ class SignalStrength(Sensor):
         self.num_avail_obs = 1
         self.std_dev = 10
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
+        if not state:
+            raise ValueError
         expected_r = state[0]
         obs_r = np.sqrt(1 / obs[0][0])
         # Gaussian weighting function
@@ -390,7 +392,9 @@ class Drone(Sensor):
         self.num_avail_obs = 2
 
     # importance weight of state given observation
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
+        if not state:
+            raise ValueError
 
         # Get acceptance value for state value
         obs_weight = self.acceptance(state)
@@ -434,7 +438,9 @@ class Heading(Sensor):
         self.num_avail_obs = 4
 
     # importance weight of state given observation
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs, state=None):
+        if not state:
+            raise ValueError
 
         # Get acceptance value for state value
         obs_weight = self.acceptance(state)
