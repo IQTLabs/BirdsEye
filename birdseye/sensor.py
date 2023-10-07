@@ -15,7 +15,7 @@ class Sensor:
         """Undefined observation sample method"""
         pass
 
-    def weight(self, hyp, obs, state):
+    def weight(self, hyp, obs):
         """Undefined method for importance
         weight of a state given observation
         """
