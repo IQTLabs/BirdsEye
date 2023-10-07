@@ -13,19 +13,19 @@ class Sensor:
 
     def observation(self, state):
         """Undefined observation sample method"""
-        pass
+        raise NotImplementedError
 
-    def weight(self, hyp, obs):
+    def weight(self, hyp, obs, state):
         """Undefined method for importance
         weight of a state given observation
         """
-        pass
+        raise NotImplementedError
 
     def acceptance(self, state):
         """Undefined method for defining
         detector acceptance pattern
         """
-        pass
+        raise NotImplementedError
 
 
 def get_radiation_pattern(antenna_filename=None):
@@ -122,7 +122,7 @@ class DoubleRSSILofi(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs):
+    def weight(self, hyp, obs, state):
         # TODO add front, mid, back
         # expected_rssi = hyp # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
@@ -256,7 +256,7 @@ class SingleRSSI(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs):
+    def weight(self, hyp, obs, state):
         # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs
@@ -314,7 +314,7 @@ class DoubleRSSI(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs):
+    def weight(self, hyp, obs, state):
         # array [# of particles x 2 rssi readings(front rssi & back rssi)]
         expected_rssi = hyp
         observed_rssi = obs
