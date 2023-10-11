@@ -23,7 +23,7 @@ class State:
         """Undefined reward calc method"""
         pass
 
-    def update_state(self):
+    def update_state(self, state, control, target_update=False):
         """Undefined state updating method"""
         pass
 

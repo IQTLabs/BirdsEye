@@ -11,14 +11,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up python-${{ env.CODECHECK_PY_VER }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.CODECHECK_PY_VER }}
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: false
+          virtualenvs-in-project: false
+          version: 1.4.2
+      - name: poetry install
+        run: |
+          poetry build && poetry install --with=dev --no-root
       - name: Tests
         run: |
-          pip3 install -r requirements.txt -r tests/requirements.txt && \
           PYTHONPATH=. python3 -m birdseye.baseline --help \
           PYTHONPATH=. python3 -m birdseye.dqn --help && \
           PYTHONPATH=. python3 -m birdseye.mcts --help && \
