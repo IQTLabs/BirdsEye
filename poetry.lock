@@ -545,18 +545,18 @@ files = [
 
 [[package]]
 name = "imageio"
-version = "2.31.5"
+version = "2.31.6"
 description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "imageio-2.31.5-py3-none-any.whl", hash = "sha256:97f68e12ba676f2f4b541684ed81f7f3370dc347e8321bc68ee34d37b2dbac9f"},
-    {file = "imageio-2.31.5.tar.gz", hash = "sha256:d8e53f9cd4054880276a3dac0a28c85ba7874084856a55a0294a8ae6ed7f3a8e"},
+    {file = "imageio-2.31.6-py3-none-any.whl", hash = "sha256:70410af62626a4d725b726ab59138e211e222b80ddf8201c7a6561d694c6238e"},
+    {file = "imageio-2.31.6.tar.gz", hash = "sha256:721f238896a9a99a77b73f06f42fc235d477d5d378cdf34dd0bee1e408b4742c"},
 ]
 
 [package.dependencies]
 numpy = "*"
-pillow = ">=8.3.2"
+pillow = ">=8.3.2,<10.1.0"
 
 [package.extras]
 all-plugins = ["astropy", "av", "imageio-ffmpeg", "psutil", "tifffile"]
@@ -2280,4 +2280,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.13"
-content-hash = "b107ee068560ee3b89bd14da19baae5afcdab39f3775385101be821949a12ca5"
+content-hash = "49276f914ea72a4dae0b90c9cd18e2fa438a62f42e0b4e2d7bb5f43fe21c585f"
