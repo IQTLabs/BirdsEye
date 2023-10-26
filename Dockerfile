@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.2.0-base-ubuntu22.04
+FROM nvidia/cuda:12.2.2-base-ubuntu22.04
 LABEL maintainer="Lucas Tindall <ltindall@iqt.org>"
 ENV PYTHONUNBUFFERED 1
 
