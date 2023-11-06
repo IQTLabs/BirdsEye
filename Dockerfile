@@ -5,10 +5,12 @@ ENV PYTHONUNBUFFERED 1
 COPY  pyproject.toml .
 COPY poetry.lock .
 
-RUN apt-get update && apt-get install -y libjpeg-dev python3 python3-pip
+RUN apt-get update && apt-get install -y libjpeg-dev python3 python3-pip python3-venv
 ENV PATH="${PATH}:/root/.local/bin"
 RUN apt-get update && apt-get install -y --no-install-recommends curl gcc git g++ libev-dev libyaml-dev tini && \
-  curl -sSL https://install.python-poetry.org | python3 - && \
+  python3 -m pip install pipx && \
+  python3 -m pipx ensurepath && \
+  pipx install poetry && \
   poetry config virtualenvs.create false && \
   poetry install --no-root && \
   apt-get purge -y gcc g++ && apt -y autoremove --purge && rm -rf /var/cache/* /root/.cache/*
