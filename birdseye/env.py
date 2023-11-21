@@ -501,7 +501,7 @@ class RFMultiEnv:
         # Flag for simulation vs real data
         self.simulated = simulated
 
-        self.pfrnn = pfrnn()
+        #self.pfrnn = pfrnn()
 
         self.last_observation = None
         self.pf = None
@@ -882,19 +882,6 @@ class RFMultiEnv:
 
         return np.array(std_dev)
 
-    def get_distance_error(self):
-        mean_x, mean_y = self.get_particle_centroid()
-
-        target_r = self.state.target_state[0]
-        target_theta = np.radians(self.state.target_state[1])
-        target_x, target_y = pol2cart(target_r, target_theta)
-
-        centroid_distance_error = np.sqrt(
-            (mean_x - target_x) ** 2 + (mean_y - target_y) ** 2
-        )
-
-        return centroid_distance_error
-
 
 class RFEnv:
     def __init__(self, sensor=None, actions=None, state=None, simulated=False):
@@ -907,7 +894,7 @@ class RFEnv:
         # Flag for simulation vs real data
         self.simulated = simulated
 
-        self.pfrnn = pfrnn()
+        #self.pfrnn = pfrnn()
         self.pf = None
 
     def dynamics(self, particles, control=None, **kwargs):

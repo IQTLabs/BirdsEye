@@ -16,7 +16,7 @@ class Sensor:
         """Undefined observation sample method"""
         raise NotImplementedError
 
-    def weight(self, hyp, obs, state=None):
+    def weight(self, hyp, obs):
         """Undefined method for importance
         weight of a state given observation
         """
@@ -312,7 +312,7 @@ class SingleRSSISeparable(Sensor):
         return rssi_power
 
     # samples observation given state
-    def observation(self, state, target, fading_sigma=None):
+    def observation(self, state, target=None, fading_sigma=None):
         if fading_sigma is None:
             fading_sigma = self.fading_sigma
 

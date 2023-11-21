@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     numeric_level = getattr(logging, args.log.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % loglevel)
+        raise ValueError("Invalid log level: %s" % args.log)
     logging.basicConfig(level=numeric_level)
 
     def message_handler(data):
