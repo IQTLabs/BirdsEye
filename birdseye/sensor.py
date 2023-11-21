@@ -45,7 +45,7 @@ def get_radiation_pattern(antenna_filename=None):
 
 
 def get_directivity(radiation_pattern, theta):
-    theta_degrees = theta * 180 / np.pi 
+    theta_degrees = theta * 180 / np.pi
     theta_degrees = theta_degrees.astype(int)
     return radiation_pattern[theta_degrees % len(radiation_pattern)]
 
@@ -232,9 +232,10 @@ class DoubleRSSILofi(Sensor):
 
         return [rssi_front, rssi_back]
 
+
 class SingleRSSISeparable(Sensor):
     """
-    Returns RSSI from a single antenna, with separate RSSI values for each target 
+    Returns RSSI from a single antenna, with separate RSSI values for each target
     """
 
     def __init__(
@@ -266,7 +267,7 @@ class SingleRSSISeparable(Sensor):
             self.fading_sigma = float(self.fading_sigma)
 
     def weight(self, hyp, obs):
-        start = timer() 
+        start = timer()
         # array of shape (# of particles)
         expected_rssi = hyp
         observed_rssi = obs
@@ -275,21 +276,21 @@ class SingleRSSISeparable(Sensor):
         denominator = 2 * np.power(self.std_dev, 2.0)
         weight = np.exp(-numerator / denominator)  # + 0.000000001
         weight = np.squeeze(weight)
-        end = timer() 
-        #print(f"weight: {end-start}")
+        end = timer()
+        # print(f"weight: {end-start}")
         return weight
 
     # samples observation given state
     def observation_vectorized(self, states, target, fading_sigma=None):
-        start = timer() 
-        if fading_sigma is None: 
+        start = timer()
+        if fading_sigma is None:
             fading_sigma = self.fading_sigma
 
-        # Calculate observation for specified target 
+        # Calculate observation for specified target
         power = 0
 
-        distance = states[:,0]
-        theta = states[:,1] * np.pi / 180.0
+        distance = states[:, 0]
+        theta = states[:, 1] * np.pi / 180.0
         directivity_rx = get_directivity(self.radiation_pattern, theta)
         power += dB_to_power(
             rssi(
@@ -302,17 +303,17 @@ class SingleRSSISeparable(Sensor):
             )
         )
         rssi_power = power_to_dB(power)
-        #return [rssi_power]
-        end = timer() 
-        #print(f"observation: {end-start}")
+        # return [rssi_power]
+        end = timer()
+        # print(f"observation: {end-start}")
         return rssi_power
 
     # samples observation given state
     def observation(self, state, target, fading_sigma=None):
-        if fading_sigma is None: 
+        if fading_sigma is None:
             fading_sigma = self.fading_sigma
 
-        # Calculate observation for specified target 
+        # Calculate observation for specified target
         power = 0
 
         distance = state[0]
@@ -331,6 +332,7 @@ class SingleRSSISeparable(Sensor):
         rssi_power = power_to_dB(power)
         return [rssi_power]
 
+
 class SingleRSSI(Sensor):
     """
     Returns RSSI from a single antenna
@@ -347,7 +349,7 @@ class SingleRSSI(Sensor):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename
         )
-        # TODO: why 15? 
+        # TODO: why 15?
         self.std_dev = 15
 
         self.power_tx = power_tx
@@ -371,7 +373,7 @@ class SingleRSSI(Sensor):
 
     # samples observation given state
     def observation(self, state, fading_sigma=None):
-        if fading_sigma is None: 
+        if fading_sigma is None:
             fading_sigma = self.fading_sigma
         # Calculate observation for multiple targets
         power_front = 0
@@ -519,7 +521,6 @@ class Drone(Sensor):
 
     # samples observation given state
     def observation(self, state):
-
         obs1_val = self.obs1_prob(state)
         weights = [1.0 - obs1_val, obs1_val]
         obsers = [0, 1]

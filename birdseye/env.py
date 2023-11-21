@@ -4,13 +4,16 @@ from pfilter import systematic_resample
 from scipy.ndimage.filters import gaussian_filter
 from timeit import default_timer as timer
 
-#from .pfrnn.pfrnn import pfrnn
+# from .pfrnn.pfrnn import pfrnn
 from .utils import particle_swap
 from .utils import particles_mean_belief
 from .utils import pol2cart
 
+
 class RFMultiSeparableEnv:
-    def __init__(self, sensor=None, actions=None, state=None, simulated=True, num_particles=2000):
+    def __init__(
+        self, sensor=None, actions=None, state=None, simulated=True, num_particles=2000
+    ):
         # Sensor definitions
         self.sensor = sensor
         # Action space and function to convert from action to index and vice versa
@@ -19,9 +22,9 @@ class RFMultiSeparableEnv:
         self.state = state
         # Flag for simulation vs real data
         self.simulated = simulated
-        self.n_particles = num_particles 
+        self.n_particles = num_particles
 
-        #self.pfrnn = pfrnn()
+        # self.pfrnn = pfrnn()
 
         self.last_observation = None
         self.pf = None
@@ -43,7 +46,7 @@ class RFMultiSeparableEnv:
         array_like
             Updated particle state information
         """
-        start = timer() 
+        start = timer()
         n_particles, n_states = particles.shape
         assert n_states == self.state.state_dim
 
@@ -59,21 +62,21 @@ class RFMultiSeparableEnv:
                         heading=heading,
                     )
                 )
-        else: 
-            updated_particles = self.state.update_state_vectorized(particles, control=control)
-        # if not np.allclose(updated_particles, updated_particles2): 
-        # #if not np.all(updated_particles==updated_particles2): 
+        else:
+            updated_particles = self.state.update_state_vectorized(
+                particles, control=control
+            )
+        # if not np.allclose(updated_particles, updated_particles2):
+        # #if not np.all(updated_particles==updated_particles2):
         #     print(f"{updated_particles=}")
         #     print(f"{updated_particles2=}")
         #     print(updated_particles==updated_particles2)
-        end = timer() 
-        #print(f"dynamics: {end-start}")
+        end = timer()
+        # print(f"dynamics: {end-start}")
         return np.array(updated_particles)
 
-        
-
     def particle_noise(self, particles, sigmas=[1, 2, 2], xp=None):
-        start = timer() 
+        start = timer()
         n_particles, n_states = particles.shape
         assert n_states == self.state.state_dim
 
@@ -81,13 +84,15 @@ class RFMultiSeparableEnv:
         # particles[:,0] = np.clip(particles[:,0], a_min=1, a_max=None)
         # particles[:,1] += np.random.normal(0, sigmas[1], (n_particles))
         # particles[:,2] += np.random.normal(0, sigmas[2], (n_particles))
-        particles[:,[0,1,2]] += np.random.normal([0,0,0],sigmas, (n_particles,3))
-        particles[:,0] = np.clip(particles[:,0], a_min=1, a_max=None)
-        end = timer() 
-        #print(f"noise = {end-start}")
+        particles[:, [0, 1, 2]] += np.random.normal([0, 0, 0], sigmas, (n_particles, 3))
+        particles[:, 0] = np.clip(particles[:, 0], a_min=1, a_max=None)
+        end = timer()
+        # print(f"noise = {end-start}")
         return particles
 
-    def reset(self,):
+    def reset(
+        self,
+    ):
         """Reset initial state and particle filter
 
         Parameters
@@ -110,15 +115,12 @@ class RFMultiSeparableEnv:
         for t in range(self.state.n_targets):
             target_pf = ParticleFilter(
                 prior_fn=lambda n: np.array(
-                    [
-                        self.state.random_particle_state()
-                        for _ in range(n)
-                    ]
+                    [self.state.random_particle_state() for _ in range(n)]
                 ),
                 # observe_fn=lambda states, **kwargs: np.array(
                 #     [
                 #         self.sensor.observation(
-                #             x, 
+                #             x,
                 #             t,
                 #             fading_sigma=0
                 #         )
@@ -139,7 +141,7 @@ class RFMultiSeparableEnv:
             )
             self.pf.append(target_pf)
 
-    def pffilter_copy(self, pf, n_downsample=None): 
+    def pffilter_copy(self, pf, n_downsample=None):
         """Modified from https://github.com/johnhw/pfilter/blob/master/pfilter/pfilter.py, because missing noise_fn
         Copy this filter at its current state. Returns
         an exact copy, that can be run forward indepedently of the first.
@@ -183,27 +185,29 @@ class RFMultiSeparableEnv:
             if hasattr(pf, array):
                 setattr(new_copy, array, getattr(pf, array).copy())
 
-        if n_downsample: 
+        if n_downsample:
             new_copy.n_particles = n_downsample
             new_copy.weights = np.ones(n_downsample) / n_downsample
-            new_copy.particles = new_copy.particles[np.random.randint(len(new_copy.particles), size=n_downsample)]
+            new_copy.particles = new_copy.particles[
+                np.random.randint(len(new_copy.particles), size=n_downsample)
+            ]
         return new_copy
 
-    def pf_copy(self, n_downsample=None): 
+    def pf_copy(self, n_downsample=None):
         return [self.pffilter_copy(pf, n_downsample=n_downsample) for pf in self.pf]
-    
-    def random_state(self, pf): 
-        state = ([
-            pf[i].particles[np.random.choice(pf[i].particles.shape[0], 1, False)][0] 
+
+    def random_state(self, pf):
+        state = [
+            pf[i].particles[np.random.choice(pf[i].particles.shape[0], 1, False)][0]
             for i in range(self.state.n_targets)
-        ])
-        return state 
-    
+        ]
+        return state
+
     # returns observation, reward, done, info
     def real_step(self, data):
         # action = data['action_taken'] if data.get('action_taken', None) else (0,0)
 
-        if not data["needs_processing"]: 
+        if not data["needs_processing"]:
             data["distance"] = None
             data["course"] = None
 
@@ -217,14 +221,14 @@ class RFMultiSeparableEnv:
             distance,
             course,
             heading,
-            #data.get("distance", None),
-            #data.get("course", None),
-            #data.get("heading", None),
+            # data.get("distance", None),
+            # data.get("course", None),
+            # data.get("heading", None),
         )
 
         # Get sensor observation
         observation = self.sensor.real_observation()
-        observation = np.array(observation) #if observation is not None else None
+        observation = np.array(observation)  # if observation is not None else None
 
         # Update particle filter
         for t in range(self.state.n_targets):
@@ -241,9 +245,7 @@ class RFMultiSeparableEnv:
         # particle_swap(self)
 
         # Calculate reward based on updated state & action
-        control_heading = (
-            heading if heading is not None else self.state.sensor_state[2]
-        )
+        control_heading = heading if heading is not None else self.state.sensor_state[2]
         control_delta_heading = (control_heading - self.state.sensor_state[2]) % 360
         # reward = self.state.reward_func(
         #     state=None,
@@ -252,25 +254,26 @@ class RFMultiSeparableEnv:
         # )
         reward = None
 
-        #belief_obs = self.env_observation()
+        # belief_obs = self.env_observation()
         belief_obs = None
 
         self.last_observation = observation
 
-        #return (belief_obs, reward, observation)
+        # return (belief_obs, reward, observation)
         return observation
 
     def void_probability(self, actions, r_min, min_bound=0.8):
-
         p_outside_void = []
-        updated_particles = [self.pf[t].particles.copy() for t in range(self.state.n_targets)]
+        updated_particles = [
+            self.pf[t].particles.copy() for t in range(self.state.n_targets)
+        ]
         for action in actions:
             for t in range(self.state.n_targets):
                 target_particles = self.dynamics(updated_particles[t], control=action)
                 updated_particles[t] = target_particles
-                B = 1-np.mean(target_particles[:,0] < r_min)
+                B = 1 - np.mean(target_particles[:, 0] < r_min)
                 p_outside_void.append(B)
-                #print(f"probability outside void = {B}")
+                # print(f"probability outside void = {B}")
         updated_particles = np.array(updated_particles)
         if np.min(p_outside_void) >= min_bound:
             return True, updated_particles
@@ -299,7 +302,7 @@ class RFMultiSeparableEnv:
         """
 
         # Get action based on index
-        #action = self.actions.index_to_action(action_idx)
+        # action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
         # next_state = np.array(
         #     [
@@ -307,7 +310,9 @@ class RFMultiSeparableEnv:
         #         for target_state in self.state.target_state
         #     ]
         # )
-        next_state = self.state.update_state_vectorized(np.array(self.state.target_state), control=action)
+        next_state = self.state.update_state_vectorized(
+            np.array(self.state.target_state), control=action
+        )
         # Update absolute position of sensor
         self.state.update_sensor(action)
 
@@ -318,8 +323,10 @@ class RFMultiSeparableEnv:
             observations.append(observation)
             # Update particle filter
 
-            self.pf[t].update(np.array(observation), xp=self.pf[t].particles, control=action)
-            #particle_swap(self)
+            self.pf[t].update(
+                np.array(observation), xp=self.pf[t].particles, control=action
+            )
+            # particle_swap(self)
 
         # Calculate reward based on updated state & action
         reward = None
@@ -331,7 +338,7 @@ class RFMultiSeparableEnv:
         # Update the state variables
         self.state.target_state = next_state
 
-        #env_obs = self.env_observation()
+        # env_obs = self.env_observation()
         env_obs = None
         self.iters += 1
         info = {"episode": {}}
@@ -340,7 +347,6 @@ class RFMultiSeparableEnv:
         info["observation"] = observations
 
         return (env_obs, reward, 0, info)
-
 
     def env_observation(self):
         """Helper function for environment observation
@@ -413,10 +419,7 @@ class RFMultiSeparableEnv:
     def get_absolute_particles(self):
         return np.array(
             [
-                [
-                    self.state.get_absolute_state(p)
-                    for p in self.pf[t].particles
-                ]
+                [self.state.get_absolute_state(p) for p in self.pf[t].particles]
                 for t in range(self.state.n_targets)
             ]
         )
@@ -431,19 +434,17 @@ class RFMultiSeparableEnv:
         if particles is None:
             for t in range(self.state.n_targets):
                 particles_x, particles_y = pol2cart(
-                    self.pf[t].particles[:,0], 
-                    np.radians(self.pf[t].particles[:,1])
+                    self.pf[t].particles[:, 0], np.radians(self.pf[t].particles[:, 1])
                 )
                 centroids.append([np.mean(particles_x), np.mean(particles_y)])
         else:
             n_targets, n_particles, n_states = particles.shape
 
-            assert n_targets == self.state.n_targets 
+            assert n_targets == self.state.n_targets
 
             for t in range(n_targets):
                 particles_x, particles_y = pol2cart(
-                    particles[t,:,0], 
-                    np.radians(particles[t,:,1])
+                    particles[t, :, 0], np.radians(particles[t, :, 1])
                 )
                 centroids.append([np.mean(particles_x), np.mean(particles_y)])
 
@@ -454,18 +455,16 @@ class RFMultiSeparableEnv:
         if particles is None:
             for t in range(self.state.n_targets):
                 particles_x, particles_y = pol2cart(
-                    self.pf[t].particles[:,0], 
-                    np.radians(self.pf[t].particles[:,1])
+                    self.pf[t].particles[:, 0], np.radians(self.pf[t].particles[:, 1])
                 )
                 std_dev.append([np.std(particles_x), np.std(particles_y)])
         else:
             n_targets, n_particles, n_states = particles.shape
-            assert n_targets == self.state.n_targets 
+            assert n_targets == self.state.n_targets
 
             for t in range(n_targets):
                 particles_x, particles_y = pol2cart(
-                    particles[t,:,0], 
-                    np.radians(particles[t,:,1])
+                    particles[t, :, 0], np.radians(particles[t, :, 1])
                 )
                 std_dev.append([np.std(particles_x), np.std(particles_y)])
 
@@ -475,23 +474,24 @@ class RFMultiSeparableEnv:
         std_dev = []
         if particles is None:
             for t in range(self.state.n_targets):
-                std_dev.append([np.std(self.pf[t].particles[:,0]), np.std(self.pf[t].particles[:,1])])
+                std_dev.append(
+                    [
+                        np.std(self.pf[t].particles[:, 0]),
+                        np.std(self.pf[t].particles[:, 1]),
+                    ]
+                )
         else:
             n_targets, n_particles, n_states = particles.shape
-            assert n_targets == self.state.n_targets 
-            
+            assert n_targets == self.state.n_targets
+
             for t in range(n_targets):
-                std_dev.append([np.std(particles[t,:,0]), np.std(particles[t,:,1])])
+                std_dev.append([np.std(particles[t, :, 0]), np.std(particles[t, :, 1])])
 
         return np.array(std_dev)
 
     def get_all_particles(self):
-        return np.array(
-            [
-                self.pf[t].particles 
-                for t in range(self.state.n_targets)
-            ]
-        )
+        return np.array([self.pf[t].particles for t in range(self.state.n_targets)])
+
 
 class RFMultiEnv:
     def __init__(self, sensor=None, actions=None, state=None, simulated=True):
@@ -542,7 +542,6 @@ class RFMultiEnv:
         return np.array(updated_particles)
 
     def particle_noise(self, particles, sigmas=[1, 2, 2], xp=None):
-
         for t in range(self.state.n_targets):
             particles[:, [4 * t]] += np.random.normal(0, sigmas[0], (len(particles), 1))
             particles[:, [4 * t]] = np.clip(particles[:, [4 * t]], a_min=1, a_max=None)
@@ -590,8 +589,8 @@ class RFMultiEnv:
             observe_fn=lambda states, **kwargs: np.array(
                 [
                     self.sensor.observation(
-                        [x[4 * t : 4 * (t + 1)] for t in range(self.state.n_targets)], 
-                        fading_sigma=0
+                        [x[4 * t : 4 * (t + 1)] for t in range(self.state.n_targets)],
+                        fading_sigma=0,
                     )
                     for x in states
                 ]
@@ -655,24 +654,23 @@ class RFMultiEnv:
         return (belief_obs, reward, observation)
 
     def void_probability(self, actions, r_min, min_bound=0.8):
-
         particles = self.pf.particles
         p_outside_void = []
         for action in actions:
             particles = self.dynamics(particles, control=action)
             for t in range(self.state.n_targets):
-                #print(particles[:,4*t] )
-                B = 1-np.mean(particles[:,4*t] < r_min)
+                # print(particles[:,4*t] )
+                B = 1 - np.mean(particles[:, 4 * t] < r_min)
                 p_outside_void.append(B)
-                #print(f"probability outside void = {B}")
-        
+                # print(f"probability outside void = {B}")
+
         if np.min(p_outside_void) >= min_bound:
             return True, particles
         return False, particles
 
     def rollout(self, actions):
         """Function to make n steps based on
-           list of action indexes 
+           list of action indexes
 
         Parameters
         ----------
@@ -692,7 +690,7 @@ class RFMultiEnv:
         """
 
         particles = self.pf.particles
-        for action in actions: 
+        for action in actions:
             particles = self.dynamics(particles, control=action)
         return particles
 
@@ -719,7 +717,7 @@ class RFMultiEnv:
         """
 
         # Get action based on index
-        #action = self.actions.index_to_action(action_idx)
+        # action = self.actions.index_to_action(action_idx)
         # Determine next state based on action & current state variables
         next_state = np.array(
             [
@@ -852,7 +850,7 @@ class RFMultiEnv:
         )
 
     def get_particle_centroids(self, particles=None):
-        if particles is None: 
+        if particles is None:
             particles = self.pf.particles
         centroids = []
         for t in range(self.state.n_targets):
@@ -865,7 +863,7 @@ class RFMultiEnv:
         return np.array(centroids)
 
     def get_particle_std_dev_cartesian(self, particles=None):
-        if particles is None: 
+        if particles is None:
             particles = self.pf.particles
         std_dev = []
         for t in range(self.state.n_targets):
@@ -877,11 +875,13 @@ class RFMultiEnv:
         return np.array(std_dev)
 
     def get_particle_std_dev_polar(self, particles=None):
-        if particles is None: 
+        if particles is None:
             particles = self.pf.particles
         std_dev = []
         for t in range(self.state.n_targets):
-            std_dev.append([np.std(particles[:, 4 * t]), np.std(particles[:, (4 * t) + 1])])
+            std_dev.append(
+                [np.std(particles[:, 4 * t]), np.std(particles[:, (4 * t) + 1])]
+            )
 
         return np.array(std_dev)
 
@@ -1082,7 +1082,6 @@ class RFEnv:
         return self.state.get_absolute_state(self.state.target_state)
 
     def get_particle_centroid(self):
-
         particles = self.pf.particles
 
         particles_r = particles[:, 0]
@@ -1096,7 +1095,6 @@ class RFEnv:
         return mean_x, mean_y
 
     def get_distance_error(self):
-
         mean_x, mean_y = self.get_particle_centroid()
 
         target_r = self.state.target_state[0]

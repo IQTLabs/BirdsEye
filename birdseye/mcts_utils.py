@@ -17,7 +17,6 @@ from .utils import tracking_error
 
 
 def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
-
     # only need to compute if exploration possibility
     if exploration_bonus:
         N_h = 0
@@ -57,7 +56,7 @@ def arg_max_action(actions, Q, N, history, c=None, exploration_bonus=False):
 # Rollout
 ##################################################################
 def rollout_random(env, state, depth, pf_copy):
-    #print(f"Rollout: {depth=}")
+    # print(f"Rollout: {depth=}")
     if depth == 0:
         return 0
 
@@ -67,12 +66,7 @@ def rollout_random(env, state, depth, pf_copy):
     # print([state[4*t:4*(t+1)] for t in range(env.state.n_targets)])
     # generate next state and reward with random action; observation doesn't matter
     # state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)])
-    next_state = np.array(
-        [
-            env.state.update_sim_state(s, action) 
-            for s in state
-        ]
-    )
+    next_state = np.array([env.state.update_sim_state(s, action) for s in state])
     rewards = []
     observations = []
     for t in range(env.state.n_targets):
@@ -80,7 +74,9 @@ def rollout_random(env, state, depth, pf_copy):
         observation = env.sensor.observation(next_state[t], t)
         observations.append(observation)
         # Update particle filter
-        pf_copy[t].update(np.array(observation), xp=pf_copy[t].particles, control=action)
+        pf_copy[t].update(
+            np.array(observation), xp=pf_copy[t].particles, control=action
+        )
         rewards.append(env.state.reward_func(pf_copy[t]))
         # print(f"{pf_copy[t].n_eff=}, {pf_copy[t].n_eff_threshold=}")
         # print(f"{pf_copy[t].weight_entropy}")
@@ -96,14 +92,16 @@ def rollout_random(env, state, depth, pf_copy):
 # Simulate
 ##################################################################
 def simulate(env, Q, N, state, history, depth, c, pf_copy):
-    #print(f"Simulate: {history=}, {depth=} \n {Q=}")
-    
+    # print(f"Simulate: {history=}, {depth=} \n {Q=}")
+
     if depth == 0:
         return (Q, N, 0)
 
     # expansion
     new_tree = history.copy()
-    new_tree.append(np.random.randint(len(env.actions.get_action_list()))) # TODO: why 1?
+    new_tree.append(
+        np.random.randint(len(env.actions.get_action_list()))
+    )  # TODO: why 1?
 
     if tuple(new_tree) not in Q:
         expansion_start = timer()
@@ -117,44 +115,44 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
             N[tuple(new_index)] = 0
         ret = rollout_random(env, state, depth, pf_copy)
         expansion_end = timer()
-        
-        #print(f"expansion time = {expansion_end-expansion_start}")
-        
+
+        # print(f"expansion time = {expansion_end-expansion_start}")
+
         return (Q, N, ret)
         # rollout
-        #return (Q, N, rollout_random(env, state, depth, pf_copy))
+        # return (Q, N, rollout_random(env, state, depth, pf_copy))
 
     select_start = timer()
     # search: find optimal action to explore
     search_action_index = arg_max_action(env.actions, Q, N, history, c, True)
-    
+
     action = env.actions.index_to_action(search_action_index)
-    select_end = timer() 
-    
-    #print(f"selection time = {select_end-select_start}")
-    
-    #print("Selected action = ",search_action_index)
+    select_end = timer()
+
+    # print(f"selection time = {select_end-select_start}")
+
+    # print("Selected action = ",search_action_index)
 
     # take action; get new state, observation, and reward
     # state_prime = np.array([env.state.update_state(state[4*t:4*(t+1)], action) for t in range(env.state.n_targets)]) # env.state.update_state(state, action)
 
-    state_start = timer() 
+    state_start = timer()
     next_state = np.array([env.state.update_sim_state(s, action) for s in state])
-    state_end = timer() 
-   
-    #print(f"state time = {state_end-state_start}")
+    state_end = timer()
 
-    # pf_start = timer() 
-    # o_start = timer() 
+    # print(f"state time = {state_end-state_start}")
+
+    # pf_start = timer()
+    # o_start = timer()
     # observations = [env.sensor.observation(next_state[t], t)[0] for t in range(env.state.n_targets)]
-    # o_end = timer() 
-    # p_start = timer() 
+    # o_end = timer()
+    # p_start = timer()
     # for t in range(env.state.n_targets):
     #     pf_copy[t].update(np.array(observations[t]), control=action) #for t in range(env.state.n_targets)
-    # p_end = timer() 
-    # r_start = timer() 
+    # p_end = timer()
+    # r_start = timer()
     # reward = np.mean([env.state.reward_func(pf_copy[t]) for t in range(env.state.n_targets)])
-    # r_end = timer() 
+    # r_end = timer()
     # pf_end = timer()
     # print(f"r time = {r_end-r_start}")
     # print(f"o time = {o_end-o_start}")
@@ -162,29 +160,31 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
     # print(f"pf time = {pf_end-pf_start}")
     observations = []
     rewards = 0
-    pf_start = timer() 
+    pf_start = timer()
     for t in range(env.state.n_targets):
         # Get sensor observation
-        o_start = timer() 
+        o_start = timer()
         observation = env.sensor.observation(next_state[t], t)[0]
         observations.append(observation)
-        o_end = timer() 
+        o_end = timer()
         # Update particle filter
-        p_start = timer() 
-        pf_copy[t].update(np.array(observation), xp=pf_copy[t].particles, control=action)
-        p_end = timer() 
-        r_start = timer() 
-        #rewards.append(env.state.reward_func(pf_copy[t]))
+        p_start = timer()
+        pf_copy[t].update(
+            np.array(observation), xp=pf_copy[t].particles, control=action
+        )
+        p_end = timer()
+        r_start = timer()
+        # rewards.append(env.state.reward_func(pf_copy[t]))
         rewards += env.state.reward_func(pf_copy[t])
-        r_end = timer() 
+        r_end = timer()
     pf_end = timer()
-    reward = rewards/env.state.n_targets
-     
-    #print(f"r time = {r_end-r_start}")
-    #print(f"o time = {o_end-o_start}")
-    #print(f"p time = {p_end-p_start}")
-    #print(f"pf time = {pf_end-pf_start}")
-    
+    reward = rewards / env.state.n_targets
+
+    # print(f"r time = {r_end-r_start}")
+    # print(f"o time = {o_end-o_start}")
+    # print(f"p time = {p_end-p_start}")
+    # print(f"pf time = {pf_end-pf_start}")
+
     # if env.state.belief_mdp:
     #     env.pf.particles = belief
     #     env.pf.update(np.array(observation), xp=belief, control=action)
@@ -194,10 +194,10 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
     #     state=state_prime, action_idx=search_action_index, particles=belief
     # )
     # recursive call after taking action and getting observation
-    tree_start = timer() 
+    tree_start = timer()
     new_history = history.copy()
     new_history.append(search_action_index)
-    #new_history.append(tuple([int(o) for o in observations]))
+    # new_history.append(tuple([int(o) for o in observations]))
     (Q, N, successor_reward) = simulate(
         env, Q, N, next_state, new_history, depth - 1, c, pf_copy
     )
@@ -208,11 +208,11 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
     update_index.append(search_action_index)
     N[tuple(update_index)] += 1
     Q[tuple(update_index)] += (q - Q[tuple(update_index)]) / N[tuple(update_index)]
-    tree_end = timer() 
-    
-    #print(f"tree time = {tree_end-tree_start}")
-    
-    #print("Q update = ",Q[tuple(update_index)])
+    tree_end = timer()
+
+    # print(f"tree time = {tree_end-tree_start}")
+
+    # print("Q update = ",Q[tuple(update_index)])
     return (Q, N, q)
 
 
@@ -220,7 +220,6 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
 # Select Action
 ##################################################################
 def select_action(env, Q, N, belief, depth, c, iterations):
-
     # empty history at top recursive call
     history = []
 
@@ -234,7 +233,6 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     env.pf.n_particles = n_particle_downsample
     env.pf.weights = np.ones(env.pf.n_particles) / env.pf.n_particles
     while counter < iterations:
-
         # draw state randomly based on belief state (pick a random particle)
         state = random.choice(belief)
         converted_state = state.reshape(env.state.n_targets, 4)
@@ -260,20 +258,22 @@ def select_action(env, Q, N, belief, depth, c, iterations):
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
 
-def select_action_light(env, Q={}, N={}, depth=2, c=20, iterations=100, n_downsample=500):
 
+def select_action_light(
+    env, Q={}, N={}, depth=2, c=20, iterations=100, n_downsample=500
+):
     # empty history at top recursive call
     history = []
 
     # number of iterations
     counter = 0
-    
+
     while counter < iterations:
-        #print(f"{counter}/{iterations} simulations")
+        # print(f"{counter}/{iterations} simulations")
         pf_copy = env.pf_copy(n_downsample=n_downsample)
         # draw state randomly based on belief state (pick a random particle)
         state = env.random_state(pf_copy)
-        #converted_state = state.reshape(env.state.n_targets, 4)
+        # converted_state = state.reshape(env.state.n_targets, 4)
         # simulate
         simulate(
             env,
@@ -293,20 +293,20 @@ def select_action_light(env, Q={}, N={}, depth=2, c=20, iterations=100, n_downsa
     action = env.actions.index_to_action(best_action_index)
     return (Q, N, action)
 
+
 def trim_tree(Q, N, action):
     assert Q.keys() == N.keys()
-    for k in list(Q): 
-        if len(k) <= 1 or k[0] != action: 
+    for k in list(Q):
+        if len(k) <= 1 or k[0] != action:
             Q.pop(k)
             N.pop(k)
-        else: 
+        else:
             Q[(k[1],)] = Q.pop(k)
             N[(k[1],)] = N.pop(k)
 
 
 class MCTSRunner:
     def __init__(self, env, depth, c, simulations=1000):
-
         self.env = env
         self.depth = depth
         self.c = c
@@ -318,7 +318,6 @@ class MCTSRunner:
         self.action = None
 
     def run(self, belief_heatmap):
-
         self.env.reset()
 
         if self.action is not None:
@@ -355,7 +354,6 @@ def mcts_trial(
     ax=None,
     results=None,
 ):
-
     # Initialize true state and belief state (particle filter);
     # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
     # state is [range, heading, relative course, own speed]
@@ -407,7 +405,6 @@ def mcts_trial(
     axs = None
 
     for time_step in tqdm(range(num_iters)):
-
         # if time_step % 100 == 0
         #    @show time_step
         # end
@@ -485,7 +482,6 @@ def mcts_trial(
         #         total_loss += 1
 
         if results is not None and results.plotting:
-
             axs = results.build_multitarget_plots(
                 env,
                 time_step,

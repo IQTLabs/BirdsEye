@@ -199,7 +199,6 @@ class Localizer(nn.Module):
         return y_out, pf_out
 
     def step(self, map_in, obs_in, act_in, gt_pos, args):
-
         pred, particle_pred = self.forward(map_in, obs_in, act_in)
 
         gt_xy_normalized = gt_pos[:, :, :2] / self.map_size

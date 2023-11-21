@@ -33,7 +33,6 @@ baseline_policy = {"static": static, "random": random_policy}
 
 
 def baseline_trial(env, policy, num_timesteps, results=None):
-
     # Initialize true state and belief state (particle filter);
     # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
     # state is [range, heading, relative course, own speed]
@@ -70,7 +69,6 @@ def baseline_trial(env, policy, num_timesteps, results=None):
     plots = []
 
     for time_step in tqdm(range(num_timesteps)):
-
         # select an action
         inference_start_time = datetime.now()
 

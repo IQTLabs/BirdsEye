@@ -30,15 +30,20 @@ from scipy.ndimage.filters import gaussian_filter
 from .definitions import REPO_DIR
 from .definitions import RUN_DIR
 
+
 def targets_found(env, min_std_dev):
-    std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
+    std_dev = np.amax(
+        env.get_particle_std_dev_cartesian(), axis=1
+    )  # get maximum standard deviation axis for each target
     not_found = np.where(std_dev > min_std_dev)
     if len(not_found[0]) == 0:
         return True
     return False
-    
+
+
 def permute_particle(particle):
     return np.hstack((particle[4:], particle[:4]))
+
 
 def particle_swap(env):
     # 2000 x 8
@@ -102,25 +107,30 @@ def particle_swap(env):
 
     env.pf.particles = particles
 
+
 def circ_tangents(point, center, radius):
     px, py = point
     cx, cy = center
 
-    b = np.sqrt((px-cx)**2 + (py-cy)**2)
+    b = np.sqrt((px - cx) ** 2 + (py - cy) ** 2)
     if radius >= b:
         ##print(f"Warning: No tangents are possible.  radius >= distance to circle center ({radius} >= {b})")
         return None
     th = np.arccos(radius / b)
-    d = np.arctan2(py-cy, px-cx)
+    d = np.arctan2(py - cy, px - cx)
     d1 = d + th
     d2 = d - th
 
-    tangents = [[cx+radius*np.cos(d1), cy+radius*np.sin(d1)],[cx+radius*np.cos(d2), cy+radius*np.sin(d2)]]
-    v = np.array(point) - np.array(center) 
+    tangents = [
+        [cx + radius * np.cos(d1), cy + radius * np.sin(d1)],
+        [cx + radius * np.cos(d2), cy + radius * np.sin(d2)],
+    ]
+    v = np.array(point) - np.array(center)
     v /= np.linalg.norm(v)
-    intersection = np.array(center) + radius*v
+    intersection = np.array(center) + radius * v
     tangents.append(list(intersection))
     return np.array(tangents)
+
 
 def pol2cart(rho, phi):
     """
@@ -223,13 +233,13 @@ class GPSVis:
         if self.map_path is not None and self.bounds is not None:
             self.img = self.create_image_from_map()
         elif self.position is not None:
-            if distance <= 200: 
+            if distance <= 200:
                 self.zoom = 18
-            elif distance <= 1000: 
+            elif distance <= 1000:
                 self.zoom = 16
             elif distance <= 2000:
                 self.zoom = 14
-            else: 
+            else:
                 self.zoom = 12
             self.TILE_SIZE = 256
             distance = distance
@@ -319,10 +329,13 @@ class GPSVis:
         # loop through every tile inside our bounded box
         for x_tile, y_tile in product(range(x0_tile, x1_tile), range(y0_tile, y1_tile)):
             try:
-                with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom), headers={'User-Agent': 'BirdsEye/0.1.1'}) as resp:
+                with requests.get(
+                    URL(x=x_tile, y=y_tile, z=self.zoom),
+                    headers={"User-Agent": "BirdsEye/0.1.1"},
+                ) as resp:
                     tile_img = Image.open(BytesIO(resp.content))
             except Exception as e:
-                tile_img = Image.open(f'{REPO_DIR}/data/0.png')
+                tile_img = Image.open(f"{REPO_DIR}/data/0.png")
             # add each tile to the full size image
             img.paste(
                 im=tile_img,
@@ -412,11 +425,13 @@ class GPSVis:
         self.y_ticks = list(self.y_ticks)  # sorted(y_ticks, reverse=True)
         self.x_ticks = list(self.x_ticks)
 
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
 
 class ResultsReader:
     """
@@ -428,7 +443,11 @@ class ResultsReader:
         experiment_name="",
     ):
         self.parent_logs_dir = f"{RUN_DIR}/{experiment_name}/"
-        self.log_dirs = [f"{self.parent_logs_dir}{d}" for d in os.listdir(self.parent_logs_dir) if d.endswith("_logs")]
+        self.log_dirs = [
+            f"{self.parent_logs_dir}{d}"
+            for d in os.listdir(self.parent_logs_dir)
+            if d.endswith("_logs")
+        ]
         self.log_data = {}
         self.log_config = {}
         for d in self.log_dirs:
@@ -439,20 +458,19 @@ class ResultsReader:
             self.log_config[d] = read_header_log(config_file)
 
             # fix missing target_speed
-            if "target_speed" not in self.log_config[d]: 
-                self.log_config[d]["target_speed"] = 0.5 
-    
+            if "target_speed" not in self.log_config[d]:
+                self.log_config[d]["target_speed"] = 0.5
+
     def average_plantime(self):
         """
         Get average planning time
         """
         plan_time = []
-        for run, log_data in self.log_data.items(): 
-            times = [data['plan_time'] for data in log_data]
+        for run, log_data in self.log_data.items():
+            times = [data["plan_time"] for data in log_data]
             plan_time.append(np.mean(times))
         avg_plan_time = np.mean(plan_time)
         return avg_plan_time
-
 
     def average_std_dev(self):
         """
@@ -460,9 +478,9 @@ class ResultsReader:
         """
         std_dev_all = []
         std_dev_success = []
-        for run, log_data in self.log_data.items(): 
+        for run, log_data in self.log_data.items():
             std_dev = np.max(log_data[-1]["std_dev_cartesian"], axis=1)
-            if len(log_data) < 400: 
+            if len(log_data) < 400:
                 std_dev_success.extend(std_dev)
             std_dev_all.extend(std_dev)
         avg_std_dev_all = np.mean(std_dev_all)
@@ -475,25 +493,27 @@ class ResultsReader:
         """
         std_dev_all = []
         std_dev_success = []
-        for run, log_data in self.log_data.items(): 
-            std_dev = [np.mean(np.max(np.array(d["std_dev_cartesian"]), axis=1)) for d in log_data]
+        for run, log_data in self.log_data.items():
+            std_dev = [
+                np.mean(np.max(np.array(d["std_dev_cartesian"]), axis=1))
+                for d in log_data
+            ]
             std_dev_all.append(std_dev)
-        # if ax is None: 
+        # if ax is None:
         #     fig = plt.figure()
         #     ax = fig.subplots()
-        # if color is None: 
+        # if color is None:
         #     color="blue"
-        # for sd in std_dev_all: 
+        # for sd in std_dev_all:
         #     ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
         # plt.show()
 
-        
         df = pd.DataFrame(std_dev_all)
-        if df.shape[1] < 400: 
-            df = df.reindex(columns = list(range(400)))
-        df = df[:][list(range(0,400,20))]
+        if df.shape[1] < 400:
+            df = df.reindex(columns=list(range(400)))
+        df = df[:][list(range(0, 400, 20))]
         df.boxplot(
-            ax=ax, 
+            ax=ax,
             notch=True,
             patch_artist=True,
             boxprops=dict(facecolor=facecolor, color=color, alpha=0.75),
@@ -501,16 +521,15 @@ class ResultsReader:
             whiskerprops=dict(color=color),
             flierprops=dict(color=color, markeredgecolor=color),
             medianprops=dict(color=color),
-            #color=color, 
-            showfliers=False
+            # color=color,
+            showfliers=False,
         )
 
-        # if experiment_name is not None: 
+        # if experiment_name is not None:
         #     plt.title(experiment_name)
         # plt.show()
 
-# df.boxplot()
-        
+    # df.boxplot()
 
     def average_rmse(self):
         """
@@ -519,38 +538,43 @@ class ResultsReader:
         rmse_success = []
         rmse_all = []
         for run, log_data in self.log_data.items():
-            rmse = np.sqrt(np.mean(np.array(log_data[-1]["centroid_distance_err"])**2))
+            rmse = np.sqrt(
+                np.mean(np.array(log_data[-1]["centroid_distance_err"]) ** 2)
+            )
             if len(log_data) < 400:
                 rmse_success.append(rmse)
             rmse_all.append(rmse)
-        
+
         avg_rmse_success = np.mean(rmse_success)
         avg_rmse_all = np.mean(rmse_all)
         return avg_rmse_success, avg_rmse_all
-    
+
     def rmse_plot(self, ax=None, color=None, facecolor=None):
         """
         Get average of the max standard deviation dimension of the particle distributions
         """
         rmse_all = []
-        for run, log_data in self.log_data.items(): 
-            rmse = [np.sqrt(np.mean(np.array(d["centroid_distance_err"])**2)) for d in log_data]
+        for run, log_data in self.log_data.items():
+            rmse = [
+                np.sqrt(np.mean(np.array(d["centroid_distance_err"]) ** 2))
+                for d in log_data
+            ]
             rmse_all.append(rmse)
-        # if ax is None: 
+        # if ax is None:
         #     fig = plt.figure()
         #     ax = fig.subplots()
-        # if color is None: 
+        # if color is None:
         #     color="blue"
-        # for sd in std_dev_all: 
+        # for sd in std_dev_all:
         #     ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
         # plt.show()
 
         df = pd.DataFrame(rmse_all)
-        if df.shape[1] < 400: 
-            df = df.reindex(columns = list(range(400)))
-        df = df[:][list(range(0,400,20))]
+        if df.shape[1] < 400:
+            df = df.reindex(columns=list(range(400)))
+        df = df[:][list(range(0, 400, 20))]
         df.boxplot(
-            ax=ax, 
+            ax=ax,
             notch=True,
             patch_artist=True,
             boxprops=dict(facecolor=facecolor, color=color, alpha=0.75),
@@ -558,13 +582,12 @@ class ResultsReader:
             whiskerprops=dict(color=color),
             flierprops=dict(color=color, markeredgecolor=color),
             medianprops=dict(color=color),
-            #color=color, 
-            showfliers=False
+            # color=color,
+            showfliers=False,
         )
-        # if experiment_name is not None: 
+        # if experiment_name is not None:
         #     plt.title(experiment_name)
         # plt.show()
-
 
     def rmse_plot2(self):
         """
@@ -573,29 +596,31 @@ class ResultsReader:
         rmse_success = []
         rmse_all = []
         for run, log_data in self.log_data.items():
-            rmse = np.sqrt(np.mean(np.array(log_data[-1]["centroid_distance_err"])**2))
+            rmse = np.sqrt(
+                np.mean(np.array(log_data[-1]["centroid_distance_err"]) ** 2)
+            )
             if len(log_data) < 400:
                 rmse_success.append(rmse)
             rmse_all.append(rmse)
-        
+
         avg_rmse_success = np.mean(rmse_success)
         avg_rmse_all = np.mean(rmse_all)
         return avg_rmse_success, avg_rmse_all
 
-    def localization_probability(self): 
+    def localization_probability(self):
         """
-        Get the probability of successful localizations from experiment run data. 
+        Get the probability of successful localizations from experiment run data.
         """
         success_localize = 0
         for run, log_data in self.log_data.items():
             if len(log_data) < 400:
                 success_localize += 1
-        success_localize_prob = success_localize/len(self.log_data)  
+        success_localize_prob = success_localize / len(self.log_data)
         return success_localize_prob
 
     def average_localization_time(self):
         """
-        Get the average run time of successful localization runs. 
+        Get the average run time of successful localization runs.
         """
         success_localize = 0
         average_localize_time = 0
@@ -608,19 +633,21 @@ class ResultsReader:
 
     def localization_histogram(self, ax=None, color=None):
         """
-        Get the average run time of successful localization runs. 
+        Get the average run time of successful localization runs.
         """
 
         runtime = []
         for run, log_data in self.log_data.items():
             runtime.append(len(log_data))
-        
-       # ax.hist(runtime, color=color, bins=400)
-        sns.histplot(data=runtime, kde=True, ax=ax, color=color, bins=np.arange(0,420,20))
+
+        # ax.hist(runtime, color=color, bins=400)
+        sns.histplot(
+            data=runtime, kde=True, ax=ax, color=color, bins=np.arange(0, 420, 20)
+        )
 
     def load_log(self, log_file):
         """
-        Load json log file 
+        Load json log file
         """
         data = []
         with open(
@@ -630,7 +657,7 @@ class ResultsReader:
         ) as infile:
             for line in infile:
                 data.append(json.loads(line))
-        return data 
+        return data
 
 
 class Results:
@@ -666,7 +693,7 @@ class Results:
         Path(self.plot_dir + "/png/").mkdir(parents=True, exist_ok=True)
         if self.make_gif == "true":
             Path(self.plot_dir + "/gif/").mkdir(parents=True, exist_ok=True)
-        
+
         self.col_names = [
             "time",
             "run_time",
@@ -703,16 +730,16 @@ class Results:
         if config:
             write_config_log(config, self.logdir)
 
-    def data_to_npy(self, array, label, timestep): 
+    def data_to_npy(self, array, label, timestep):
         """
         Save npy array to file
         """
         Path(f"{self.logdir}/{label}/").mkdir(parents=True, exist_ok=True)
         np.save(
-                f"{self.logdir}/{label}/{timestep}.npy",
-                array,
-            )
-            
+            f"{self.logdir}/{label}/{timestep}.npy",
+            array,
+        )
+
     def data_to_json(self, data):
         """
         Save data dict to log
@@ -740,7 +767,9 @@ class Results:
         filename = run if sub_run is None else "{}_{}".format(run, sub_run)
         # Build GIF
         with imageio.get_writer(
-            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", duration=int(1000 * 1/5)
+            "{}/gif/{}.gif".format(self.plot_dir, filename),
+            mode="I",
+            duration=int(1000 * 1 / 5),
         ) as writer:
             for png_filename in sorted(
                 os.listdir(self.plot_dir + "/png/"), key=lambda x: (len(x), x)
@@ -748,7 +777,17 @@ class Results:
                 image = imageio.v2.imread(self.plot_dir + "/png/" + png_filename)
                 writer.append_data(image)
 
-    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None, sidebar=False, separable=False, map_distance=200):
+    def live_plot(
+        self,
+        env,
+        time_step=None,
+        fig=None,
+        ax=None,
+        data=None,
+        sidebar=False,
+        separable=False,
+        map_distance=200,
+    ):
         """
         Create a live plot
         """
@@ -757,7 +796,9 @@ class Results:
             and data.get("position", None) is not None
             and data.get("heading", None) is not None
         ):
-            self.openstreetmap = GPSVis(position=data["position"], distance=map_distance)
+            self.openstreetmap = GPSVis(
+                position=data["position"], distance=map_distance
+            )
             self.openstreetmap.set_origin(data["position"])
             self.transform = np.array(
                 [self.openstreetmap.origin[0], self.openstreetmap.origin[1]]
@@ -796,7 +837,9 @@ class Results:
             target_relative_heading = target_heading - data["heading"]
             target_distance = get_distance(data["position"], data["drone_position"])
             print(f"Sensor position & heading = {data['position']},{data['heading']}")
-            print(f"Target distance & heading = {target_distance},{target_relative_heading}")
+            print(
+                f"Target distance & heading = {target_distance},{target_relative_heading}"
+            )
             print(f"{self.expected_target_rssi=}")
             self.expected_target_rssi = env.sensor.observation(
                 [target_distance, target_relative_heading, None, None], 0
@@ -806,10 +849,8 @@ class Results:
         if self.openstreetmap is not None:
             self.openstreetmap.plot_map(axis1=ax)
         # TODO get variables
-        if separable: 
-            ax.set_title(
-                "Time = {}".format(time_step)
-            )
+        if separable:
+            ax.set_title("Time = {}".format(time_step))
         else:
             abs_particles = np.moveaxis(abs_particles, 1, 0)
             # ax.set_title(
@@ -820,7 +861,6 @@ class Results:
             ax.set_title(
                 f"Time = {str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}"
             )
-            
 
         color_array = [
             ["salmon", "darkred", "red"],
@@ -831,27 +871,26 @@ class Results:
         )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
 
         separable_color_array = [
-            ["lightgreen","green"],
+            ["lightgreen", "green"],
             ["lightblue", "blue"],
             ["pink", "red"],
             ["wheat", "orange"],
         ]
 
-
         for t in range(env.state.n_targets):
-            # PLOT PARTICLES 
+            # PLOT PARTICLES
             # particles_x, particles_y = pol2cart(
             #     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
             # )
             particles_x, particles_y = pol2cart(
-                abs_particles[t,:,0], np.radians(abs_particles[t,:,1])
+                abs_particles[t, :, 0], np.radians(abs_particles[t, :, 1])
             )
             if self.transform is not None:
                 particles_x += self.transform[0]
                 particles_y += self.transform[1]
-            if separable: 
+            if separable:
                 particle_color = separable_color_array[t][0]
-            else: 
+            else:
                 particle_color = "salmon"
             (line1,) = ax.plot(
                 particles_x,
@@ -864,8 +903,8 @@ class Results:
                 alpha=0.4,
                 zorder=1,
             )
-            
-            # PLOT HEATMAP OVER STREET MAP 
+
+            # PLOT HEATMAP OVER STREET MAP
             if self.openstreetmap:
                 heatmap, xedges, yedges = np.histogram2d(
                     particles_x,
@@ -887,9 +926,9 @@ class Results:
             # PLOT CENTROIDS
             centroid_x = np.mean(particles_x)
             centroid_y = np.mean(particles_y)
-            if separable: 
+            if separable:
                 centroid_color = separable_color_array[t][1]
-            else: 
+            else:
                 centroid_color = "magenta"
 
             (line2,) = ax.plot(
@@ -908,8 +947,10 @@ class Results:
             else:
                 lines.extend([])
 
-        # PLOT SENSOR 
-        if self.openstreetmap and data["position"] is not None:# and not data["needs_processing"]:
+        # PLOT SENSOR
+        if (
+            self.openstreetmap and data["position"] is not None
+        ):  # and not data["needs_processing"]:
             self.sensor_gps_hist.append(
                 self.openstreetmap.scale_to_img(
                     data["position"],
@@ -918,13 +959,15 @@ class Results:
             )
 
             temp_np = np.array(self.sensor_gps_hist)
-            sensor_x = temp_np[:,0]
-            sensor_y = temp_np[:,1]
+            sensor_x = temp_np[:, 0]
+            sensor_y = temp_np[:, 1]
 
             if len(self.sensor_gps_hist) > 1:
-                #print(f"{data['heading']=}")
-                #print(f"{data['previous_heading']=}")
-                arrow_x,arrow_y = pol2cart(4,np.radians(data.get("heading", data["previous_heading"])))
+                # print(f"{data['heading']=}")
+                # print(f"{data['previous_heading']=}")
+                arrow_x, arrow_y = pol2cart(
+                    4, np.radians(data.get("heading", data["previous_heading"]))
+                )
                 ax.arrow(
                     sensor_x[-1],
                     sensor_y[-1],
@@ -972,7 +1015,7 @@ class Results:
                 head_length=6,
                 facecolor="rebeccapurple",
                 zorder=7,
-                #edgecolor="black",
+                # edgecolor="black",
                 label="Sensor",
                 linewidth=1,
             )
@@ -982,25 +1025,24 @@ class Results:
                 sensor_y[:-1],
                 linewidth=5,
                 color="rebeccapurple",
-                #markeredgecolor="black",
-                #markersize=4,
+                # markeredgecolor="black",
+                # markersize=4,
                 zorder=6,
-                #path_effects=[pe.Stroke(linewidth=7, foreground='black')]
+                # path_effects=[pe.Stroke(linewidth=7, foreground='black')]
             )
-        # (line4,) = ax.plot(
-        #     sensor_x[-1],
-        #     sensor_y[-1],
-        #     "p",
-        #     color="blue",
-        #     label="sensor",
-        #     markersize=10,
-        #     zorder=4,
-        # )
+            # (line4,) = ax.plot(
+            #     sensor_x[-1],
+            #     sensor_y[-1],
+            #     "p",
+            #     color="blue",
+            #     label="sensor",
+            #     markersize=10,
+            #     zorder=4,
+            # )
             lines.extend([line4])
 
-        
         if self.openstreetmap and data.get("drone_position", None) is not None:
-            #print(f"{data['drone_position']=}")
+            # print(f"{data['drone_position']=}")
             self.target_hist.append(
                 self.openstreetmap.scale_to_img(
                     data["drone_position"],
@@ -1010,25 +1052,24 @@ class Results:
 
         # PLOT TARGETS
         if self.target_hist:
-            
-            #target_np = np.array(self.target_hist)
-            #print(f"{self.target_hist[-1]=}")
-            #assert len(self.target_hist.shape) == 3
-            for t in range(env.state.n_targets): 
+            # target_np = np.array(self.target_hist)
+            # print(f"{self.target_hist[-1]=}")
+            # assert len(self.target_hist.shape) == 3
+            for t in range(env.state.n_targets):
                 if env.simulated:
                     target_x, target_y = pol2cart(
                         np.array(self.target_hist)[:, t, 0],
                         np.radians(np.array(self.target_hist)[:, t, 1]),
                     )
-                else: 
+                else:
                     temp_np = np.array(self.target_hist)
-                    target_x = temp_np[:,0]
-                    target_y = temp_np[:,1]
-                    
+                    target_x = temp_np[:, 0]
+                    target_y = temp_np[:, 1]
+
                 # if self.transform is not None:
                 #     target_x += self.transform[0]
                 #     target_y += self.transform[1]
-                    
+
                 if len(self.target_hist) > 1:
                     ax.plot(
                         target_x[:-1],
@@ -1053,7 +1094,8 @@ class Results:
         # Legend
         legend_elements = [
             Line2D(
-                [0], [0], 
+                [0],
+                [0],
                 marker="o",
                 color="white",
                 markersize=4,
@@ -1061,7 +1103,8 @@ class Results:
                 label="Particles",
             ),
             Line2D(
-                [0], [0], 
+                [0],
+                [0],
                 marker="^",
                 color="white",
                 markeredgecolor="black",
@@ -1070,7 +1113,8 @@ class Results:
                 markersize=12,
             ),
             Line2D(
-                [0], [0], 
+                [0],
+                [0],
                 marker="X",
                 color="white",
                 markerfacecolor="black",
@@ -1079,17 +1123,11 @@ class Results:
                 markersize=10,
             ),
             mpatches.Patch(
-                facecolor="rebeccapurple", 
-                edgecolor="black",
-                label="Sensor"
+                facecolor="rebeccapurple", edgecolor="black", label="Sensor"
             ),
-            mpatches.Patch(
-                facecolor="green", 
-                edgecolor="black",
-                label="SensorGPS"
-            ),
+            mpatches.Patch(facecolor="green", edgecolor="black", label="SensorGPS"),
         ]
-        
+
         # ax.legend(
         #     handles=legend_elements,
         #     loc="upper left",
@@ -1099,13 +1137,13 @@ class Results:
         #     ncol=1,
         # )
         ax.legend(
-                handles=legend_elements,
-                loc="upper center",
-                bbox_to_anchor=(0.5, -0.05),
-                fancybox=True,
-                shadow=True,
-                ncol=4,
-            )
+            handles=legend_elements,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.05),
+            fancybox=True,
+            shadow=True,
+            ncol=4,
+        )
 
         # X/Y Limits
         if self.openstreetmap is None:
@@ -1117,19 +1155,21 @@ class Results:
 
         # Sidebar Text
         if sidebar:
-
             self.pf_stats["map_state"][-1][0]
-            map_r = f"{self.pf_stats['map_state'][-1][0]:.0f} m" if self.pf_stats["map_state"][-1][0] is not None else f"unknown"
-            
-            if self.pf_stats["map_state"][-1][0] is not None: 
+            map_r = (
+                f"{self.pf_stats['map_state'][-1][0]:.0f} m"
+                if self.pf_stats["map_state"][-1][0] is not None
+                else f"unknown"
+            )
+
+            if self.pf_stats["map_state"][-1][0] is not None:
                 map_theta = self.pf_stats["map_state"][-1][1]
-                map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+                map_theta = np.degrees(np.arctan2(np.sin(map_theta), np.cos(map_theta)))
                 map_theta = f"{map_theta:.0f} deg"
-            else: 
+            else:
                 map_theta = f"unknown"
-        
-            
-            #map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+
+            # map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
             rel_centroid_x, rel_centroid_y = env.get_particle_centroids()[t]
             centroid_r, centroid_theta = cart2pol(rel_centroid_x, rel_centroid_y)
             centroid_theta = np.degrees(centroid_theta)
@@ -1145,32 +1185,66 @@ class Results:
             )
 
             # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
-            actual_heading_str = f"{data.get('heading'):.0f} deg" if data.get("heading", None) else f"unknown"
-            actual_speed_str = f"{data.get('action_taken')[1]:.2f} m/s" if data.get("action_taken", None) else f"unknown"
+            actual_heading_str = (
+                f"{data.get('heading'):.0f} deg"
+                if data.get("heading", None)
+                else f"unknown"
+            )
+            actual_speed_str = (
+                f"{data.get('action_taken')[1]:.2f} m/s"
+                if data.get("action_taken", None)
+                else f"unknown"
+            )
             actual_str = (
                 f"SENSOR ACTUAL\n"
                 f"Heading = {actual_heading_str}\n"
                 f"Speed = {actual_speed_str}"
             )
 
-            proposal_heading_str = f"{data.get('action_proposal')[0]:.0f} deg" if None not in data.get("action_proposal", (None, None)) else f"unknown"
-            proposal_speed_str = f"{data.get('action_proposal')[1]:.2f} m/s" if None not in data.get("action_proposal", (None, None)) else f"unknown"
+            proposal_heading_str = (
+                f"{data.get('action_proposal')[0]:.0f} deg"
+                if None not in data.get("action_proposal", (None, None))
+                else f"unknown"
+            )
+            proposal_speed_str = (
+                f"{data.get('action_proposal')[1]:.2f} m/s"
+                if None not in data.get("action_proposal", (None, None))
+                else f"unknown"
+            )
             proposal_str = (
                 f"SENSOR PROPOSAL\n"
                 f"Heading = {proposal_heading_str}\n"
                 f"Speed = {proposal_speed_str}"
             )
 
-            rssi_observed_str = f"{env.last_observation} dB" if env.last_observation else f"unknown"
-            rssi_expected_str = f"{self.expected_target_rssi:.0f} dB" if self.expected_target_rssi else f"unknown"
-            rssi_difference_str = f"Difference = {env.last_observation - self.expected_target_rssi:.0f} dB\n" if (env.last_observation and self.expected_target_rssi) else ""
-            rssi_mean_str = f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f} dB" if self.pf_stats["mean_hypothesis"][-1][0] else f"unknown"
-            rssi_map_str = f"{self.pf_stats['map_hypothesis'][-1][0]:.0f} dB" if self.pf_stats["map_hypothesis"][-1][0] else f"unknown"
+            rssi_observed_str = (
+                f"{env.last_observation} dB" if env.last_observation else f"unknown"
+            )
+            rssi_expected_str = (
+                f"{self.expected_target_rssi:.0f} dB"
+                if self.expected_target_rssi
+                else f"unknown"
+            )
+            rssi_difference_str = (
+                f"Difference = {env.last_observation - self.expected_target_rssi:.0f} dB\n"
+                if (env.last_observation and self.expected_target_rssi)
+                else ""
+            )
+            rssi_mean_str = (
+                f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f} dB"
+                if self.pf_stats["mean_hypothesis"][-1][0]
+                else f"unknown"
+            )
+            rssi_map_str = (
+                f"{self.pf_stats['map_hypothesis'][-1][0]:.0f} dB"
+                if self.pf_stats["map_hypothesis"][-1][0]
+                else f"unknown"
+            )
             rssi_str = (
                 f"RSSI\n"
                 f"Observed = {rssi_observed_str}\n"
                 f"Expected = {rssi_expected_str}\n"
-                #f"{rssi_difference_str}"
+                # f"{rssi_difference_str}"
                 f"Mean estimate = {rssi_mean_str}\n"
                 f"MAP estimate = {rssi_map_str}"
             )
@@ -1202,7 +1276,7 @@ class Results:
                 )
             else:
                 fig.texts[0].set_text(sidebar_str)
-  
+
             # if len(fig.texts) == 0:
             #     props = dict(boxstyle="round", facecolor="mistyrose", alpha=0.5)
             #     text = fig.text(
@@ -1253,7 +1327,7 @@ class Results:
         self.native_plot = "true" if time_step % self.plot_every_n == 0 else "false"
         if self.native_plot == "true":
             plt.draw()
-            #plt.pause(0.001)
+            # plt.pause(0.001)
             fig.canvas.start_event_loop(0.001)
             fig.canvas.draw_idle()
         if self.make_gif == "true":
@@ -1523,7 +1597,6 @@ class Results:
             heatmap_combined = None
             all_particles_x, all_particles_y = [], []
             for t in range(env.state.n_targets):
-
                 particles_x, particles_y = pol2cart(
                     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
                 )
@@ -1964,7 +2037,6 @@ class Results:
 
 
 def write_config_log(config, logdir):
-
     if isinstance(config, configparser.ConfigParser):
         config2log = {section: dict(config[section]) for section in config.sections()}
     else:
@@ -2028,7 +2100,6 @@ def particles_centroid_xy(particles):
 
 
 def angle_diff(angle):
-
     diff = angle % 360
 
     diff = (diff + 360) % 360
@@ -2124,6 +2195,7 @@ def tracking_error(all_targets, all_particles):
 
     return r_error, theta_error, heading_error, centroid_distance_error, rmse, mae
 
+
 def tracking_metrics_separable(all_targets, all_particles):
     """
     Calculate different tracking metrics
@@ -2136,7 +2208,6 @@ def tracking_metrics_separable(all_targets, all_particles):
     rmse = None
     mae = None
     n_targets, n_particles, n_states = all_particles.shape
-
 
     for t in range(n_targets):
         target = all_targets[t]

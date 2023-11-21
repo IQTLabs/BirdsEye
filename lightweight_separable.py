@@ -20,44 +20,46 @@ from birdseye.planners.light_mcts import LightMCTS
 from birdseye.planners.lavapilot import LAVAPilot
 from birdseye.planners.repp import REPP
 
-def main(config=None, config_path=None): 
 
+def main(config=None, config_path=None):
     n_simulations = 100
     max_iterations = 400
-    reward_func = lambda pf: pf.weight_entropy #lambda *args, **kwargs: None    
+    reward_func = lambda pf: pf.weight_entropy  # lambda *args, **kwargs: None
     r_min = 10
-    horizon = 1#8
+    horizon = 1  # 8
     min_bound = 0.82
     min_std_dev = 35
-    num_particles = 3000#3000
+    num_particles = 3000  # 3000
 
-    default_config = ({
-        "native_plot": "false", 
+    default_config = {
+        "native_plot": "false",
         "make_gif": "false",
-        "n_targets": "2", 
-        "antenna_type": "logp", 
+        "n_targets": "2",
+        "antenna_type": "logp",
         "planner_method": "lightweight",
-        "target_speed": "0.5", 
-        "sensor_speed": "1.0", 
-        "power_tx": "26.0", 
+        "target_speed": "0.5",
+        "sensor_speed": "1.0",
+        "power_tx": "26.0",
         "directivity_tx": "1.0",
         "freq": "5.7e9",
         "fading_sigma": "8.0",
         "threshold": "-120",
         "mcts_depth": "3",
         "mcts_c": "20.0",
-        "mcts_simulations": "100", 
+        "mcts_simulations": "100",
         "mcts_n_downsample": "400",
-    })
-    assert config is None or config_path is None, "config and config_path cannot both be defined"
+    }
+    assert (
+        config is None or config_path is None
+    ), "config and config_path cannot both be defined"
 
-    if config_path: 
+    if config_path:
         config = configparser.ConfigParser()
         config.read(config_path)
         config = config["lightweight"]
-    elif config is None: 
-        config = default_config 
-        
+    elif config is None:
+        config = default_config
+
     local_plot = config.get("native_plot", default_config["native_plot"]).lower()
     make_gif = config.get("make_gif", default_config["make_gif"]).lower()
     n_targets = int(config.get("n_targets", default_config["n_targets"]))
@@ -66,20 +68,40 @@ def main(config=None, config_path=None):
     experiment_name = config.get("experiment_name", planner_method)
     target_speed = float(config.get("target_speed", default_config["target_speed"]))
     sensor_speed = float(config.get("sensor_speed", default_config["sensor_speed"]))
-    if len(config.get("power_tx").split(",")) == 1: 
+    if len(config.get("power_tx").split(",")) == 1:
         config["power_tx"] = ",".join([config["power_tx"] for _ in range(n_targets)])
-    power_tx = [float(x) for x in config.get("power_tx", ",".join(default_config["power_tx"] for _ in range(n_targets))).split(",")]
-    if len(config.get("directivity_tx").split(",")) == 1: 
-        config["directivity_tx"] = ",".join([config["directivity_tx"] for _ in range(n_targets)])
-    directivity_tx = [float(x) for x in config.get("directivity_tx", ",".join(default_config["directivity_tx"] for _ in range(n_targets))).split(",")]
-    if len(config.get("freq").split(",")) == 1: 
+    power_tx = [
+        float(x)
+        for x in config.get(
+            "power_tx", ",".join(default_config["power_tx"] for _ in range(n_targets))
+        ).split(",")
+    ]
+    if len(config.get("directivity_tx").split(",")) == 1:
+        config["directivity_tx"] = ",".join(
+            [config["directivity_tx"] for _ in range(n_targets)]
+        )
+    directivity_tx = [
+        float(x)
+        for x in config.get(
+            "directivity_tx",
+            ",".join(default_config["directivity_tx"] for _ in range(n_targets)),
+        ).split(",")
+    ]
+    if len(config.get("freq").split(",")) == 1:
         config["freq"] = ",".join([config["freq"] for _ in range(n_targets)])
-    freq = [float(x) for x in config.get("freq", ",".join(default_config["freq"] for _ in range(n_targets))).split(",")]
+    freq = [
+        float(x)
+        for x in config.get(
+            "freq", ",".join(default_config["freq"] for _ in range(n_targets))
+        ).split(",")
+    ]
     fading_sigma = float(config.get("fading_sigma", default_config["fading_sigma"]))
     threshold = float(config.get("threshold", default_config["threshold"]))
     depth = int(config.get("depth", default_config["mcts_depth"]))
     c = float(config.get("c", default_config["mcts_c"]))
-    mcts_simulations = int(config.get("mcts_simulations", default_config["mcts_simulations"]))
+    mcts_simulations = int(
+        config.get("mcts_simulations", default_config["mcts_simulations"])
+    )
     n_downsample = int(config.get("n_downsample", default_config["mcts_n_downsample"]))
 
     # Sensor
@@ -117,41 +139,52 @@ def main(config=None, config_path=None):
         )
 
         actions = birdseye.actions.BaselineActions(sensor_speed=sensor_speed)
-        #actions.print_action_info()
+        # actions.print_action_info()
 
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, 
-            target_speed=target_speed, 
-            sensor_speed=sensor_speed, 
-            reward=reward_func, 
+            n_targets=n_targets,
+            target_speed=target_speed,
+            sensor_speed=sensor_speed,
+            reward=reward_func,
             simulated=True,
         )
 
         env = birdseye.env.RFMultiSeparableEnv(
-            sensor=sensor, actions=actions, state=state, simulated=True, num_particles=num_particles
+            sensor=sensor,
+            actions=actions,
+            state=state,
+            simulated=True,
+            num_particles=num_particles,
         )
         env.reset()
 
         target_selections = {t for t in range(n_targets)}
-        if planner_method == "repp": # REPP
-            planner = REPP(env, min_std_dev, r_min, horizon, min_bound, target_selections)
-        elif planner_method == "lavapilot": # LAVAPilot
+        if planner_method == "repp":  # REPP
+            planner = REPP(
+                env, min_std_dev, r_min, horizon, min_bound, target_selections
+            )
+        elif planner_method == "lavapilot":  # LAVAPilot
             planner = LAVAPilot(env, min_std_dev, r_min, horizon, min_bound)
-        elif planner_method == "mcts": # MCTS
-            planner = LightMCTS(env, depth=depth, c=c, simulations=mcts_simulations, n_downsample=n_downsample)
-        else: 
+        elif planner_method == "mcts":  # MCTS
+            planner = LightMCTS(
+                env,
+                depth=depth,
+                c=c,
+                simulations=mcts_simulations,
+                n_downsample=n_downsample,
+            )
+        else:
             raise Exception
-        
+
         control_actions = []
 
-        for i in trange(max_iterations, desc='Time steps'):
-            if i%horizon == 0:
-                
-                if targets_found(env, min_std_dev): 
-                    # all objects localized 
+        for i in trange(max_iterations, desc="Time steps"):
+            if i % horizon == 0:
+                if targets_found(env, min_std_dev):
+                    # all objects localized
                     control_action = None
                     break
-                else: 
+                else:
                     plan_start_time = timer()
                     control_action = planner.get_action()
                     plan_end_time = timer()
@@ -159,7 +192,7 @@ def main(config=None, config_path=None):
                 control_actions.extend(control_action)
 
             action = control_actions[i]
-            #print(f"{action=}")
+            # print(f"{action=}")
             (env_obs, reward, _, info) = env.step(action)
 
             if (local_plot == "true") or (make_gif == "true"):
@@ -174,10 +207,12 @@ def main(config=None, config_path=None):
                 centroid_distance_error,
                 rmse,
                 mae,
-            ) = tracking_metrics_separable(env.state.target_state, env.get_all_particles())
+            ) = tracking_metrics_separable(
+                env.state.target_state, env.get_all_particles()
+            )
 
             utc_time = datetime.utcnow().timestamp()
-            #results.data_to_npy(env.get_all_particles(), "particles", utc_time)
+            # results.data_to_npy(env.get_all_particles(), "particles", utc_time)
             ### save results
             data = {
                 "time": utc_time,
@@ -192,44 +227,51 @@ def main(config=None, config_path=None):
                 "heading_err": heading_error,
                 "centroid_distance_err": centroid_distance_error,
                 "rmse": rmse,
-                "mae": mae, 
+                "mae": mae,
                 "plan_time": plan_end_time - plan_start_time,
             }
             results.data_to_json(data)
-            
+
         if make_gif == "true":
             results.save_gif("tracking")
 
         if (local_plot == "true") or (make_gif == "true"):
             plt.close(fig)
 
-    for i in trange(n_simulations, desc='Experiments'):
+    for i in trange(n_simulations, desc="Experiments"):
         run_simulation()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--batch_mode', action='store_true')
-    parser.add_argument("--config_path", type=str, default="lightweight_separable_config.ini")
+    parser.add_argument("--batch_mode", action="store_true")
+    parser.add_argument(
+        "--config_path", type=str, default="lightweight_separable_config.ini"
+    )
     args = parser.parse_args()
 
     if args.batch_mode:
         procs = []
-        n_targets = [4,8]
+        n_targets = [4, 8]
         target_speeds = [0.1, 0.5, 1]
         sensor_speeds = [1, 2, 3]
-        planner_methods = ["repp","lavapilot"] #"mcts"
-        fading_sigmas = [5,10]
-        for conf in list(itertools.product(n_targets, target_speeds, sensor_speeds, planner_methods, fading_sigmas)): 
+        planner_methods = ["repp", "lavapilot"]  # "mcts"
+        fading_sigmas = [5, 10]
+        for conf in list(
+            itertools.product(
+                n_targets, target_speeds, sensor_speeds, planner_methods, fading_sigmas
+            )
+        ):
             n_target, target_speed, sensor_speed, planner_method, fading_sigma = conf
-            config = ({
+            config = {
                 "experiment_name": f"{planner_method}_{target_speed}targetspeed_{sensor_speed}sensorspeed_{n_target}targets_{fading_sigma}fading",
                 "n_targets": str(n_target),
                 "target_speed": str(target_speed),
-                "sensor_speed": str(sensor_speed), 
+                "sensor_speed": str(sensor_speed),
                 "planner_method": planner_method,
                 "fading_sigma": str(fading_sigma),
-            }) 
-            proc = Process(target=main, kwargs=({"config":config}))
+            }
+            proc = Process(target=main, kwargs=({"config": config}))
             procs.append(proc)
             proc.start()
 
@@ -237,5 +279,5 @@ if __name__ == '__main__':
         for proc in procs:
             proc.join()
 
-    else: 
+    else:
         main(config_path=args.config_path)

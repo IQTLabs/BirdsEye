@@ -19,80 +19,95 @@ def circ_tangents(point, center, radius):
     px, py = point
     cx, cy = center
 
-    b = np.sqrt((px-cx)**2 + (py-cy)**2)
+    b = np.sqrt((px - cx) ** 2 + (py - cy) ** 2)
     if radius >= b:
         ##print(f"Warning: No tangents are possible.  radius >= distance to circle center ({radius} >= {b})")
         return None
     th = np.arccos(radius / b)
-    d = np.arctan2(py-cy, px-cx)
+    d = np.arctan2(py - cy, px - cx)
     d1 = d + th
     d2 = d - th
 
-    tangents = [[cx+radius*np.cos(d1), cy+radius*np.sin(d1)],[cx+radius*np.cos(d2), cy+radius*np.sin(d2)]]
-    v = np.array(point) - np.array(center) 
+    tangents = [
+        [cx + radius * np.cos(d1), cy + radius * np.sin(d1)],
+        [cx + radius * np.cos(d2), cy + radius * np.sin(d2)],
+    ]
+    v = np.array(point) - np.array(center)
     v /= np.linalg.norm(v)
-    intersection = np.array(center) + radius*v
+    intersection = np.array(center) + radius * v
     tangents.append(list(intersection))
     return np.array(tangents)
 
+
 def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
     control_action = None
-    std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
-    #print(f"{std_dev=}")
+    std_dev = np.amax(
+        env.get_particle_std_dev_cartesian(), axis=1
+    )  # get maximum standard deviation axis for each target
+    # print(f"{std_dev=}")
     not_found = np.where(std_dev > min_std_dev)
     if len(not_found[0]):
         object_of_interest = np.argmin(std_dev[not_found])
     else:
         print(f"All objects localised!")
         return None
-    #print(f"{object_of_interest=}")
+    # print(f"{object_of_interest=}")
     # get tangents and min distance point proposals
-    proposals = circ_tangents([0,0], env.get_particle_centroids()[object_of_interest],  r_min)
-    #print(f"{env.get_particle_centroids()[object_of_interest]=}")
+    proposals = circ_tangents(
+        [0, 0], env.get_particle_centroids()[object_of_interest], r_min
+    )
+    # print(f"{env.get_particle_centroids()[object_of_interest]=}")
     if proposals is not None:
-        # convert proposal end points to polar coordinates 
-        proposals = [birdseye.utils.cart2pol(p[0],p[1]) for p in proposals]
-        #print(f"{proposals=}")
+        # convert proposal end points to polar coordinates
+        proposals = [birdseye.utils.cart2pol(p[0], p[1]) for p in proposals]
+        # print(f"{proposals=}")
 
         # create trajectories of length=horizon from proposal end points (first turn, then move straight)
         trajectories = []
         for p in proposals:
-            trajectory = np.zeros((horizon,2))
-            trajectory[:,1] = np.minimum(p[0]/horizon, 1)
-            trajectory[0,0] = np.degrees(p[1])
+            trajectory = np.zeros((horizon, 2))
+            trajectory[:, 1] = np.minimum(p[0] / horizon, 1)
+            trajectory[0, 0] = np.degrees(p[1])
             trajectories.append(trajectory)
 
-        # check void probability contstraint for each trajectory, choose first that is sufficient 
+        # check void probability contstraint for each trajectory, choose first that is sufficient
         for trj in trajectories:
-            void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
+            void_condition, particles = env.void_probability(
+                trj, r_min, min_bound=min_bound
+            )
             if void_condition:
                 control_action = trj
-                #print(f"Found good trajectory!")
+                # print(f"Found good trajectory!")
                 break
-                
-    deg_width = 40 
-    default_controls = np.linspace(-180,int(180-deg_width),int(360/deg_width))
 
-    # if no optimal trajectory meets void constraint 
+    deg_width = 40
+    default_controls = np.linspace(-180, int(180 - deg_width), int(360 / deg_width))
+
+    # if no optimal trajectory meets void constraint
     if control_action is None:
-
-        # create trajectories from default controls 
+        # create trajectories from default controls
         trajectories = []
         for c in default_controls:
             trajectory = np.zeros((horizon, 2))
-            trajectory[:,1] = 1
-            trajectory[0,0] = c
+            trajectory[:, 1] = 1
+            trajectory[0, 0] = c
             trajectories.append(trajectory)
 
-        # check void constraint for each trajectory 
+        # check void constraint for each trajectory
         distances = []
         constrained_trajectories = []
         for trj in trajectories:
-            void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
+            void_condition, particles = env.void_probability(
+                trj, r_min, min_bound=min_bound
+            )
             if void_condition:
                 constrained_trajectories.append(trj)
-                distances.append(env.get_particle_centroids(particles=particles)[object_of_interest][0])
-        # choose the sufficient trajectory that results in the min distance to centroid 
+                distances.append(
+                    env.get_particle_centroids(particles=particles)[object_of_interest][
+                        0
+                    ]
+                )
+        # choose the sufficient trajectory that results in the min distance to centroid
         if distances:
             control_action = constrained_trajectories[np.argmin(distances)]
 
@@ -101,10 +116,15 @@ def get_control_actions(env, min_std_dev, r_min, horizon, min_bound):
         control_action = trajectories[np.random.randint(len(default_controls))]
     return control_action
 
-def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected=None):
+
+def get_control_actions_improved(
+    env, min_std_dev, r_min, horizon, min_bound, last_selected=None
+):
     control_action = None
-    std_dev = np.amax(env.get_particle_std_dev_cartesian(), axis=1) # get maximum standard deviation axis for each target
-    #print(f"{std_dev=}")
+    std_dev = np.amax(
+        env.get_particle_std_dev_cartesian(), axis=1
+    )  # get maximum standard deviation axis for each target
+    # print(f"{std_dev=}")
     not_found = np.where(std_dev > min_std_dev)
     not_found_sorted = np.argsort(std_dev[not_found])
     if len(not_found[0]):
@@ -113,22 +133,23 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
         print(f"All objects localised!")
         return None, None
 
-
     # get tangents and min distance point proposals
-    #print(f"{env.get_particle_centroids()=}")
+    # print(f"{env.get_particle_centroids()=}")
     centroids = env.get_particle_centroids()
     proposals = {}
     for i in range(env.state.n_targets):
-        mean_other_centroids = [np.mean(np.delete(centroids,i,axis=0), axis=0)]
-        target_proposals = circ_tangents([0,0], env.get_particle_centroids()[i],  r_min)
-        # for p in proposals: 
+        mean_other_centroids = [np.mean(np.delete(centroids, i, axis=0), axis=0)]
+        target_proposals = circ_tangents([0, 0], env.get_particle_centroids()[i], r_min)
+        # for p in proposals:
         #     print(f"{p=}")
         #     print(f"{mean_other_centroids[0]=}")
         #     print(f"{np.linalg.norm(np.array(p)-mean_other_centroids[0])=}")
         # print(f"{i=}, {mean_other_centroids=}")
         # print(f"{i=}, {proposals=}")
-        if target_proposals is not None: 
-            distances_to_other = distance.cdist(mean_other_centroids,target_proposals)[0]
+        if target_proposals is not None:
+            distances_to_other = distance.cdist(mean_other_centroids, target_proposals)[
+                0
+            ]
             sorted_proposals = target_proposals[np.argsort(distances_to_other)]
             min_dist_proposal = target_proposals[np.argmin(distances_to_other)]
             proposals[i] = min_dist_proposal
@@ -143,56 +164,63 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
     # print(f"{proposals=}")
     # print(f"{not_found_sorted=}")
 
-    #print(f"{env.get_particle_centroids()[object_of_interest]=}")
+    # print(f"{env.get_particle_centroids()[object_of_interest]=}")
     if proposals:
-
-
         ####################
 
-        # convert proposal end points to polar coordinates 
-        proposals = {i:birdseye.utils.cart2pol(p[0],p[1]) for i,p in proposals.items()}
-        #print(f"{proposals=}")
+        # convert proposal end points to polar coordinates
+        proposals = {
+            i: birdseye.utils.cart2pol(p[0], p[1]) for i, p in proposals.items()
+        }
+        # print(f"{proposals=}")
 
         # create trajectories of length=horizon from proposal end points (first turn, then move straight)
         trajectories = {}
-        for i,p in proposals.items():
-            trajectory = np.zeros((horizon,2))
-            trajectory[:,1] = np.minimum(p[0]/horizon, 1)
-            trajectory[0,0] = np.degrees(p[1])
+        for i, p in proposals.items():
+            trajectory = np.zeros((horizon, 2))
+            trajectory[:, 1] = np.minimum(p[0] / horizon, 1)
+            trajectory[0, 0] = np.degrees(p[1])
             trajectories[i] = trajectory
 
-        # check void probability contstraint for each trajectory, choose first that is sufficient 
-        for i,trj in trajectories.items():
-            void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
+        # check void probability contstraint for each trajectory, choose first that is sufficient
+        for i, trj in trajectories.items():
+            void_condition, particles = env.void_probability(
+                trj, r_min, min_bound=min_bound
+            )
             if void_condition and last_selected != i:
                 last_selected = i
                 control_action = trj
-                #print(f"Found good trajectory!")
+                # print(f"Found good trajectory!")
                 break
-                
-    deg_width = 40 
-    default_controls = np.linspace(-180,int(180-deg_width),int(360/deg_width))
 
-    # if no optimal trajectory meets void constraint 
+    deg_width = 40
+    default_controls = np.linspace(-180, int(180 - deg_width), int(360 / deg_width))
+
+    # if no optimal trajectory meets void constraint
     if control_action is None:
-
-        # create trajectories from default controls 
+        # create trajectories from default controls
         trajectories = []
         for c in default_controls:
             trajectory = np.zeros((horizon, 2))
-            trajectory[:,1] = 1
-            trajectory[0,0] = c
+            trajectory[:, 1] = 1
+            trajectory[0, 0] = c
             trajectories.append(trajectory)
 
-        # check void constraint for each trajectory 
+        # check void constraint for each trajectory
         distances = []
         constrained_trajectories = []
         for trj in trajectories:
-            void_condition, particles = env.void_probability(trj, r_min, min_bound=min_bound)
+            void_condition, particles = env.void_probability(
+                trj, r_min, min_bound=min_bound
+            )
             if void_condition:
                 constrained_trajectories.append(trj)
-                distances.append(env.get_particle_centroids(particles=particles)[object_of_interest][0])
-        # choose the sufficient trajectory that results in the min distance to centroid 
+                distances.append(
+                    env.get_particle_centroids(particles=particles)[object_of_interest][
+                        0
+                    ]
+                )
+        # choose the sufficient trajectory that results in the min distance to centroid
         if distances:
             control_action = constrained_trajectories[np.argmin(distances)]
 
@@ -202,13 +230,12 @@ def get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, la
     return control_action, last_selected
 
 
-def main(config_path="lightweight_config.ini"): 
-
+def main(config_path="lightweight_config.ini"):
     n_simulations = 100
     max_iterations = 400
     reward_func = lambda *args, **kwargs: None
     config_path = config_path
-    
+
     r_min = 10
     horizon = 8
     min_bound = 0.82
@@ -261,16 +288,19 @@ def main(config_path="lightweight_config.ini"):
             power_tx=power_tx,
             directivity_tx=directivity_tx,
             freq=freq,
-            fading_sigma=fading_sigma
+            fading_sigma=fading_sigma,
         )
 
         # Action space
         actions = birdseye.actions.BaselineActions()
-        #actions.print_action_info()
+        # actions.print_action_info()
 
         # State managment
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, target_speed=target_speed, reward=reward_func, simulated=True
+            n_targets=n_targets,
+            target_speed=target_speed,
+            reward=reward_func,
+            simulated=True,
         )
 
         # Environment
@@ -280,29 +310,31 @@ def main(config_path="lightweight_config.ini"):
 
         belief = env.reset(num_particles=num_particles)
 
-        #planner = birdseye.planner.LightweightPlanner(env, actions)
+        # planner = birdseye.planner.LightweightPlanner(env, actions)
 
         last_selected = None
         control_actions = []
-        #for i in range(max_iterations): 
-        for i in trange(max_iterations, desc='Time steps'):
-            if i%horizon == 0:
+        # for i in range(max_iterations):
+        for i in trange(max_iterations, desc="Time steps"):
+            if i % horizon == 0:
                 if planner_method == "lightweight_simple":
-                    control_action = get_control_actions(env, min_std_dev, r_min, horizon, min_bound)
+                    control_action = get_control_actions(
+                        env, min_std_dev, r_min, horizon, min_bound
+                    )
                 else:
-                    control_action, last_selected = get_control_actions_improved(env, min_std_dev, r_min, horizon, min_bound, last_selected)
-                if control_action is None: 
-                    # all objects localized 
+                    control_action, last_selected = get_control_actions_improved(
+                        env, min_std_dev, r_min, horizon, min_bound, last_selected
+                    )
+                if control_action is None:
+                    # all objects localized
                     break
                 control_actions.extend(control_action)
             action = control_actions[i]
-            #print(f"{action=}")
+            # print(f"{action=}")
             (env_obs, reward, _, info) = env.step(action)
 
             if (local_plot == "true") or (make_gif == "true"):
-                results.live_plot(
-                    env=env, time_step=i, fig=fig, ax=ax, data={}
-                )
+                results.live_plot(env=env, time_step=i, fig=fig, ax=ax, data={})
 
             (
                 r_error,
@@ -329,16 +361,15 @@ def main(config_path="lightweight_config.ini"):
                 "heading_err": heading_error,
                 "centroid_distance_err": centroid_distance_error,
                 "rmse": rmse,
-                "mae": mae
+                "mae": mae,
             }
             results.data_to_json(data)
-            
+
         if make_gif == "true":
             results.save_gif("tracking")
 
         if (local_plot == "true") or (make_gif == "true"):
             plt.close(fig)
-                
 
         # print(f"{env.pf.particles.shape=}")
         # print(f"{env.get_particle_centroids(env.pf.particles)=}")
@@ -352,12 +383,12 @@ def main(config_path="lightweight_config.ini"):
         # print(f"{env.void_probability(trajectories[0], r_min)=}")
         # print(f"{control_action=}")
 
-    for i in trange(n_simulations, desc='Experiments'):
-    #for i in range(n_simulations): 
+    for i in trange(n_simulations, desc="Experiments"):
+        # for i in range(n_simulations):
         run_simulation()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str, default="lightweight_config.ini")
     args = parser.parse_args()

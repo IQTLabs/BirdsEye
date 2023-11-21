@@ -302,7 +302,10 @@ class SigScan:
 
         # State managment
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, reward=reward_func, simulated=False, particle_distance=particle_distance,
+            n_targets=n_targets,
+            reward=reward_func,
+            simulated=False,
+            particle_distance=particle_distance,
         )
 
         # Environment
@@ -360,7 +363,13 @@ class SigScan:
 
             plot_start = timer()
             results.live_plot(
-                env=env, time_step=time_step, fig=fig, ax=ax, data=self.data, sidebar=True, map_distance=particle_distance,
+                env=env,
+                time_step=time_step,
+                fig=fig,
+                ax=ax,
+                data=self.data,
+                sidebar=True,
+                map_distance=particle_distance,
             )
             plot_end = timer()
 

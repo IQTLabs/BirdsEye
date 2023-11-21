@@ -63,7 +63,6 @@ Offset = 148
 
 
 def get_rssi(tx_power, source_x, source_y, current_x, current_y):
-
     # calculate the distance from lat/lon coords in feet
     #
     # Note: one degree of latitude = approx. 364000 feet, one degree of longitude = approx. 288200 feet

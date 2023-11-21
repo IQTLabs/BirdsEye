@@ -1,9 +1,10 @@
 import json
 import logging
-import paho.mqtt.client 
+import paho.mqtt.client
 import sys
 
-class BirdsEyeMQTT():
+
+class BirdsEyeMQTT:
     def __init__(self, mqtt_host, mqtt_port, message_handler):
         try:
             self.client = paho.mqtt.client.Client()
@@ -13,7 +14,7 @@ class BirdsEyeMQTT():
             self.message_handler = message_handler
             self.client.connect(mqtt_host, mqtt_port, 60)
             self.client.loop_start()
-            
+
         except Exception as err:
             logging.error(
                 "Unable to connect to MQTT host %s:%s because: %s.",
@@ -23,7 +24,7 @@ class BirdsEyeMQTT():
             )
             sys.exit(1)
 
-    def on_message(self, client, userdata, json_message):  
+    def on_message(self, client, userdata, json_message):
         json_data = json.loads(json_message.payload)
         self.message_handler(json_data)
 
@@ -32,9 +33,7 @@ class BirdsEyeMQTT():
         logging.info(
             "Connected to %s with result code %s", sub_channel, str(result_code)
         )
-        self.client.subscribe(sub_channel) # also tried qos = 1 and 1
+        self.client.subscribe(sub_channel)  # also tried qos = 1 and 1
 
-    def on_publish(self, client, userdata, mid): 
-        logging.info(
-            "Completed transmission to broker."
-        )
+    def on_publish(self, client, userdata, mid):
+        logging.info("Completed transmission to broker.")

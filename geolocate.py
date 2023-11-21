@@ -23,9 +23,16 @@ import birdseye.utils
 from birdseye.planners.light_mcts import LightMCTS
 from birdseye.planners.lavapilot import LAVAPilot
 from birdseye.planners.repp import REPP
-from birdseye.utils import get_heading, get_distance, is_float, tracking_metrics_separable, targets_found
+from birdseye.utils import (
+    get_heading,
+    get_distance,
+    is_float,
+    tracking_metrics_separable,
+    targets_found,
+)
 
 ORCHESTRATOR = os.getenv("ORCHESTRATOR", "0.0.0.0")
+
 
 class GamutRFSensor(birdseye.sensor.SingleRSSISeparable):
     """
@@ -61,6 +68,7 @@ class GamutRFSensor(birdseye.sensor.SingleRSSISeparable):
             return [None]
         return [self.data["rssi"]]
 
+
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
@@ -95,7 +103,7 @@ class Geolocate:
         """
 
         logging.info(f"Received MQTT message: {message_data}")
-        if self.data["needs_processing"]: 
+        if self.data["needs_processing"]:
             logging.debug("\nReceived multiple data in one step!\n")
         if self.static_position:
             message_data["position"] = self.static_position
@@ -116,13 +124,13 @@ class Geolocate:
         self.data["rssi"] = message_data.get("rssi", None)
         self.data["position"] = message_data.get("position", self.data["position"])
 
-        # course is direction of movement 
+        # course is direction of movement
         self.data["course"] = get_heading(
             self.data["previous_position"], self.data["position"]
         )
 
-        # heading is antenna facing direction 
-        # mavlink heading is yaw relative to North 
+        # heading is antenna facing direction
+        # mavlink heading is yaw relative to North
         self.data["heading"] = (
             -float(message_data.get("heading", None)) + 90
             if is_float(message_data.get("heading", None))
@@ -151,17 +159,16 @@ class Geolocate:
 
         self.data["needs_processing"] = True
 
-    
     def run_flask(self, flask_host, flask_port, fig, results):
         """
         Flask
         """
         app = Flask(__name__)
-        
+
         @app.route("/")
         def index():
             flask_start_time = timer()
-            
+
             if not self.image_buf.getbuffer().nbytes:
                 return render_template("loading.html")
 
@@ -172,7 +179,9 @@ class Geolocate:
             logging.debug("=======================================")
             logging.debug("Flask Timing")
             logging.debug("time step = %s", str(results.time_step))
-            logging.debug("buffer size = {:.2f} MB".format(len(self.image_buf.getbuffer()) / 1e6))
+            logging.debug(
+                "buffer size = {:.2f} MB".format(len(self.image_buf.getbuffer()) / 1e6)
+            )
             logging.debug(
                 "Duration = {:.4f} s".format(flask_end_time - flask_start_time)
             )
@@ -192,24 +201,24 @@ class Geolocate:
         """
         Main loop
         """
-        
-        #### CONFIGS 
-        default_config = ({
-            "local_plot": "false", 
+
+        #### CONFIGS
+        default_config = {
+            "local_plot": "false",
             "make_gif": "false",
-            "n_targets": "2", 
-            "antenna_type": "logp", 
+            "n_targets": "2",
+            "antenna_type": "logp",
             "planner_method": "repp",
-            "target_speed": "0.5", 
-            "sensor_speed": "1.0", 
-            "power_tx": "26.0", 
+            "target_speed": "0.5",
+            "sensor_speed": "1.0",
+            "power_tx": "26.0",
             "directivity_tx": "1.0",
             "freq": "5.7e9",
             "fading_sigma": "8.0",
             "threshold": "-120",
             "mcts_depth": "3",
             "mcts_c": "20.0",
-            "mcts_simulations": "100", 
+            "mcts_simulations": "100",
             "mcts_n_downsample": "400",
             "static_position": None,
             "static_heading": None,
@@ -219,8 +228,7 @@ class Geolocate:
             "flask_host": "0.0.0.0",
             "flask_port": "4999",
             "use_flask": "false",
-
-        })
+        }
         default_config.update(self.config)
         self.config = default_config
 
@@ -233,7 +241,6 @@ class Geolocate:
         if self.static_heading:
             self.static_heading = float(self.static_heading)
             self.data["heading"] = self.static_heading
-        
 
         replay_file = self.config["replay_file"]
 
@@ -251,19 +258,25 @@ class Geolocate:
         sensor_speed = float(self.config["sensor_speed"])
         target_speed = float(self.config["target_speed"])
 
-        if len(self.config["power_tx"].split(",")) == 1: 
-            self.config["power_tx"] = ",".join([self.config["power_tx"] for _ in range(n_targets)])
+        if len(self.config["power_tx"].split(",")) == 1:
+            self.config["power_tx"] = ",".join(
+                [self.config["power_tx"] for _ in range(n_targets)]
+            )
         power_tx = [float(x) for x in self.config["power_tx"].split(",")]
-        if len(self.config["directivity_tx"].split(",")) == 1: 
-            self.config["directivity_tx"] = ",".join([self.config["directivity_tx"] for _ in range(n_targets)])
+        if len(self.config["directivity_tx"].split(",")) == 1:
+            self.config["directivity_tx"] = ",".join(
+                [self.config["directivity_tx"] for _ in range(n_targets)]
+            )
         directivity_tx = [float(x) for x in self.config["directivity_tx"].split(",")]
-        if len(self.config["freq"].split(",")) == 1: 
-            self.config["freq"] = ",".join([self.config["freq"] for _ in range(n_targets)])
+        if len(self.config["freq"].split(",")) == 1:
+            self.config["freq"] = ",".join(
+                [self.config["freq"] for _ in range(n_targets)]
+            )
         freq = [float(x) for x in self.config["freq"].split(",")]
 
         fading_sigma = float(self.config["fading_sigma"])
         threshold = float(self.config["threshold"])
-        
+
         particle_distance = float(self.config["particle_distance"])
 
         local_plot = self.config["local_plot"].lower()
@@ -271,14 +284,15 @@ class Geolocate:
         use_flask = self.config["use_flask"].lower()
         if (local_plot == "true") or (make_gif == "true") or (use_flask == "true"):
             any_plot = True
-        else: 
+        else:
             any_plot = False
         ##########
 
-
-        ###### MQTT or replay from file 
+        ###### MQTT or replay from file
         if replay_file is None:
-            mqtt_client = birdseye.mqtt.BirdsEyeMQTT(mqtt_host, mqtt_port, self.data_handler)
+            mqtt_client = birdseye.mqtt.BirdsEyeMQTT(
+                mqtt_host, mqtt_port, self.data_handler
+            )
         else:
             with open(replay_file, "r", encoding="UTF-8") as open_file:
                 replay_data = json.load(open_file)
@@ -289,14 +303,14 @@ class Geolocate:
         global_start_time = datetime.utcnow().timestamp()
         n_simulations = 100
         max_iterations = 400
-        reward_func = lambda pf: pf.weight_entropy #lambda *args, **kwargs: None    
+        reward_func = lambda pf: pf.weight_entropy  # lambda *args, **kwargs: None
         r_min = 10
-        horizon = 1#8
+        horizon = 1  # 8
         min_bound = 0.82
         min_std_dev = 35
-        num_particles = 3000#3000
+        num_particles = 3000  # 3000
         step_duration = 1
-  
+
         results = birdseye.utils.Results(
             experiment_name=self.config_path,
             global_start_time=global_start_time,
@@ -320,44 +334,52 @@ class Geolocate:
         )  # fading sigm = 8dB, threshold = -120dB
 
         # Action space
-        #actions = WalkingActions()
+        # actions = WalkingActions()
         actions = birdseye.actions.BaselineActions(sensor_speed=sensor_speed)
         actions.print_action_info()
 
         # State managment
         state = birdseye.state.RFMultiState(
-            n_targets=n_targets, 
-            target_speed=target_speed, 
-            sensor_speed=sensor_speed, 
-            reward=reward_func, 
+            n_targets=n_targets,
+            target_speed=target_speed,
+            sensor_speed=sensor_speed,
+            reward=reward_func,
             simulated=False,
         )
 
         # Environment
         env = birdseye.env.RFMultiSeparableEnv(
-            sensor=sensor, 
-            actions=actions, 
-            state=state, 
-            simulated=False, 
-            num_particles=num_particles
+            sensor=sensor,
+            actions=actions,
+            state=state,
+            simulated=False,
+            num_particles=num_particles,
         )
 
         belief = env.reset()
-        
+
         # Motion planner
         if self.config.get("use_planner", "false").lower() != "true":
             planner = None
-        else: 
+        else:
             target_selections = {t for t in range(n_targets)}
-            if planner_method == "repp": # REPP
-                planner = REPP(env, min_std_dev, r_min, horizon, min_bound, target_selections)
-            elif planner_method == "lavapilot": # LAVAPilot
+            if planner_method == "repp":  # REPP
+                planner = REPP(
+                    env, min_std_dev, r_min, horizon, min_bound, target_selections
+                )
+            elif planner_method == "lavapilot":  # LAVAPilot
                 planner = LAVAPilot(env, min_std_dev, r_min, horizon, min_bound)
-            elif planner_method == "mcts": # MCTS
-                planner = LightMCTS(env, depth=depth, c=c, simulations=mcts_simulations, n_downsample=n_downsample)
-            else: 
+            elif planner_method == "mcts":  # MCTS
+                planner = LightMCTS(
+                    env,
+                    depth=depth,
+                    c=c,
+                    simulations=mcts_simulations,
+                    n_downsample=n_downsample,
+                )
+            else:
                 raise Exception
-        
+
         if use_flask == "true":
             matplotlib.use("agg")
         if any_plot:
@@ -365,28 +387,26 @@ class Geolocate:
             ax = fig.subplots()
             fig.set_tight_layout(True)
             plt.show(block=False)
-    
+
         self.image_buf = BytesIO()
         if use_flask == "true":
             self.run_flask(flask_host, flask_port, fig, results)
-           
-            
+
         ##############
         # Main loop
         ##############
         time_step = 0
         control_actions = []
         step_time = 0
- 
-        while self.data["position"] is None or self.data["heading"] is None: 
+
+        while self.data["position"] is None or self.data["heading"] is None:
             time.sleep(1)
             logging.info("Waiting for GPS...")
 
         while True:
-
             loop_start = timer()
             self.data["utc_time"] = datetime.utcnow().timestamp()
-            
+
             if replay_file:
                 # load data from saved file
                 if time_step == len(replay_ts):
@@ -395,21 +415,19 @@ class Geolocate:
 
             action_start = timer()
 
-            if planner: 
-                if time_step%horizon == 0:
-                    
-                    if targets_found(env, min_std_dev): 
-                        # all objects localized 
+            if planner:
+                if time_step % horizon == 0:
+                    if targets_found(env, min_std_dev):
+                        # all objects localized
                         control_action = [None]
-                        
-                    else: 
-                        
+
+                    else:
                         plan_start_time = timer()
                         control_action = planner.get_action()
                         plan_end_time = timer()
 
                     control_actions.extend(control_action)
-                #logging.info(f"{control_actions[-1]=}")
+                # logging.info(f"{control_actions[-1]=}")
                 action = control_actions[time_step]
 
                 self.data["action_proposal"] = action
@@ -418,25 +436,25 @@ class Geolocate:
 
             step_start = timer()
 
-            while time.perf_counter() - step_time < step_duration: 
+            while time.perf_counter() - step_time < step_duration:
                 pass
             step_time = time.perf_counter()
-            observation = env.real_step(self.data) 
+            observation = env.real_step(self.data)
             step_end = timer()
 
             plot_start = timer()
             if any_plot:
                 results.live_plot(
-                    env=env, 
-                    time_step=time_step, 
-                    fig=fig, 
-                    ax=ax, 
-                    data=self.data, 
+                    env=env,
+                    time_step=time_step,
+                    fig=fig,
+                    ax=ax,
+                    data=self.data,
                     sidebar=False,
-                    separable=True, 
+                    separable=True,
                     map_distance=particle_distance,
                 )
-                # safe image buf 
+                # safe image buf
                 tmp_buf = BytesIO()
                 fig.savefig(tmp_buf, format="png", bbox_inches="tight")
                 self.image_buf = tmp_buf
@@ -488,12 +506,12 @@ class Geolocate:
 if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser()
     parser.add_argument("config_path")
-    parser.add_argument('--log', default="INFO")
+    parser.add_argument("--log", default="INFO")
     args = parser.parse_args()
 
     numeric_level = getattr(logging, args.log.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
+        raise ValueError("Invalid log level: %s" % loglevel)
     logging.basicConfig(level=numeric_level, format="[%(asctime)s] %(message)s")
     logging.getLogger("matplotlib.font_manager").disabled = True
 

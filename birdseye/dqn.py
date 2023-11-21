@@ -316,7 +316,6 @@ def run_dqn(env, config, global_start_time):
 
 
 def evaluate(env, qnet, max_episode_length, device, ob_scale, results, trials=500):
-
     trials = trials
     run_data = []
     for i in range(trials):
