@@ -881,7 +881,9 @@ class RFMultiEnv:
             )
 
         return np.array(std_dev)
-
+    
+    def get_all_particles(self):
+        return np.array(self.pf.particles)
 
 class RFEnv:
     def __init__(self, sensor=None, actions=None, state=None, simulated=False):

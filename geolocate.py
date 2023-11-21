@@ -370,12 +370,16 @@ class Geolocate:
             elif planner_method == "lavapilot":  # LAVAPilot
                 planner = LAVAPilot(env, min_std_dev, r_min, horizon, min_bound)
             elif planner_method == "mcts":  # MCTS
+                mcts_depth = int(self.config["mcts_depth"])
+                mcts_c = float(self.config["mcts_c"])
+                mcts_simulations = int(self.config["mcts_simulations"])
+                mcts_n_downsample = int(self.config["mcts_n_downsample"])
                 planner = LightMCTS(
                     env,
-                    depth=depth,
-                    c=c,
+                    depth=mcts_depth,
+                    c=mcts_c,
                     simulations=mcts_simulations,
-                    n_downsample=n_downsample,
+                    n_downsample=mcts_n_downsample,
                 )
             else:
                 raise Exception
@@ -511,7 +515,7 @@ if __name__ == "__main__":  # pragma: no cover
 
     numeric_level = getattr(logging, args.log.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % loglevel)
+        raise ValueError("Invalid log level: %s" % args.log)
     logging.basicConfig(level=numeric_level, format="[%(asctime)s] %(message)s")
     logging.getLogger("matplotlib.font_manager").disabled = True
 

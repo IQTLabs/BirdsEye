@@ -27,6 +27,7 @@ pylint = "^3.0.0"
 pytype = "^2023.9.11"
 pytest = "^7.4.2"
 pytest-cov = "^4.1.0"
+torch = ">=2.0.0, !=2.0.1"
 
 [build-system]
 requires = ["poetry-core"]
