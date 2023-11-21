@@ -323,6 +323,7 @@ class RFMultiState(State):
         State (array_like)
             Updated state values array
         """
+        state = np.atleast_2d(state)
         total_start = timer()
         # Get current state vars
         start = timer()
