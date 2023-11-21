@@ -799,7 +799,7 @@ class Results:
             print(f"Target distance & heading = {target_distance},{target_relative_heading}")
             print(f"{self.expected_target_rssi=}")
             self.expected_target_rssi = env.sensor.observation(
-                [[target_distance, target_relative_heading, None, None]]
+                [target_distance, target_relative_heading, None, None], 0
             )[0]
 
         ax.clear()
@@ -909,8 +909,7 @@ class Results:
                 lines.extend([])
 
         # PLOT SENSOR 
-        if self.openstreetmap and data.get("position", None) is not None:
-            #print(f"{data['position']=}")
+        if self.openstreetmap and data["position"] is not None:# and not data["needs_processing"]:
             self.sensor_gps_hist.append(
                 self.openstreetmap.scale_to_img(
                     data["position"],
@@ -949,7 +948,7 @@ class Results:
                 sensor_y[-1],
                 "p",
                 color="green",
-                label="Sensor",
+                label="SensorGPS",
                 markersize=10,
                 zorder=4,
             )
@@ -1082,7 +1081,13 @@ class Results:
             mpatches.Patch(
                 facecolor="rebeccapurple", 
                 edgecolor="black",
-                label="Sensor")
+                label="Sensor"
+            ),
+            mpatches.Patch(
+                facecolor="green", 
+                edgecolor="black",
+                label="SensorGPS"
+            ),
         ]
         
         # ax.legend(
@@ -1156,7 +1161,7 @@ class Results:
                 f"Speed = {proposal_speed_str}"
             )
 
-            rssi_observed_str = f"{env.last_observation:.0f} dB" if env.last_observation else f"unknown"
+            rssi_observed_str = f"{env.last_observation} dB" if env.last_observation else f"unknown"
             rssi_expected_str = f"{self.expected_target_rssi:.0f} dB" if self.expected_target_rssi else f"unknown"
             rssi_difference_str = f"Difference = {env.last_observation - self.expected_target_rssi:.0f} dB\n" if (env.last_observation and self.expected_target_rssi) else ""
             rssi_mean_str = f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f} dB" if self.pf_stats["mean_hypothesis"][-1][0] else f"unknown"
@@ -1248,7 +1253,9 @@ class Results:
         self.native_plot = "true" if time_step % self.plot_every_n == 0 else "false"
         if self.native_plot == "true":
             plt.draw()
-            plt.pause(0.001)
+            #plt.pause(0.001)
+            fig.canvas.start_event_loop(0.001)
+            fig.canvas.draw_idle()
         if self.make_gif == "true":
             png_filename = os.path.join(self.plot_dir, "png", f"{time_step}.png")
             print(f"saving plots in {png_filename}")

@@ -4,7 +4,7 @@ from pfilter import systematic_resample
 from scipy.ndimage.filters import gaussian_filter
 from timeit import default_timer as timer
 
-from .pfrnn.pfrnn import pfrnn
+#from .pfrnn.pfrnn import pfrnn
 from .utils import particle_swap
 from .utils import particles_mean_belief
 from .utils import pol2cart
@@ -48,18 +48,19 @@ class RFMultiSeparableEnv:
         assert n_states == self.state.state_dim
 
         updated_particles = []
-
-        # for p in range(n_particles):
-        #     updated_particles.append(
-        #         self.state.update_state(
-        #             particles[p],
-        #             control=control,
-        #             distance=distance,
-        #             course=course,
-        #             heading=heading,
-        #         )
-        #     )
-        updated_particles2 = self.state.update_state_vectorized(particles, control=control)
+        if not self.simulated:
+            for p in range(n_particles):
+                updated_particles.append(
+                    self.state.update_state(
+                        particles[p],
+                        control=control,
+                        distance=distance,
+                        course=course,
+                        heading=heading,
+                    )
+                )
+        else: 
+            updated_particles = self.state.update_state_vectorized(particles, control=control)
         # if not np.allclose(updated_particles, updated_particles2): 
         # #if not np.all(updated_particles==updated_particles2): 
         #     print(f"{updated_particles=}")
@@ -67,7 +68,7 @@ class RFMultiSeparableEnv:
         #     print(updated_particles==updated_particles2)
         end = timer() 
         #print(f"dynamics: {end-start}")
-        return np.array(updated_particles2)
+        return np.array(updated_particles)
 
         
 
@@ -202,31 +203,46 @@ class RFMultiSeparableEnv:
     def real_step(self, data):
         # action = data['action_taken'] if data.get('action_taken', None) else (0,0)
 
+        if not data["needs_processing"]: 
+            data["distance"] = None
+            data["course"] = None
+
+        distance = data["distance"]
+        course = data["course"]
+        heading = data["heading"]
+        data["needs_processing"] = False
+
         # Update position of sensor
         self.state.update_real_sensor(
-            data.get("distance", None),
-            data.get("course", None),
-            data.get("heading", None),
+            distance,
+            course,
+            heading,
+            #data.get("distance", None),
+            #data.get("course", None),
+            #data.get("heading", None),
         )
 
         # Get sensor observation
         observation = self.sensor.real_observation()
-        observation = np.array(observation) if observation is not None else None
+        observation = np.array(observation) #if observation is not None else None
 
         # Update particle filter
         for t in range(self.state.n_targets):
             self.pf[t].update(
                 observation[t],
                 xp=self.pf[t].particles,
-                distance=data.get("distance", None),
-                course=data.get("course", None),
-                heading=data.get("heading", None),
+                distance=distance,
+                course=course,
+                heading=heading,
+                # distance=data.get("distance", None),
+                # course=data.get("course", None),
+                # heading=data.get("heading", None),
             )
         # particle_swap(self)
 
         # Calculate reward based on updated state & action
         control_heading = (
-            data["heading"] if data.get("heading", None) else self.state.sensor_state[2]
+            heading if heading is not None else self.state.sensor_state[2]
         )
         control_delta_heading = (control_heading - self.state.sensor_state[2]) % 360
         # reward = self.state.reward_func(
@@ -241,7 +257,8 @@ class RFMultiSeparableEnv:
 
         self.last_observation = observation
 
-        return (belief_obs, reward, observation)
+        #return (belief_obs, reward, observation)
+        return observation
 
     def void_probability(self, actions, r_min, min_bound=0.8):
 

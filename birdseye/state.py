@@ -527,7 +527,7 @@ class RFMultiState(State):
 
         r, theta_deg, prev_heading, spd = self.sensor_state
         heading = heading if heading else prev_heading
-
+        
         if distance and course:
             spd = distance
             crs = course % 360

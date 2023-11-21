@@ -18,8 +18,8 @@ pandas = "2.1.1"
 pfilter = "0.2.5"
 requests = "2.31.0"
 scipy = "1.11.3"
-torch = ">=2.0.0, !=2.0.1"
 tqdm = "4.66.1"
+seaborn = "^0.13.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -1,0 +1,13 @@
+version: "3.3"
+networks:
+  gamutrf:
+services:
+  geolocate:
+    restart: always
+    image: iqtlabs/birdseye:latest
+    networks:
+      - gamutrf
+    ports:
+      - '4999:4999'
+    environment:
+      - 'ORCHESTRATOR=${ORCHESTRATOR}'

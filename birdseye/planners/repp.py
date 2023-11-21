@@ -1,3 +1,4 @@
+import logging
 import numpy as np 
 from scipy.spatial import distance
 
@@ -41,8 +42,13 @@ class REPP:
         #for i in target_selections_not_found: 
         #for i in range(env.state.n_targets):
         for i in self.target_selections:
-            mean_other_centroids = [np.mean(np.delete(centroids,i,axis=0), axis=0)]
+            if self.env.state.n_targets > 1: 
+                mean_other_centroids = [np.mean(np.delete(centroids,i,axis=0), axis=0)]
+            else: 
+                mean_other_centroids = [np.array([0,0])]
+
             target_proposals = circ_tangents([0,0], self.env.get_particle_centroids()[i], self.r_min)
+
             # for p in proposals: 
             #     print(f"{p=}")
             #     print(f"{mean_other_centroids[0]=}")
@@ -80,7 +86,7 @@ class REPP:
 
         # if no optimal trajectory meets void constraint 
         if control_action is None:
-            print('no optimal control')
+            logging.info("Path planner (REPP): No optimal path could be calculated. Choosing from defaults.")
             # create trajectories from default controls 
             trajectories = []
             for c in default_controls:
@@ -102,7 +108,7 @@ class REPP:
                 control_action = constrained_trajectories[np.argmin(distances)]
 
         if control_action is None:
-            print(f"Error: No path satisfies void constraints. Choosing random path.")
+            logging.info(f"Path planner (REPP): No path satisfies void constraints. Choosing random path.")
             control_action = trajectories[np.random.randint(len(default_controls))]
             
         return control_action

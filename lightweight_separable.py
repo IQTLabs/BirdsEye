@@ -51,12 +51,13 @@ def main(config=None, config_path=None):
     })
     assert config is None or config_path is None, "config and config_path cannot both be defined"
 
-    if config is None and config_path: 
+    if config_path: 
         config = configparser.ConfigParser()
         config.read(config_path)
         config = config["lightweight"]
-
-    config = default_config | config
+    elif config is None: 
+        config = default_config 
+        
     local_plot = config.get("native_plot", default_config["native_plot"]).lower()
     make_gif = config.get("make_gif", default_config["make_gif"]).lower()
     n_targets = int(config.get("n_targets", default_config["n_targets"]))
