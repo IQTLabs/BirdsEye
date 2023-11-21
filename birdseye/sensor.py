@@ -247,9 +247,12 @@ class SingleRSSISeparable(Sensor):
         n_targets=2,
         fading_sigma=None,
     ):
-        assert n_targets == len(power_tx)
-        assert n_targets == len(directivity_tx)
-        assert n_targets == len(freq)
+        if n_targets != len(power_tx):
+            raise ValueError("len(power_tx) must equal n_targets")
+        if n_targets != len(directivity_tx):
+            raise ValueError("len(directivity_tx) must equal n_targets")
+        if n_targets != len(freq):
+            raise ValueError("len(freq) must equal n_targets")
 
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename

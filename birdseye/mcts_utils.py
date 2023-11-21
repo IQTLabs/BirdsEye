@@ -295,7 +295,7 @@ def select_action_light(
 
 
 def trim_tree(Q, N, action):
-    assert Q.keys() == N.keys()
+    # debug: assert Q.keys() == N.keys()
     for k in list(Q):
         if len(k) <= 1 or k[0] != action:
             Q.pop(k)

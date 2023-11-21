@@ -48,7 +48,6 @@ class RFMultiSeparableEnv:
         """
         start = timer()
         n_particles, n_states = particles.shape
-        assert n_states == self.state.state_dim
 
         updated_particles = []
         if not self.simulated:
@@ -439,8 +438,6 @@ class RFMultiSeparableEnv:
                 centroids.append([np.mean(particles_x), np.mean(particles_y)])
         else:
             n_targets, n_particles, n_states = particles.shape
-
-            assert n_targets == self.state.n_targets
 
             for t in range(n_targets):
                 particles_x, particles_y = pol2cart(

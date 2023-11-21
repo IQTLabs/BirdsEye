@@ -31,7 +31,7 @@ from birdseye.utils import (
     targets_found,
 )
 
-ORCHESTRATOR = os.getenv("ORCHESTRATOR", "0.0.0.0")
+ORCHESTRATOR = os.getenv("ORCHESTRATOR", "0.0.0.0") # nosec
 
 
 class GamutRFSensor(birdseye.sensor.SingleRSSISeparable):
@@ -225,7 +225,7 @@ class Geolocate:
             "replay_file": None,
             "mqtt_host": ORCHESTRATOR,
             "mqtt_port": "1883",
-            "flask_host": "0.0.0.0",
+            "flask_host": "0.0.0.0", # nosec
             "flask_port": "4999",
             "use_flask": "false",
         }

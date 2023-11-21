@@ -49,9 +49,8 @@ def main(config=None, config_path=None):
         "mcts_simulations": "100",
         "mcts_n_downsample": "400",
     }
-    assert (
-        config is None or config_path is None
-    ), "config and config_path cannot both be defined"
+    if (config and config_path):
+        raise ValueError("config and config_path cannot both be defined")
 
     if config_path:
         config = configparser.ConfigParser()
