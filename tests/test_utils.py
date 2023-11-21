@@ -26,7 +26,7 @@ def test_results():
     """
     instance = Results(plotting="false")
     instance = Results(
-        method_name="dqn", global_start_time="1656695290", plotting="True"
+        experiment_name="dqn", global_start_time="1656695290", plotting="True"
     )
 
     data = {

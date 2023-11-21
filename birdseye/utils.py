@@ -683,6 +683,8 @@ class Results:
                 self.plotting = True
             else:
                 self.plotting = False
+        if type(config) != dict: 
+            config = vars(config)
         self.native_plot = config.get("native_plot", "false").lower()
         self.plot_every_n = int(config.get("plot_every_n", 1))
         self.make_gif = config.get("make_gif", "false").lower()

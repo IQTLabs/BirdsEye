@@ -379,6 +379,7 @@ class SingleRSSI(Sensor):
         if fading_sigma is None:
             fading_sigma = self.fading_sigma
         # Calculate observation for multiple targets
+        state = np.atleast_2d(np.array(state))
         power_front = 0
         for ts in state:  # target_state, particle_state
             distance = ts[0]
