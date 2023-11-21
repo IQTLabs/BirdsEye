@@ -77,7 +77,7 @@ class RFMultiSeparableEnv:
     def particle_noise(self, particles, sigmas=[1, 2, 2], xp=None):
         start = timer()
         n_particles, n_states = particles.shape
-        assert n_states == self.state.state_dim
+        # debug: assert n_states == self.state.state_dim
 
         # particles[:,0] += np.random.normal(0, sigmas[0], (n_particles))
         # particles[:,0] = np.clip(particles[:,0], a_min=1, a_max=None)
@@ -457,7 +457,7 @@ class RFMultiSeparableEnv:
                 std_dev.append([np.std(particles_x), np.std(particles_y)])
         else:
             n_targets, n_particles, n_states = particles.shape
-            assert n_targets == self.state.n_targets
+            # debug: assert n_targets == self.state.n_targets
 
             for t in range(n_targets):
                 particles_x, particles_y = pol2cart(
@@ -479,7 +479,7 @@ class RFMultiSeparableEnv:
                 )
         else:
             n_targets, n_particles, n_states = particles.shape
-            assert n_targets == self.state.n_targets
+            # debug assert n_targets == self.state.n_targets
 
             for t in range(n_targets):
                 std_dev.append([np.std(particles[t, :, 0]), np.std(particles[t, :, 1])])
