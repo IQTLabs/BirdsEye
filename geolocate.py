@@ -258,21 +258,20 @@ class Geolocate:
         sensor_speed = float(self.config["sensor_speed"])
         target_speed = float(self.config["target_speed"])
 
-        if len(self.config["power_tx"].split(",")) == 1:
-            self.config["power_tx"] = ",".join(
-                [self.config["power_tx"] for _ in range(n_targets)]
-            )
-        power_tx = [float(x) for x in self.config["power_tx"].split(",")]
-        if len(self.config["directivity_tx"].split(",")) == 1:
-            self.config["directivity_tx"] = ",".join(
-                [self.config["directivity_tx"] for _ in range(n_targets)]
-            )
-        directivity_tx = [float(x) for x in self.config["directivity_tx"].split(",")]
-        if len(self.config["freq"].split(",")) == 1:
-            self.config["freq"] = ",".join(
-                [self.config["freq"] for _ in range(n_targets)]
-            )
-        freq = [float(x) for x in self.config["freq"].split(",")]
+        power_tx = self.config["power_tx"]
+        power_tx = [float(x) for x in power_tx.split(",")]
+        if len(power_tx) == 1:
+            power_tx = [power_tx[0] for _ in range(n_targets)]
+        
+        directivity_tx = self.config["directivity_tx"]
+        directivity_tx = [float(x) for x in directivity_tx.split(",")]
+        if len(directivity_tx) == 1:
+            directivity_tx = [directivity_tx[0] for _ in range(n_targets)]
+        
+        freq = self.config["freq"]
+        freq = [float(x) for x in freq.split(",")]
+        if len(freq) == 1:
+            freq = [freq[0] for _ in range(n_targets)]
 
         fading_sigma = float(self.config["fading_sigma"])
         threshold = float(self.config["threshold"])

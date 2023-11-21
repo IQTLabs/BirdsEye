@@ -55,7 +55,7 @@ def run_mcts(
 
     # Results instance for saving results to file
     results = Results(
-        method_name="mcts",
+        experiment_name="mcts",
         global_start_time=global_start_time,
         num_iters=num_runs,
         plotting=plotting,

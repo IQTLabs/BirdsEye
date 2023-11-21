@@ -67,33 +67,22 @@ def main(config=None, config_path=None):
     experiment_name = config.get("experiment_name", planner_method)
     target_speed = float(config.get("target_speed", default_config["target_speed"]))
     sensor_speed = float(config.get("sensor_speed", default_config["sensor_speed"]))
-    if len(config.get("power_tx").split(",")) == 1:
-        config["power_tx"] = ",".join([config["power_tx"] for _ in range(n_targets)])
-    power_tx = [
-        float(x)
-        for x in config.get(
-            "power_tx", ",".join(default_config["power_tx"] for _ in range(n_targets))
-        ).split(",")
-    ]
-    if len(config.get("directivity_tx").split(",")) == 1:
-        config["directivity_tx"] = ",".join(
-            [config["directivity_tx"] for _ in range(n_targets)]
-        )
-    directivity_tx = [
-        float(x)
-        for x in config.get(
-            "directivity_tx",
-            ",".join(default_config["directivity_tx"] for _ in range(n_targets)),
-        ).split(",")
-    ]
-    if len(config.get("freq").split(",")) == 1:
-        config["freq"] = ",".join([config["freq"] for _ in range(n_targets)])
-    freq = [
-        float(x)
-        for x in config.get(
-            "freq", ",".join(default_config["freq"] for _ in range(n_targets))
-        ).split(",")
-    ]
+    
+    power_tx = config.get("power_tx", default_config["power_tx"])
+    power_tx = [float(x) for x in power_tx.split(",")]
+    if len(power_tx) == 1:
+        power_tx = [power_tx[0] for _ in range(n_targets)]
+    
+    directivity_tx = config.get("directivity_tx", default_config["directivity_tx"])
+    directivity_tx = [float(x) for x in directivity_tx.split(",")]
+    if len(directivity_tx) == 1:
+        directivity_tx = [directivity_tx[0] for _ in range(n_targets)]
+    
+    freq = config.get("freq", default_config["freq"])
+    freq = [float(x) for x in freq.split(",")]
+    if len(freq) == 1:
+        freq = [freq[0] for _ in range(n_targets)]
+   
     fading_sigma = float(config.get("fading_sigma", default_config["fading_sigma"]))
     threshold = float(config.get("threshold", default_config["threshold"]))
     depth = int(config.get("depth", default_config["mcts_depth"]))

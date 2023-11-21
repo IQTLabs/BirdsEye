@@ -220,7 +220,7 @@ def run_baseline(env, config=None, global_start_time=None):
 
     # Results instance for saving results to file
     results = Results(
-        method_name="baseline",
+        experiment_name="baseline",
         global_start_time=global_start_time,
         num_iters=num_trials,
         plotting=plotting,

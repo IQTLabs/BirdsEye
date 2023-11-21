@@ -156,7 +156,7 @@ def run_dqn(env, config, global_start_time):
 
     # Results instance for saving results to file
     results = Results(
-        method_name="dqn",
+        experiment_name="dqn",
         global_start_time=global_start_time,
         num_iters=number_timesteps,
         plotting=plotting,
