@@ -197,7 +197,7 @@ class DoubleRSSILofi(Sensor):
         return likelihood
 
     # samples observation given state
-    def observation(self, state):
+    def observation(self, state, **kwargs):
         # Calculate observation for multiple targets
         power_front = 0
         power_back = 0

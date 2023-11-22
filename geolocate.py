@@ -31,7 +31,7 @@ from birdseye.utils import (
     targets_found,
 )
 
-ORCHESTRATOR = os.getenv("ORCHESTRATOR", "0.0.0.0") # nosec
+ORCHESTRATOR = os.getenv("ORCHESTRATOR", "0.0.0.0")  # nosec
 
 
 class GamutRFSensor(birdseye.sensor.SingleRSSISeparable):
@@ -225,7 +225,7 @@ class Geolocate:
             "replay_file": None,
             "mqtt_host": ORCHESTRATOR,
             "mqtt_port": "1883",
-            "flask_host": "0.0.0.0", # nosec
+            "flask_host": "0.0.0.0",  # nosec
             "flask_port": "4999",
             "use_flask": "false",
         }
@@ -262,12 +262,12 @@ class Geolocate:
         power_tx = [float(x) for x in power_tx.split(",")]
         if len(power_tx) == 1:
             power_tx = [power_tx[0] for _ in range(n_targets)]
-        
+
         directivity_tx = self.config["directivity_tx"]
         directivity_tx = [float(x) for x in directivity_tx.split(",")]
         if len(directivity_tx) == 1:
             directivity_tx = [directivity_tx[0] for _ in range(n_targets)]
-        
+
         freq = self.config["freq"]
         freq = [float(x) for x in freq.split(",")]
         if len(freq) == 1:
@@ -302,7 +302,9 @@ class Geolocate:
         global_start_time = datetime.utcnow().timestamp()
         n_simulations = 100
         max_iterations = 400
-        reward_func = lambda pf: pf.weight_entropy  # lambda *args, **kwargs: None
+        reward_func = (
+            lambda pf, **kwargs: pf.weight_entropy
+        )  # lambda *args, **kwargs: None
         r_min = 10
         horizon = 1  # 8
         min_bound = 0.82

@@ -49,7 +49,7 @@ def main(config=None, config_path=None):
         "mcts_simulations": "100",
         "mcts_n_downsample": "400",
     }
-    if (config and config_path):
+    if config and config_path:
         raise ValueError("config and config_path cannot both be defined")
 
     if config_path:
@@ -67,22 +67,22 @@ def main(config=None, config_path=None):
     experiment_name = config.get("experiment_name", planner_method)
     target_speed = float(config.get("target_speed", default_config["target_speed"]))
     sensor_speed = float(config.get("sensor_speed", default_config["sensor_speed"]))
-    
+
     power_tx = config.get("power_tx", default_config["power_tx"])
     power_tx = [float(x) for x in power_tx.split(",")]
     if len(power_tx) == 1:
         power_tx = [power_tx[0] for _ in range(n_targets)]
-    
+
     directivity_tx = config.get("directivity_tx", default_config["directivity_tx"])
     directivity_tx = [float(x) for x in directivity_tx.split(",")]
     if len(directivity_tx) == 1:
         directivity_tx = [directivity_tx[0] for _ in range(n_targets)]
-    
+
     freq = config.get("freq", default_config["freq"])
     freq = [float(x) for x in freq.split(",")]
     if len(freq) == 1:
         freq = [freq[0] for _ in range(n_targets)]
-   
+
     fading_sigma = float(config.get("fading_sigma", default_config["fading_sigma"]))
     threshold = float(config.get("threshold", default_config["threshold"]))
     depth = int(config.get("depth", default_config["mcts_depth"]))

@@ -684,7 +684,7 @@ class Results:
                 self.plotting = True
             else:
                 self.plotting = False
-        if type(config) == argparse.Namespace: 
+        if type(config) == argparse.Namespace:
             config = vars(config)
         self.native_plot = config.get("native_plot", "false").lower()
         self.plot_every_n = int(config.get("plot_every_n", 1))

@@ -178,6 +178,7 @@ class RFMultiState(State):
         particles=None,
         action_penalty=-1.0,
         delta=20,
+        **kwargs,
     ):
         """Function to calculate reward based on state and selected action
 
@@ -223,7 +224,13 @@ class RFMultiState(State):
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
     def range_reward(
-        self, state, action=None, action_idx=None, particles=None, action_penalty=-0.05
+        self,
+        state,
+        action=None,
+        action_idx=None,
+        particles=None,
+        action_penalty=-0.05,
+        **kwargs,
     ):
         """Function to calculate reward based on state and selected action
 
@@ -308,7 +315,7 @@ class RFMultiState(State):
 
         return -1.0 * cost
 
-    def update_state_vectorized(self, state, control):
+    def update_state_vectorized(self, state, control, **kwargs):
         """Update state based on state and action
 
         Parameters
@@ -323,6 +330,7 @@ class RFMultiState(State):
         State (array_like)
             Updated state values array
         """
+        original_shape = state.shape
         state = np.atleast_2d(state)
         total_start = timer()
         # Get current state vars
@@ -408,8 +416,9 @@ class RFMultiState(State):
         #     theta += 360
 
         # return (r, theta, crs, spd)
-
-        return np.stack((r, theta, crs, spd), axis=-1)
+        new_state = np.stack((r, theta, crs, spd), axis=-1)
+        new_state = np.reshape(new_state, original_shape)
+        return new_state
 
     # returns new state given last state and action (control)
 

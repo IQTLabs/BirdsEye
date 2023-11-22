@@ -1,3 +1,4 @@
+import argparse
 import base64
 import configparser
 import json
@@ -414,5 +415,15 @@ class SigScan:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    instance = SigScan()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("config_path")
+    parser.add_argument("--log", default="INFO")
+    args = parser.parse_args()
+
+    numeric_level = getattr(logging, args.log.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError("Invalid log level: %s" % args.log)
+    logging.basicConfig(level=numeric_level, format="[%(asctime)s] %(message)s")
+    logging.getLogger("matplotlib.font_manager").disabled = True
+    instance = SigScan(config_path=args.config_path)
     instance.main()

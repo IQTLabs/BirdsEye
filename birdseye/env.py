@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from pfilter import ParticleFilter
 from pfilter import systematic_resample
 from scipy.ndimage.filters import gaussian_filter
@@ -8,6 +9,59 @@ from timeit import default_timer as timer
 from .utils import particle_swap
 from .utils import particles_mean_belief
 from .utils import pol2cart
+
+
+def pffilter_copy(pf, n_downsample=None):
+    """Modified from https://github.com/johnhw/pfilter/blob/master/pfilter/pfilter.py, because missing noise_fn
+    Copy this filter at its current state. Returns
+    an exact copy, that can be run forward indepedently of the first.
+    Beware that if your passed in functions (e.g. dynamics) are stateful, behaviour
+    might not be independent! (tip: write stateless functions!)
+    Returns:
+    ---------
+        A new, independent copy of this filter.
+    """
+    # construct the filter
+    new_copy = ParticleFilter(
+        observe_fn=pf.observe_fn,
+        resample_fn=pf.resample_fn,
+        n_particles=pf.n_particles,
+        prior_fn=pf.prior_fn,
+        dynamics_fn=pf.dynamics_fn,
+        noise_fn=pf.noise_fn,
+        weight_fn=pf.weight_fn,
+        resample_proportion=pf.resample_proportion,
+        column_names=pf.column_names,
+        internal_weight_fn=pf.internal_weight_fn,
+        transform_fn=pf.transform_fn,
+        n_eff_threshold=pf.n_eff_threshold,
+    )
+
+    # copy particle state
+    for array in ["particles", "original_particles", "original_weights", "weights"]:
+        setattr(new_copy, array, np.array(getattr(pf, array)))
+
+    # copy any attributes
+    for array in [
+        "mean_hypothesis",
+        "mean_state",
+        "map_state",
+        "map_hypothesis",
+        "hypotheses",
+        "n_eff",
+        "weight_informational_energy",
+        "weight_entropy",
+    ]:
+        if hasattr(pf, array):
+            setattr(new_copy, array, getattr(pf, array).copy())
+
+    if n_downsample:
+        new_copy.n_particles = n_downsample
+        new_copy.weights = np.ones(n_downsample) / n_downsample
+        new_copy.particles = new_copy.particles[
+            np.random.randint(len(new_copy.particles), size=n_downsample)
+        ]
+    return new_copy
 
 
 class RFMultiSeparableEnv:
@@ -140,60 +194,8 @@ class RFMultiSeparableEnv:
             )
             self.pf.append(target_pf)
 
-    def pffilter_copy(self, pf, n_downsample=None):
-        """Modified from https://github.com/johnhw/pfilter/blob/master/pfilter/pfilter.py, because missing noise_fn
-        Copy this filter at its current state. Returns
-        an exact copy, that can be run forward indepedently of the first.
-        Beware that if your passed in functions (e.g. dynamics) are stateful, behaviour
-        might not be independent! (tip: write stateless functions!)
-        Returns:
-        ---------
-            A new, independent copy of this filter.
-        """
-        # construct the filter
-        new_copy = ParticleFilter(
-            observe_fn=pf.observe_fn,
-            resample_fn=pf.resample_fn,
-            n_particles=pf.n_particles,
-            prior_fn=pf.prior_fn,
-            dynamics_fn=pf.dynamics_fn,
-            noise_fn=pf.noise_fn,
-            weight_fn=pf.weight_fn,
-            resample_proportion=pf.resample_proportion,
-            column_names=pf.column_names,
-            internal_weight_fn=pf.internal_weight_fn,
-            transform_fn=pf.transform_fn,
-            n_eff_threshold=pf.n_eff_threshold,
-        )
-
-        # copy particle state
-        for array in ["particles", "original_particles", "original_weights", "weights"]:
-            setattr(new_copy, array, np.array(getattr(pf, array)))
-
-        # copy any attributes
-        for array in [
-            "mean_hypothesis",
-            "mean_state",
-            "map_state",
-            "map_hypothesis",
-            "hypotheses",
-            "n_eff",
-            "weight_informational_energy",
-            "weight_entropy",
-        ]:
-            if hasattr(pf, array):
-                setattr(new_copy, array, getattr(pf, array).copy())
-
-        if n_downsample:
-            new_copy.n_particles = n_downsample
-            new_copy.weights = np.ones(n_downsample) / n_downsample
-            new_copy.particles = new_copy.particles[
-                np.random.randint(len(new_copy.particles), size=n_downsample)
-            ]
-        return new_copy
-
     def pf_copy(self, n_downsample=None):
-        return [self.pffilter_copy(pf, n_downsample=n_downsample) for pf in self.pf]
+        return [pffilter_copy(pf, n_downsample=n_downsample) for pf in self.pf]
 
     def random_state(self, pf):
         state = [
@@ -501,7 +503,7 @@ class RFMultiEnv:
         # Flag for simulation vs real data
         self.simulated = simulated
 
-        #self.pfrnn = pfrnn()
+        # self.pfrnn = pfrnn()
 
         self.last_observation = None
         self.pf = None
@@ -527,12 +529,14 @@ class RFMultiEnv:
         for p in particles:
             new_p = []
             for t in range(self.state.n_targets):
-                new_p += self.state.update_state(
-                    p[4 * t : 4 * (t + 1)],
-                    control=control,
-                    distance=distance,
-                    course=course,
-                    heading=heading,
+                new_p.extend(
+                    self.state.update_state(
+                        p[4 * t : 4 * (t + 1)],
+                        control=control,
+                        distance=distance,
+                        course=course,
+                        heading=heading,
+                    )
                 )
             # new_p = np.array([self.state.update_state(target_state, control) for target_state in p])
             updated_particles.append(new_p)
@@ -555,6 +559,12 @@ class RFMultiEnv:
             # particles[:,[2,6]] += np.random.normal(0,sigmas[2], (len(particles), 2))
 
         return particles
+
+    def pf_copy(self, n_downsample=None):
+        return [pffilter_copy(self.pf, n_downsample=n_downsample)]
+
+    def random_state(self, pf):
+        return [random.choice(self.pf.particles)]
 
     def reset(self, num_particles=2000):
         """Reset initial state and particle filter
@@ -881,9 +891,10 @@ class RFMultiEnv:
             )
 
         return np.array(std_dev)
-    
+
     def get_all_particles(self):
         return np.array(self.pf.particles)
+
 
 class RFEnv:
     def __init__(self, sensor=None, actions=None, state=None, simulated=False):
@@ -896,7 +907,7 @@ class RFEnv:
         # Flag for simulation vs real data
         self.simulated = simulated
 
-        #self.pfrnn = pfrnn()
+        # self.pfrnn = pfrnn()
         self.pf = None
 
     def dynamics(self, particles, control=None, **kwargs):

@@ -77,7 +77,14 @@ def rollout_random(env, state, depth, pf_copy):
         pf_copy[t].update(
             np.array(observation), xp=pf_copy[t].particles, control=action
         )
-        rewards.append(env.state.reward_func(pf_copy[t]))
+        rewards.append(
+            env.state.reward_func(
+                pf=pf_copy[t],
+                state=next_state,
+                action_idx=action_index,
+                particles=pf_copy[t].particles,
+            )
+        )
         # print(f"{pf_copy[t].n_eff=}, {pf_copy[t].n_eff_threshold=}")
         # print(f"{pf_copy[t].weight_entropy}")
     # reward = env.state.reward_func(
@@ -175,7 +182,13 @@ def simulate(env, Q, N, state, history, depth, c, pf_copy):
         p_end = timer()
         r_start = timer()
         # rewards.append(env.state.reward_func(pf_copy[t]))
-        rewards += env.state.reward_func(pf_copy[t])
+        rewards += env.state.reward_func(
+            pf=pf_copy[t],
+            state=next_state,
+            action_idx=search_action_index,
+            particles=pf_copy[t].particles,
+        )
+
         r_end = timer()
     pf_end = timer()
     reward = rewards / env.state.n_targets
@@ -324,11 +337,19 @@ class MCTSRunner:
             self.Q = {}
             self.N = {}
 
-        self.Q, self.N, self.action = select_action(
+        # self.Q, self.N, self.action = select_action(
+        #     self.env,
+        #     self.Q,
+        #     self.N,
+        #     self.env.pf.particles,
+        #     self.depth,
+        #     self.c,
+        #     self.simulations,
+        # )
+        self.Q, self.N, self.action = select_action_light(
             self.env,
             self.Q,
             self.N,
-            self.env.pf.particles,
             self.depth,
             self.c,
             self.simulations,
