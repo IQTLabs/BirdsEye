@@ -676,7 +676,7 @@ class Results:
         config={},
         enable_heatmap=False,
         enable_gps_plot=False,
-        class_map=None
+        class_map={}
     ):
         self.num_iters = num_iters
         self.experiment_name = experiment_name
