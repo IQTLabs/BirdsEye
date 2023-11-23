@@ -76,7 +76,7 @@ class GamutRFSensor(birdseye.sensor.SingleRSSISeparable):
                 self.class_map[class_name] = self.class_map.get(class_name, len(self.class_map))
                 format_observation[self.class_map[class_name]] = observation[class_name]
             observation = format_observation
-            
+
         if type(observation) != list:
             observation = [observation]
 
@@ -557,8 +557,8 @@ class Geolocate:
 
 if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser()
-    parser.add_argument("config_path")
-    parser.add_argument("--log", default="INFO")
+    parser.add_argument("config_path", help="Path to config file, geolocate.ini provided as example.")
+    parser.add_argument("--log", default="INFO", help="Log level")
     args = parser.parse_args()
 
     numeric_level = getattr(logging, args.log.upper(), None)

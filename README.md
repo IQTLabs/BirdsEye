@@ -52,41 +52,37 @@ ___
 ## 1. Usage
 ### Installation
 ```
-pip install -r requirements.txt
+poetry config virtualenvs.create false 
+poetry install --no-root
 ```
 
 ### To run on command line
 ```
-$ python run_birdseye.py -h
-usage: run_birdseye.py [-h] -c FILE [-b]
+$ python geolocate.py -h
+usage: geolocate.py [-h] [--log LOG] config_path
 
-optional arguments:
-  -h, --help            show this help message and exit
-  -c FILE, --config FILE
-                        Specify a configuration file
-  -b, --batch           Perform batch run
+positional arguments:
+  config_path  Path to config file, geolocate.ini provided as example.
+
+options:
+  -h, --help   show this help message and exit
+  --log LOG    Log level
 ```
 
 ### To run using a Docker container
-First install Docker with GPU support. [Instructions here.](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
+First install Docker. [Instructions here.](https://docs.docker.com/engine/install/)
 
-A Docker file has also been provided for ease of use. To run with Docker, execute the following commands:
+A [Dockerfile](Dockerfile) has been provided for ease of use. To run with Docker, execute the following commands:
 ```
-> docker build -t birds_eye .
-> docker run -it --gpus all birds_eye -c {config.yaml}
+docker build -t birds_eye .
+docker run -it -p 4999:4999 birds_eye
 ```
-In order to streamline this process a `Makefile` has been provided as a shorthand.
-```
-> make run_mcts
-> make run_dqn
-> make run_batch
-```
-Accepted make values are: `run_mcts, run_dqn, run_batch, build`
 
-If you don't have or want to use GPUs you can preface the `make` command with `GPUS=` like so:
+A Docker compose file has also been provided. To run with docker compose:
 ```
-> GPUS= make run_mcts
+ORCHESTRATOR={INSERT ORCHESTRATOR IP} docker compose -f geolocate.yml up
 ```
+
 
 ## 2. Configurations
 Running experiments requires a set of configurations variables which specify settings for the envrionment and motion planning method.
@@ -94,14 +90,10 @@ See [Configurations Documentation](docs/CONFIGS.md) for more information.
 
 
 ## 3. Examples
-### Run with Monte Carlo Tree Search policy
 ```
-$ python run_birdseye.py -c configs/mcts.yaml
+$ python geolocate.py geolocate.ini
 ```
-### Run with Deep Q-Network policy
-```
-$ python run_birdseye.py -c configs/dqn.yaml
-```
+
 
 ## 4. Results
 The results of the experiments will be stored in the `./runs` directory.
