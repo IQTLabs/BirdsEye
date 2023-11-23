@@ -60,13 +60,34 @@ class GamutRFSensor(birdseye.sensor.SingleRSSISeparable):
         )
         self.threshold = threshold
         self.data = data
+        self.n_targets = n_targets
+        self.class_map = {}
 
     def real_observation(self):
-        if (self.data.get("rssi", None)) is None or (
-            self.data["rssi"] < self.threshold
-        ):
-            return [None]
-        return [self.data["rssi"]]
+        observation = self.data.get("rssi", None)
+        default_observation = [None] * self.n_targets
+
+        if observation is None:
+            return default_observation
+        
+        if type(observation) == dict: 
+            format_observation = default_observation
+            for class_name in observation:
+                self.class_map[class_name] = self.class_map.get(class_name, len(self.class_map))
+                format_observation[self.class_map[class_name]] = observation[class_name]
+            observation = format_observation
+            
+        if type(observation) != list:
+            observation = [observation]
+
+        if len(observation) != self.n_targets: 
+            raise ValueError("len(observation) != n_targets")
+
+        for i in range(len(observation)): 
+            if observation[i] and observation[i] < self.threshold:
+                observation[i] = None
+        
+        return observation
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -89,6 +110,7 @@ class Geolocate:
             "action_proposal": None,
             "action_taken": None,
             "needs_processing": False,
+            "gps": None,
         }
         config = configparser.ConfigParser()
         config.read(config_path)
@@ -121,7 +143,30 @@ class Geolocate:
             else self.data["previous_heading"]
         )
 
-        self.data["rssi"] = message_data.get("rssi", None)
+        self.data["gps"] = message_data.get("gps", None)
+
+        predictions = message_data.get("predictions", None)
+        metadata = message_data.get("metadata", None)
+        if predictions:
+            self.data["rssi"] = {}
+            for class_name in predictions.keys(): 
+                #self.class_map[class_name] = self.class_map.get(class_name, len(self.class_map))
+                #if class_name not in self.class_map:
+                #    self.class_map[class_name] = self.class_iter
+                #    self.class_iter += 1
+                
+                self.data["rssi"][class_name] = np.mean(
+                    [float(prediction["rssi"]) for prediction in predictions[class_name]]
+                )
+        elif metadata: 
+            # TODO: how to handle when tracking multiple targets
+            #self.data["rssi"] = float(metadata["rssi_mean"])
+            #self.data["rssi"] = float(metadata["rssi_min"])
+            #self.data["rssi"] = float(metadata.get["rssi_max"])
+            pass
+        else: 
+            self.data["rssi"] = message_data.get("rssi", None)
+
         self.data["position"] = message_data.get("position", self.data["position"])
 
         # course is direction of movement
@@ -312,12 +357,6 @@ class Geolocate:
         num_particles = 3000  # 3000
         step_duration = 1
 
-        results = birdseye.utils.Results(
-            experiment_name=self.config_path,
-            global_start_time=global_start_time,
-            config=self.config,
-        )
-
         # Sensor
         if antenna_type in ["directional", "yagi", "logp"]:
             antenna_filename = "radiation_pattern_yagi_5.csv"
@@ -329,6 +368,7 @@ class Geolocate:
             power_tx=power_tx,
             directivity_tx=directivity_tx,
             freq=freq,
+            n_targets=n_targets,
             fading_sigma=fading_sigma,
             threshold=threshold,
             data=self.data,
@@ -358,6 +398,13 @@ class Geolocate:
         )
 
         belief = env.reset()
+
+        results = birdseye.utils.Results(
+            experiment_name=self.config_path,
+            global_start_time=global_start_time,
+            config=self.config,
+            class_map=sensor.class_map,
+        )
 
         # Motion planner
         if self.config.get("use_planner", "false").lower() != "true":
@@ -404,7 +451,7 @@ class Geolocate:
         control_actions = []
         step_time = 0
 
-        while self.data["position"] is None or self.data["heading"] is None:
+        while self.data["gps"] != "fix":
             time.sleep(1)
             logging.info("Waiting for GPS...")
 

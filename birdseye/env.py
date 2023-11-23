@@ -185,7 +185,7 @@ class RFMultiSeparableEnv:
                 ),
                 n_particles=self.n_particles,
                 dynamics_fn=self.dynamics,
-                resample_proportion=0.005,
+                resample_proportion=0.1,#0.005,
                 noise_fn=lambda x, **kwargs: self.particle_noise(x, sigmas=[1, 2, 2]),
                 weight_fn=lambda hyp, o, xp=None, **kwargs: self.sensor.weight(hyp, o),
                 resample_fn=systematic_resample,

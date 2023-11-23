@@ -674,11 +674,17 @@ class Results:
         num_iters=0,
         plotting=False,
         config={},
+        enable_heatmap=False,
+        enable_gps_plot=False,
+        class_map=None
     ):
         self.num_iters = num_iters
         self.experiment_name = experiment_name
         self.global_start_time = global_start_time
         self.plotting = plotting
+        self.enable_heatmap = enable_heatmap
+        self.enable_gps_plot = enable_gps_plot
+        self.class_map = class_map
         if not isinstance(self.plotting, bool):
             if self.plotting in ("true", "True"):
                 self.plotting = True
@@ -723,7 +729,7 @@ class Results:
         self.target_hist = []
         self.sensor_hist = []
         self.sensor_gps_hist = []
-        self.history_length = 50
+        self.history_length = 10
         self.time_step = 0
         self.texts = []
         self.openstreetmap = None
@@ -875,11 +881,11 @@ class Results:
 
         separable_color_array = [
             ["lightgreen", "green"],
-            ["lightblue", "blue"],
+            ["deepskyblue", "blue"],
             ["pink", "red"],
             ["wheat", "orange"],
         ]
-
+        legend_elements = []
         for t in range(env.state.n_targets):
             # PLOT PARTICLES
             # particles_x, particles_y = pol2cart(
@@ -908,7 +914,7 @@ class Results:
             )
 
             # PLOT HEATMAP OVER STREET MAP
-            if self.openstreetmap:
+            if self.enable_heatmap and self.openstreetmap:
                 heatmap, xedges, yedges = np.histogram2d(
                     particles_x,
                     particles_y,
@@ -950,9 +956,27 @@ class Results:
             else:
                 lines.extend([])
 
+            target_class_name = f"Target {t}"
+            for class_name, class_idx in self.class_map.items(): 
+                if t == class_idx: 
+                    target_class_name = class_name
+
+            legend_elements.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="white",
+                    markersize=8,
+                    markeredgecolor="black",
+                    markerfacecolor=centroid_color,
+                    label=target_class_name,
+                )
+            )
+
         # PLOT SENSOR
         if (
-            self.openstreetmap and data["position"] is not None
+            self.enable_gps_plot and self.openstreetmap and data["position"] is not None
         ):  # and not data["needs_processing"]:
             self.sensor_gps_hist.append(
                 self.openstreetmap.scale_to_img(
@@ -981,8 +1005,8 @@ class Results:
                     zorder=4,
                 )
                 ax.plot(
-                    sensor_x[:-1],
-                    sensor_y[:-1],
+                    sensor_x[len(sensor_x)-self.history_length:-1],
+                    sensor_y[len(sensor_y)-self.history_length:-1],
                     linewidth=3.0,
                     color="green",
                     markeredgecolor="black",
@@ -999,6 +1023,9 @@ class Results:
                 zorder=4,
             )
             lines.extend([line4])
+            legend_elements.append(
+                mpatches.Patch(facecolor="green", edgecolor="black", label="SensorGPS")
+            )
 
         sensor_x, sensor_y = pol2cart(
             np.array(self.sensor_hist)[:, 0],
@@ -1024,8 +1051,8 @@ class Results:
             )
             ax.add_patch(line4)
             ax.plot(
-                sensor_x[:-1],
-                sensor_y[:-1],
+                sensor_x[len(sensor_x)-self.history_length:-1],
+                sensor_y[len(sensor_x)-self.history_length:-1],
                 linewidth=5,
                 color="rebeccapurple",
                 # markeredgecolor="black",
@@ -1043,6 +1070,11 @@ class Results:
             #     zorder=4,
             # )
             lines.extend([line4])
+            legend_elements.append(
+                mpatches.Patch(
+                    facecolor="rebeccapurple", edgecolor="black", label="Sensor"
+                )
+            )
 
         if self.openstreetmap and data.get("drone_position", None) is not None:
             # print(f"{data['drone_position']=}")
@@ -1093,18 +1125,21 @@ class Results:
                     zorder=3,
                 )
             lines.extend([line5])
+            legend_elements.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="X",
+                    color="white",
+                    markerfacecolor="black",
+                    markeredgecolor="black",
+                    label="Targets",
+                    markersize=10,
+                )
+            )
 
         # Legend
-        legend_elements = [
-            Line2D(
-                [0],
-                [0],
-                marker="o",
-                color="white",
-                markersize=4,
-                markeredgecolor="black",
-                label="Particles",
-            ),
+        legend_elements.append(
             Line2D(
                 [0],
                 [0],
@@ -1112,40 +1147,18 @@ class Results:
                 color="white",
                 markeredgecolor="black",
                 markerfacecolor="white",
-                label="Mean Estimates",
+                label="Avg Estimates",
                 markersize=12,
-            ),
-            Line2D(
-                [0],
-                [0],
-                marker="X",
-                color="white",
-                markerfacecolor="black",
-                markeredgecolor="black",
-                label="Targets",
-                markersize=10,
-            ),
-            mpatches.Patch(
-                facecolor="rebeccapurple", edgecolor="black", label="Sensor"
-            ),
-            mpatches.Patch(facecolor="green", edgecolor="black", label="SensorGPS"),
-        ]
-
-        # ax.legend(
-        #     handles=legend_elements,
-        #     loc="upper left",
-        #     bbox_to_anchor=(1.04, 1.0),
-        #     fancybox=True,
-        #     shadow=True,
-        #     ncol=1,
-        # )
+            )
+        )
+    
         ax.legend(
             handles=legend_elements,
             loc="upper center",
-            bbox_to_anchor=(0.5, -0.05),
+            bbox_to_anchor=(0.5, -0.1),
             fancybox=True,
             shadow=True,
-            ncol=4,
+            ncol=len(legend_elements),
         )
 
         # X/Y Limits

@@ -23,9 +23,35 @@ if __name__ == "__main__":
     mqtt_client = BirdsEyeMQTT("localhost", 1883, message_handler)
 
     publish_data = {
+        "metadata": {
+            "image_path": "/logs/inference/image_1700632876.885_640x640_2408895999Hz.png", 
+            "orig_rows": "28897", 
+            "rssi_max": "-46.058800", 
+            "rssi_mean": "-69.604271", 
+            "rssi_min": "-117.403526", 
+            "rx_freq": "2408895999", 
+            "ts": "1700632876.885"
+        }, 
+        "predictions": {
+            "mini2_telem": [
+                {
+                    "rssi": "-40", 
+                    "conf": "0.33034399151802063", 
+                    "xywh": [609.8685302734375, 250.76278686523438, 20.482666015625, 7.45684814453125]
+                }
+            ],
+            "mini2_video": [
+                {
+                    "rssi": "-80", 
+                    "conf": "0.33034399151802063", 
+                    "xywh": [609.8685302734375, 250.76278686523438, 20.482666015625, 7.45684814453125]
+                }
+            ]
+        }, 
         "position": [32.922651, -117.120815],
         "heading": 0,
-        "rssi": -40,
+        "rssi": [-40, -60],
+        "gps": "fix"
     }
 
     def on_key_release(key):
