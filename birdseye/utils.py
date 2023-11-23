@@ -1376,6 +1376,8 @@ class Results:
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
 
+        self.history_length = 50 
+        
         if len(self.abs_target_hist) < self.history_length:
             self.abs_target_hist = [abs_target] * self.history_length
             self.abs_sensor_hist = [abs_sensor] * self.history_length
