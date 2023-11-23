@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 from scipy.constants import speed_of_light
+from timeit import default_timer as timer
 
 
 class Sensor:
@@ -15,7 +16,7 @@ class Sensor:
         """Undefined observation sample method"""
         raise NotImplementedError
 
-    def weight(self, hyp, obs, state=None):
+    def weight(self, hyp, obs):
         """Undefined method for importance
         weight of a state given observation
         """
@@ -40,11 +41,13 @@ def get_radiation_pattern(antenna_filename=None):
 
     radiation_pattern = shift(radiation_pattern, 90)
 
-    return radiation_pattern
+    return np.array(radiation_pattern)
 
 
 def get_directivity(radiation_pattern, theta):
-    return radiation_pattern[int(theta * 180 / np.pi) % len(radiation_pattern)]
+    theta_degrees = theta * 180 / np.pi
+    theta_degrees = theta_degrees.astype(int)
+    return radiation_pattern[theta_degrees % len(radiation_pattern)]
 
 
 def rssi(
@@ -194,7 +197,7 @@ class DoubleRSSILofi(Sensor):
         return likelihood
 
     # samples observation given state
-    def observation(self, state):
+    def observation(self, state, **kwargs):
         # Calculate observation for multiple targets
         power_front = 0
         power_back = 0
@@ -230,9 +233,112 @@ class DoubleRSSILofi(Sensor):
         return [rssi_front, rssi_back]
 
 
+class SingleRSSISeparable(Sensor):
+    """
+    Returns RSSI from a single antenna, with separate RSSI values for each target
+    """
+
+    def __init__(
+        self,
+        antenna_filename=None,
+        power_tx=[26, 26],
+        directivity_tx=[1, 1],
+        freq=[5.7e9, 5.7e9],
+        n_targets=2,
+        fading_sigma=None,
+    ):
+        if n_targets != len(power_tx):
+            raise ValueError("len(power_tx) must equal n_targets")
+        if n_targets != len(directivity_tx):
+            raise ValueError("len(directivity_tx) must equal n_targets")
+        if n_targets != len(freq):
+            raise ValueError("len(freq) must equal n_targets")
+
+        self.radiation_pattern = get_radiation_pattern(
+            antenna_filename=antenna_filename
+        )
+
+        # TODO: why 15?
+        self.std_dev = 15
+
+        self.power_tx = power_tx
+        self.directivity_tx = directivity_tx
+        self.freq = freq
+
+        self.fading_sigma = fading_sigma
+        if self.fading_sigma is not None:
+            self.fading_sigma = float(self.fading_sigma)
+
+    def weight(self, hyp, obs):
+        start = timer()
+        # array of shape (# of particles)
+        expected_rssi = hyp
+        observed_rssi = obs
+        # Gaussian weighting function
+        numerator = np.power(expected_rssi - observed_rssi, 2.0)
+        denominator = 2 * np.power(self.std_dev, 2.0)
+        weight = np.exp(-numerator / denominator)  # + 0.000000001
+        weight = np.squeeze(weight)
+        end = timer()
+        # print(f"weight: {end-start}")
+        return weight
+
+    # samples observation given state
+    def observation_vectorized(self, states, target, fading_sigma=None):
+        start = timer()
+        if fading_sigma is None:
+            fading_sigma = self.fading_sigma
+
+        # Calculate observation for specified target
+        power = 0
+
+        distance = states[:, 0]
+        theta = states[:, 1] * np.pi / 180.0
+        directivity_rx = get_directivity(self.radiation_pattern, theta)
+        power += dB_to_power(
+            rssi(
+                distance,
+                directivity_rx,
+                power_tx=self.power_tx[target],
+                directivity_tx=self.directivity_tx[target],
+                freq=self.freq[target],
+                fading_sigma=self.fading_sigma,
+            )
+        )
+        rssi_power = power_to_dB(power)
+        # return [rssi_power]
+        end = timer()
+        # print(f"observation: {end-start}")
+        return rssi_power
+
+    # samples observation given state
+    def observation(self, state, target=None, fading_sigma=None):
+        if fading_sigma is None:
+            fading_sigma = self.fading_sigma
+
+        # Calculate observation for specified target
+        power = 0
+
+        distance = state[0]
+        theta = state[1] * np.pi / 180.0
+        directivity_rx = get_directivity(self.radiation_pattern, theta)
+        power += dB_to_power(
+            rssi(
+                distance,
+                directivity_rx,
+                power_tx=self.power_tx[target],
+                directivity_tx=self.directivity_tx[target],
+                freq=self.freq[target],
+                fading_sigma=self.fading_sigma,
+            )
+        )
+        rssi_power = power_to_dB(power)
+        return [rssi_power]
+
+
 class SingleRSSI(Sensor):
     """
-    Uses RSSI comparison from two opposite facing Yagi/directional antennas
+    Returns RSSI from a single antenna
     """
 
     def __init__(
@@ -246,6 +352,7 @@ class SingleRSSI(Sensor):
         self.radiation_pattern = get_radiation_pattern(
             antenna_filename=antenna_filename
         )
+        # TODO: why 15?
         self.std_dev = 15
 
         self.power_tx = power_tx
@@ -256,8 +363,8 @@ class SingleRSSI(Sensor):
         if self.fading_sigma:
             self.fading_sigma = float(self.fading_sigma)
 
-    def weight(self, hyp, obs, state=None):
-        # array [# of particles x 2 rssi readings(front rssi & back rssi)]
+    def weight(self, hyp, obs):
+        # array [# of particles x 1 rssi reading]
         expected_rssi = hyp
         observed_rssi = obs
         # Gaussian weighting function
@@ -268,10 +375,12 @@ class SingleRSSI(Sensor):
         return likelihood
 
     # samples observation given state
-    def observation(self, state):
+    def observation(self, state, fading_sigma=None):
+        if fading_sigma is None:
+            fading_sigma = self.fading_sigma
         # Calculate observation for multiple targets
+        state = np.atleast_2d(np.array(state))
         power_front = 0
-
         for ts in state:  # target_state, particle_state
             distance = ts[0]
             theta_front = ts[1] * np.pi / 180.0
@@ -283,7 +392,7 @@ class SingleRSSI(Sensor):
                     power_tx=self.power_tx,
                     directivity_tx=self.directivity_tx,
                     freq=self.freq,
-                    fading_sigma=self.fading_sigma,
+                    fading_sigma=fading_sigma,
                 )
             )
         rssi_front = power_to_dB(power_front)
@@ -416,7 +525,6 @@ class Drone(Sensor):
 
     # samples observation given state
     def observation(self, state):
-
         obs1_val = self.obs1_prob(state)
         weights = [1.0 - obs1_val, obs1_val]
         obsers = [0, 1]

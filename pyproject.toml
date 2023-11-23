@@ -18,8 +18,8 @@ pandas = "2.1.2"
 pfilter = "0.2.5"
 requests = "2.31.0"
 scipy = "1.11.3"
-torch = ">=2.0.0, !=2.0.1"
 tqdm = "4.66.1"
+seaborn = "^0.13.0"
 
 
 [tool.poetry.group.dev.dependencies]
@@ -27,6 +27,7 @@ pylint = "^3.0.0"
 pytype = "^2023.9.11"
 pytest = "^7.4.2"
 pytest-cov = "^4.1.0"
+torch = ">=2.0.0, !=2.0.1"
 
 [build-system]
 requires = ["poetry-core"]

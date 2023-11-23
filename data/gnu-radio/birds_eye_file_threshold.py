@@ -226,7 +226,6 @@ class birds_eye_file_threshold(gr.top_block, Qt.QWidget):
 
 
 def main(top_block_cls=birds_eye_file_threshold, options=None):
-
     if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
         style = gr.prefs().get_string("qtgui", "style", "raster")
         Qt.QApplication.setGraphicsSystem(style)

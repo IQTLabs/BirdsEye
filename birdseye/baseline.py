@@ -15,7 +15,6 @@ from .state import RFState
 from .utils import particle_swap
 from .utils import Results
 from .utils import tracking_error
-from .utils import write_header_log
 
 # Default baseline inputs
 baseline_defaults = {"plotting": False, "trials": 500, "timesteps": 150}
@@ -34,7 +33,6 @@ baseline_policy = {"static": static, "random": random_policy}
 
 
 def baseline_trial(env, policy, num_timesteps, results=None):
-
     # Initialize true state and belief state (particle filter);
     # we assume perfect knowledge at start of simulation (could experiment otherwise with random beliefs)
     # state is [range, heading, relative course, own speed]
@@ -71,7 +69,6 @@ def baseline_trial(env, policy, num_timesteps, results=None):
     plots = []
 
     for time_step in tqdm(range(num_timesteps)):
-
         # select an action
         inference_start_time = datetime.now()
 
@@ -223,10 +220,11 @@ def run_baseline(env, config=None, global_start_time=None):
 
     # Results instance for saving results to file
     results = Results(
-        method_name="baseline",
+        experiment_name="baseline",
         global_start_time=global_start_time,
         num_iters=num_trials,
         plotting=plotting,
+        config=config,
     )
 
     run_data = []
@@ -282,9 +280,7 @@ def baseline(args=None, env=None):
         state = RFState()
         env = RFEnv(sensor, actions, state)
 
-    global_start_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-    if config:
-        write_header_log(config, "baseline", global_start_time)
+    global_start_time = datetime.utcnow().timestamp()
 
     env.actions = BaselineActions()
     run_baseline(env=env, config=args, global_start_time=global_start_time)

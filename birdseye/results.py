@@ -27,7 +27,6 @@ def plotter(
     rewards=["range_reward", "entropy_collision_reward"],
     **kwargs,
 ):
-
     fig = plt.figure(figsize=(20, 16), constrained_layout=True)
     fig.suptitle(title)
     subfig_rows = fig.subfigures(nrows=len(sensors), ncols=1)
@@ -56,7 +55,6 @@ def separate_plotter(
     rewards=["range_reward", "entropy_collision_reward"],
     **kwargs,
 ):
-
     fig = plt.figure(figsize=(20, 26), constrained_layout=True)
     fig.suptitle(title)
     subfig_rows = fig.subfigures(nrows=len(sensors) * len(rewards), ncols=1)
@@ -769,7 +767,6 @@ def single_metric_grid(
 
 
 def starting_position_plots(config, limit=1, metric="centroid_err"):
-
     reward_str = {
         "range_reward": "State Dependent Reward",
         "entropy_collision_reward": "Belief Dependent Reward",

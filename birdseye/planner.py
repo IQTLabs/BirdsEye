@@ -4,11 +4,27 @@ from .mcts_utils import MCTSRunner
 
 
 class PathPlanner:
-    def __init__(self, env, config, device):
+    def __init__(self, env, actions):
         pass
 
     def proposal(self, observation):
         pass
+
+
+class LightweightPlanner(PathPlanner):
+    def __init__(self, env, actions):
+        self.env = env
+        self.actions = actions
+
+    def proposal(self, observation):
+        # get target estimates
+        # select target with minimum std dev
+        # calculate void constraint around selected target
+        # get possible trajectories (tangent to void and min distance to target)
+        ## first element of trajectory turns, then proceed straight
+        # for each trajectory calculate void probability functional; if satisfied select action
+        # if none selected, select next best from discrete set
+        return None
 
 
 class MCTSPlanner(PathPlanner):

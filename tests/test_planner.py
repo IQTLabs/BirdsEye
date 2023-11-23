@@ -16,7 +16,7 @@ def test_path_planner():
     """
     Test the PathPlanner class
     """
-    planner = PathPlanner(env=None, config=None, device=None)
+    planner = PathPlanner(env=None, actions=None)
     planner.proposal(None)
 
 

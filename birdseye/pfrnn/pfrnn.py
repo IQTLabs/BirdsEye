@@ -9,7 +9,6 @@ from birdseye.utils import pol2cart
 
 
 def parse_args(arg_string=None):
-
     parser = argparse.ArgumentParser()
 
     # parser.add('-c', '--config', required=True, default='./configs/train.conf',

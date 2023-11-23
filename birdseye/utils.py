@@ -1,18 +1,27 @@
 """
 Particle Filter helper functions
 """
+import argparse
 import configparser
 import json
 import math
 import os
+import datetime
 from collections import defaultdict
 from io import BytesIO
 from itertools import permutations
 from itertools import product
 from pathlib import Path
+import pandas as pd
+from pyparsing import col
+import seaborn as sns
+
 
 import imageio
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+import matplotlib.patheffects as pe
+import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import requests
@@ -21,6 +30,16 @@ from scipy.ndimage.filters import gaussian_filter
 
 from .definitions import REPO_DIR
 from .definitions import RUN_DIR
+
+
+def targets_found(env, min_std_dev):
+    std_dev = np.amax(
+        env.get_particle_std_dev_cartesian(), axis=1
+    )  # get maximum standard deviation axis for each target
+    not_found = np.where(std_dev > min_std_dev)
+    if len(not_found[0]) == 0:
+        return True
+    return False
 
 
 def permute_particle(particle):
@@ -88,6 +107,30 @@ def particle_swap(env):
         particles[:, (state_dim * i) + 1] = np.degrees(phi)
 
     env.pf.particles = particles
+
+
+def circ_tangents(point, center, radius):
+    px, py = point
+    cx, cy = center
+
+    b = np.sqrt((px - cx) ** 2 + (py - cy) ** 2)
+    if radius >= b:
+        ##print(f"Warning: No tangents are possible.  radius >= distance to circle center ({radius} >= {b})")
+        return None
+    th = np.arccos(radius / b)
+    d = np.arctan2(py - cy, px - cx)
+    d1 = d + th
+    d2 = d - th
+
+    tangents = [
+        [cx + radius * np.cos(d1), cy + radius * np.sin(d1)],
+        [cx + radius * np.cos(d2), cy + radius * np.sin(d2)],
+    ]
+    v = np.array(point) - np.array(center)
+    v /= np.linalg.norm(v)
+    intersection = np.array(center) + radius * v
+    tangents.append(list(intersection))
+    return np.array(tangents)
 
 
 def pol2cart(rho, phi):
@@ -177,7 +220,7 @@ class GPSVis:
     Class for GPS data visualization using pre-downloaded OSM map in image format.
     """
 
-    def __init__(self, position=None, map_path=None, bounds=None):
+    def __init__(self, position=None, map_path=None, bounds=None, distance=200):
         """
         :param data_path: Path to file containing GPS records.
         :param map_path: Path to pre-downloaded OSM map in image format.
@@ -191,9 +234,16 @@ class GPSVis:
         if self.map_path is not None and self.bounds is not None:
             self.img = self.create_image_from_map()
         elif self.position is not None:
-            self.zoom = 17
+            if distance <= 200:
+                self.zoom = 18
+            elif distance <= 1000:
+                self.zoom = 16
+            elif distance <= 2000:
+                self.zoom = 14
+            else:
+                self.zoom = 12
             self.TILE_SIZE = 256
-            distance = 100
+            distance = distance
 
             coord = self.position
 
@@ -280,10 +330,13 @@ class GPSVis:
         # loop through every tile inside our bounded box
         for x_tile, y_tile in product(range(x0_tile, x1_tile), range(y0_tile, y1_tile)):
             try:
-                with requests.get(URL(x=x_tile, y=y_tile, z=self.zoom), headers={'User-Agent': 'BirdsEye/0.1.1'}) as resp:
+                with requests.get(
+                    URL(x=x_tile, y=y_tile, z=self.zoom),
+                    headers={"User-Agent": "BirdsEye/0.1.1"},
+                ) as resp:
                     tile_img = Image.open(BytesIO(resp.content))
             except Exception as e:
-                tile_img = Image.open(f'{REPO_DIR}/data/0.png')
+                tile_img = Image.open(f"{REPO_DIR}/data/0.png")
             # add each tile to the full size image
             img.paste(
                 im=tile_img,
@@ -350,7 +403,7 @@ class GPSVis:
         ) + new[0]
         # y must be reversed because the orientation of the image in the matplotlib.
         # image - (0, 0) in upper left corner; coordinate system - (0, 0) in lower left corner
-        return int(x), int(y)
+        return [int(x), int(y)]
 
     def set_origin(self, lat_lon):
         self.origin = self.scale_to_img(
@@ -374,6 +427,240 @@ class GPSVis:
         self.x_ticks = list(self.x_ticks)
 
 
+class NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
+
+class ResultsReader:
+    """
+    ResultsReader class for loading run results
+    """
+
+    def __init__(
+        self,
+        experiment_name="",
+    ):
+        self.parent_logs_dir = f"{RUN_DIR}/{experiment_name}/"
+        self.log_dirs = [
+            f"{self.parent_logs_dir}{d}"
+            for d in os.listdir(self.parent_logs_dir)
+            if d.endswith("_logs")
+        ]
+        self.log_data = {}
+        self.log_config = {}
+        for d in self.log_dirs:
+            log_file = f"{d}/data.log"
+            if os.path.exists(log_file):
+                self.log_data[d] = self.load_log(f"{d}/data.log")
+            config_file = f"{d}/config.log"
+            self.log_config[d] = read_header_log(config_file)
+
+            # fix missing target_speed
+            if "target_speed" not in self.log_config[d]:
+                self.log_config[d]["target_speed"] = 0.5
+
+    def average_plantime(self):
+        """
+        Get average planning time
+        """
+        plan_time = []
+        for run, log_data in self.log_data.items():
+            times = [data["plan_time"] for data in log_data]
+            plan_time.append(np.mean(times))
+        avg_plan_time = np.mean(plan_time)
+        return avg_plan_time
+
+    def average_std_dev(self):
+        """
+        Get average of the max standard deviation dimension of the particle distributions
+        """
+        std_dev_all = []
+        std_dev_success = []
+        for run, log_data in self.log_data.items():
+            std_dev = np.max(log_data[-1]["std_dev_cartesian"], axis=1)
+            if len(log_data) < 400:
+                std_dev_success.extend(std_dev)
+            std_dev_all.extend(std_dev)
+        avg_std_dev_all = np.mean(std_dev_all)
+        avg_std_dev_success = np.mean(std_dev_success)
+        return avg_std_dev_success, avg_std_dev_all
+
+    def std_dev_plot(self, ax=None, color=None, facecolor=None):
+        """
+        Get average of the max standard deviation dimension of the particle distributions
+        """
+        std_dev_all = []
+        std_dev_success = []
+        for run, log_data in self.log_data.items():
+            std_dev = [
+                np.mean(np.max(np.array(d["std_dev_cartesian"]), axis=1))
+                for d in log_data
+            ]
+            std_dev_all.append(std_dev)
+        # if ax is None:
+        #     fig = plt.figure()
+        #     ax = fig.subplots()
+        # if color is None:
+        #     color="blue"
+        # for sd in std_dev_all:
+        #     ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
+        # plt.show()
+
+        df = pd.DataFrame(std_dev_all)
+        if df.shape[1] < 400:
+            df = df.reindex(columns=list(range(400)))
+        df = df[:][list(range(0, 400, 20))]
+        df.boxplot(
+            ax=ax,
+            notch=True,
+            patch_artist=True,
+            boxprops=dict(facecolor=facecolor, color=color, alpha=0.75),
+            capprops=dict(color=color),
+            whiskerprops=dict(color=color),
+            flierprops=dict(color=color, markeredgecolor=color),
+            medianprops=dict(color=color),
+            # color=color,
+            showfliers=False,
+        )
+
+        # if experiment_name is not None:
+        #     plt.title(experiment_name)
+        # plt.show()
+
+    # df.boxplot()
+
+    def average_rmse(self):
+        """
+        Get average rmse for successful and all runs
+        """
+        rmse_success = []
+        rmse_all = []
+        for run, log_data in self.log_data.items():
+            rmse = np.sqrt(
+                np.mean(np.array(log_data[-1]["centroid_distance_err"]) ** 2)
+            )
+            if len(log_data) < 400:
+                rmse_success.append(rmse)
+            rmse_all.append(rmse)
+
+        avg_rmse_success = np.mean(rmse_success)
+        avg_rmse_all = np.mean(rmse_all)
+        return avg_rmse_success, avg_rmse_all
+
+    def rmse_plot(self, ax=None, color=None, facecolor=None):
+        """
+        Get average of the max standard deviation dimension of the particle distributions
+        """
+        rmse_all = []
+        for run, log_data in self.log_data.items():
+            rmse = [
+                np.sqrt(np.mean(np.array(d["centroid_distance_err"]) ** 2))
+                for d in log_data
+            ]
+            rmse_all.append(rmse)
+        # if ax is None:
+        #     fig = plt.figure()
+        #     ax = fig.subplots()
+        # if color is None:
+        #     color="blue"
+        # for sd in std_dev_all:
+        #     ax.scatter(range(len(sd)), sd, s=2, color=color, marker=".", alpha=0.25)
+        # plt.show()
+
+        df = pd.DataFrame(rmse_all)
+        if df.shape[1] < 400:
+            df = df.reindex(columns=list(range(400)))
+        df = df[:][list(range(0, 400, 20))]
+        df.boxplot(
+            ax=ax,
+            notch=True,
+            patch_artist=True,
+            boxprops=dict(facecolor=facecolor, color=color, alpha=0.75),
+            capprops=dict(color=color),
+            whiskerprops=dict(color=color),
+            flierprops=dict(color=color, markeredgecolor=color),
+            medianprops=dict(color=color),
+            # color=color,
+            showfliers=False,
+        )
+        # if experiment_name is not None:
+        #     plt.title(experiment_name)
+        # plt.show()
+
+    def rmse_plot2(self):
+        """
+        Get average rmse for successful and all runs
+        """
+        rmse_success = []
+        rmse_all = []
+        for run, log_data in self.log_data.items():
+            rmse = np.sqrt(
+                np.mean(np.array(log_data[-1]["centroid_distance_err"]) ** 2)
+            )
+            if len(log_data) < 400:
+                rmse_success.append(rmse)
+            rmse_all.append(rmse)
+
+        avg_rmse_success = np.mean(rmse_success)
+        avg_rmse_all = np.mean(rmse_all)
+        return avg_rmse_success, avg_rmse_all
+
+    def localization_probability(self):
+        """
+        Get the probability of successful localizations from experiment run data.
+        """
+        success_localize = 0
+        for run, log_data in self.log_data.items():
+            if len(log_data) < 400:
+                success_localize += 1
+        success_localize_prob = success_localize / len(self.log_data)
+        return success_localize_prob
+
+    def average_localization_time(self):
+        """
+        Get the average run time of successful localization runs.
+        """
+        success_localize = 0
+        average_localize_time = 0
+        for run, log_data in self.log_data.items():
+            if len(log_data) < 400:
+                success_localize += 1
+                average_localize_time += len(log_data)
+        average_localize_time /= success_localize
+        return average_localize_time
+
+    def localization_histogram(self, ax=None, color=None):
+        """
+        Get the average run time of successful localization runs.
+        """
+
+        runtime = []
+        for run, log_data in self.log_data.items():
+            runtime.append(len(log_data))
+
+        # ax.hist(runtime, color=color, bins=400)
+        sns.histplot(
+            data=runtime, kde=True, ax=ax, color=color, bins=np.arange(0, 420, 20)
+        )
+
+    def load_log(self, log_file):
+        """
+        Load json log file
+        """
+        data = []
+        with open(
+            log_file,
+            "r",
+            encoding="UTF-8",
+        ) as infile:
+            for line in infile:
+                data.append(json.loads(line))
+        return data
+
+
 class Results:
     """
     Results class for saving run results
@@ -382,34 +669,40 @@ class Results:
 
     def __init__(
         self,
-        method_name="",
+        experiment_name="",
         global_start_time="",
         num_iters=0,
         plotting=False,
         config={},
+        enable_heatmap=False,
+        enable_gps_plot=False,
+        class_map={}
     ):
         self.num_iters = num_iters
-        self.method_name = method_name
+        self.experiment_name = experiment_name
         self.global_start_time = global_start_time
         self.plotting = plotting
+        self.enable_heatmap = enable_heatmap
+        self.enable_gps_plot = enable_gps_plot
+        self.class_map = class_map
         if not isinstance(self.plotting, bool):
             if self.plotting in ("true", "True"):
                 self.plotting = True
             else:
                 self.plotting = False
+        if type(config) == argparse.Namespace:
+            config = vars(config)
         self.native_plot = config.get("native_plot", "false").lower()
         self.plot_every_n = int(config.get("plot_every_n", 1))
         self.make_gif = config.get("make_gif", "false").lower()
-
-        self.namefile = f"{RUN_DIR}/{method_name}/{global_start_time}_data.csv"
-        self.plot_dir = config.get(
-            "plot_dir", f"{RUN_DIR}/{method_name}/{global_start_time}"
-        )
-        self.logdir = f"{RUN_DIR}/{method_name}/{global_start_time}_logs/"
+        self.namefile = f"{RUN_DIR}/{experiment_name}/{global_start_time}_data.csv"
+        self.logdir = f"{RUN_DIR}/{experiment_name}/{global_start_time}_logs/"
+        Path(self.logdir).mkdir(parents=True, exist_ok=True)
+        self.plot_dir = config.get("plot_dir", self.logdir)
         Path(self.plot_dir + "/png/").mkdir(parents=True, exist_ok=True)
         if self.make_gif == "true":
             Path(self.plot_dir + "/gif/").mkdir(parents=True, exist_ok=True)
-        Path(self.logdir).mkdir(parents=True, exist_ok=True)
+
         self.col_names = [
             "time",
             "run_time",
@@ -436,7 +729,7 @@ class Results:
         self.target_hist = []
         self.sensor_hist = []
         self.sensor_gps_hist = []
-        self.history_length = 50
+        self.history_length = 10
         self.time_step = 0
         self.texts = []
         self.openstreetmap = None
@@ -444,7 +737,29 @@ class Results:
         self.expected_target_rssi = None
 
         if config:
-            write_header_log(config, self.method_name, self.global_start_time)
+            write_config_log(config, self.logdir)
+
+    def data_to_npy(self, array, label, timestep):
+        """
+        Save npy array to file
+        """
+        Path(f"{self.logdir}/{label}/").mkdir(parents=True, exist_ok=True)
+        np.save(
+            f"{self.logdir}/{label}/{timestep}.npy",
+            array,
+        )
+
+    def data_to_json(self, data):
+        """
+        Save data dict to log
+        """
+        with open(
+            f"{self.logdir}/data.log",
+            "a",
+            encoding="UTF-8",
+        ) as outfile:
+            json.dump(data, outfile, cls=NumpyEncoder)
+            outfile.write("\n")
 
     def write_dataframe(self, run_data):
         """
@@ -461,7 +776,9 @@ class Results:
         filename = run if sub_run is None else "{}_{}".format(run, sub_run)
         # Build GIF
         with imageio.get_writer(
-            "{}/gif/{}.gif".format(self.plot_dir, filename), mode="I", duration=int(1000 * 1/5)
+            "{}/gif/{}.gif".format(self.plot_dir, filename),
+            mode="I",
+            duration=int(1000 * 1 / 5),
         ) as writer:
             for png_filename in sorted(
                 os.listdir(self.plot_dir + "/png/"), key=lambda x: (len(x), x)
@@ -469,7 +786,17 @@ class Results:
                 image = imageio.v2.imread(self.plot_dir + "/png/" + png_filename)
                 writer.append_data(image)
 
-    def live_plot(self, env, time_step=None, fig=None, ax=None, data=None):
+    def live_plot(
+        self,
+        env,
+        time_step=None,
+        fig=None,
+        ax=None,
+        data=None,
+        sidebar=False,
+        separable=False,
+        map_distance=200,
+    ):
         """
         Create a live plot
         """
@@ -478,7 +805,9 @@ class Results:
             and data.get("position", None) is not None
             and data.get("heading", None) is not None
         ):
-            self.openstreetmap = GPSVis(position=data["position"])
+            self.openstreetmap = GPSVis(
+                position=data["position"], distance=map_distance
+            )
             self.openstreetmap.set_origin(data["position"])
             self.transform = np.array(
                 [self.openstreetmap.origin[0], self.openstreetmap.origin[1]]
@@ -502,6 +831,9 @@ class Results:
         abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
 
+        if env.simulated:
+            self.target_hist.append(env.get_absolute_target())
+
         target_heading = None
         target_relative_heading = None
 
@@ -513,19 +845,31 @@ class Results:
             target_heading = get_heading(data["position"], data["drone_position"])
             target_relative_heading = target_heading - data["heading"]
             target_distance = get_distance(data["position"], data["drone_position"])
+            print(f"Sensor position & heading = {data['position']},{data['heading']}")
+            print(
+                f"Target distance & heading = {target_distance},{target_relative_heading}"
+            )
+            print(f"{self.expected_target_rssi=}")
             self.expected_target_rssi = env.sensor.observation(
-                [[target_distance, target_relative_heading, None, None]]
+                [target_distance, target_relative_heading, None, None], 0
             )[0]
 
         ax.clear()
         if self.openstreetmap is not None:
             self.openstreetmap.plot_map(axis1=ax)
         # TODO get variables
-        ax.set_title(
-            "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
-                time_step, None, None, None
+        if separable:
+            ax.set_title("Time = {}".format(time_step))
+        else:
+            abs_particles = np.moveaxis(abs_particles, 1, 0)
+            # ax.set_title(
+            #     "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
+            #         time_step, None, None, None
+            #     )
+            # )
+            ax.set_title(
+                f"Time = {str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}"
             )
-        )
 
         color_array = [
             ["salmon", "darkred", "red"],
@@ -535,27 +879,42 @@ class Results:
             []
         )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
 
-        # Plot Particles
+        separable_color_array = [
+            ["lightgreen", "green"],
+            ["deepskyblue", "blue"],
+            ["pink", "red"],
+            ["wheat", "orange"],
+        ]
+        legend_elements = []
         for t in range(env.state.n_targets):
+            # PLOT PARTICLES
+            # particles_x, particles_y = pol2cart(
+            #     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
+            # )
             particles_x, particles_y = pol2cart(
-                abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
+                abs_particles[t, :, 0], np.radians(abs_particles[t, :, 1])
             )
             if self.transform is not None:
                 particles_x += self.transform[0]
                 particles_y += self.transform[1]
+            if separable:
+                particle_color = separable_color_array[t][0]
+            else:
+                particle_color = "salmon"
             (line1,) = ax.plot(
                 particles_x,
                 particles_y,
                 "o",
-                color=color_array[t][0],
+                color=particle_color,
                 markersize=4,
                 markeredgecolor="black",
-                label="particles",
-                alpha=0.3,
+                label="Particles",
+                alpha=0.4,
                 zorder=1,
             )
 
-            if self.openstreetmap:
+            # PLOT HEATMAP OVER STREET MAP
+            if self.enable_heatmap and self.openstreetmap:
                 heatmap, xedges, yedges = np.histogram2d(
                     particles_x,
                     particles_y,
@@ -573,17 +932,23 @@ class Results:
                 )
                 # plt.colorbar(im)
 
+            # PLOT CENTROIDS
             centroid_x = np.mean(particles_x)
             centroid_y = np.mean(particles_y)
+            if separable:
+                centroid_color = separable_color_array[t][1]
+            else:
+                centroid_color = "magenta"
+
             (line2,) = ax.plot(
                 centroid_x,
                 centroid_y,
-                "*",
-                color="magenta",
+                "^",
+                color=centroid_color,
                 markeredgecolor="black",
-                label="centroid",
+                label="Mean Estimate",
                 markersize=12,
-                zorder=2,
+                zorder=7,
             )
 
             if t == 0:
@@ -591,7 +956,77 @@ class Results:
             else:
                 lines.extend([])
 
-        # Plot Sensor
+            target_class_name = f"Target {t}"
+            for class_name, class_idx in self.class_map.items(): 
+                if t == class_idx: 
+                    target_class_name = class_name
+
+            legend_elements.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="o",
+                    color="white",
+                    markersize=8,
+                    markeredgecolor="black",
+                    markerfacecolor=centroid_color,
+                    label=target_class_name,
+                )
+            )
+
+        # PLOT SENSOR
+        if (
+            self.enable_gps_plot and self.openstreetmap and data["position"] is not None
+        ):  # and not data["needs_processing"]:
+            self.sensor_gps_hist.append(
+                self.openstreetmap.scale_to_img(
+                    data["position"],
+                    (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
+                )
+            )
+
+            temp_np = np.array(self.sensor_gps_hist)
+            sensor_x = temp_np[:, 0]
+            sensor_y = temp_np[:, 1]
+
+            if len(self.sensor_gps_hist) > 1:
+                # print(f"{data['heading']=}")
+                # print(f"{data['previous_heading']=}")
+                arrow_x, arrow_y = pol2cart(
+                    4, np.radians(data.get("heading", data["previous_heading"]))
+                )
+                ax.arrow(
+                    sensor_x[-1],
+                    sensor_y[-1],
+                    arrow_x,
+                    arrow_y,
+                    width=1.5,
+                    color="green",
+                    zorder=4,
+                )
+                ax.plot(
+                    sensor_x[len(sensor_x)-self.history_length:-1],
+                    sensor_y[len(sensor_y)-self.history_length:-1],
+                    linewidth=3.0,
+                    color="green",
+                    markeredgecolor="black",
+                    markersize=4,
+                    zorder=4,
+                )
+            (line4,) = ax.plot(
+                sensor_x[-1],
+                sensor_y[-1],
+                "p",
+                color="green",
+                label="SensorGPS",
+                markersize=10,
+                zorder=4,
+            )
+            lines.extend([line4])
+            legend_elements.append(
+                mpatches.Patch(facecolor="green", edgecolor="black", label="SensorGPS")
+            )
+
         sensor_x, sensor_y = pol2cart(
             np.array(self.sensor_hist)[:, 0],
             np.radians(np.array(self.sensor_hist)[:, 1]),
@@ -600,182 +1035,317 @@ class Results:
             sensor_x += self.transform[0]
             sensor_y += self.transform[1]
         if len(self.sensor_hist) > 1:
-            ax.arrow(
+            line4 = mpatches.FancyArrow(
                 sensor_x[-2],
                 sensor_y[-2],
                 4 * (sensor_x[-1] - sensor_x[-2]),
                 4 * (sensor_y[-1] - sensor_y[-2]),
-                width=1.5,
-                color="blue",
-                zorder=4,
+                width=2.5,
+                head_width=9,
+                head_length=6,
+                facecolor="rebeccapurple",
+                zorder=7,
+                # edgecolor="black",
+                label="Sensor",
+                linewidth=1,
             )
+            ax.add_patch(line4)
             ax.plot(
-                sensor_x[:-1],
-                sensor_y[:-1],
-                linewidth=3.0,
-                color="blue",
-                markeredgecolor="black",
-                markersize=4,
-                zorder=4,
+                sensor_x[len(sensor_x)-self.history_length:-1],
+                sensor_y[len(sensor_x)-self.history_length:-1],
+                linewidth=5,
+                color="rebeccapurple",
+                # markeredgecolor="black",
+                # markersize=4,
+                zorder=6,
+                # path_effects=[pe.Stroke(linewidth=7, foreground='black')]
             )
-        (line4,) = ax.plot(
-            sensor_x[-1],
-            sensor_y[-1],
-            "H",
-            color="blue",
-            label="sensor",
-            markersize=10,
-            zorder=4,
-        )
-        lines.extend([line4])
+            # (line4,) = ax.plot(
+            #     sensor_x[-1],
+            #     sensor_y[-1],
+            #     "p",
+            #     color="blue",
+            #     label="sensor",
+            #     markersize=10,
+            #     zorder=4,
+            # )
+            lines.extend([line4])
+            legend_elements.append(
+                mpatches.Patch(
+                    facecolor="rebeccapurple", edgecolor="black", label="Sensor"
+                )
+            )
 
         if self.openstreetmap and data.get("drone_position", None) is not None:
+            # print(f"{data['drone_position']=}")
             self.target_hist.append(
                 self.openstreetmap.scale_to_img(
                     data["drone_position"],
                     (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
                 )
             )
-            target_np = np.array(self.target_hist)
-            if len(self.target_hist) > 1:
-                ax.plot(
-                    target_np[:, 0],
-                    target_np[:, 1],
-                    linewidth=3.0,
-                    color="maroon",
+
+        # PLOT TARGETS
+        if self.target_hist:
+            # target_np = np.array(self.target_hist)
+            # print(f"{self.target_hist[-1]=}")
+            # assert len(self.target_hist.shape) == 3
+            for t in range(env.state.n_targets):
+                if env.simulated:
+                    target_x, target_y = pol2cart(
+                        np.array(self.target_hist)[:, t, 0],
+                        np.radians(np.array(self.target_hist)[:, t, 1]),
+                    )
+                else:
+                    temp_np = np.array(self.target_hist)
+                    target_x = temp_np[:, 0]
+                    target_y = temp_np[:, 1]
+
+                # if self.transform is not None:
+                #     target_x += self.transform[0]
+                #     target_y += self.transform[1]
+
+                if len(self.target_hist) > 1:
+                    ax.plot(
+                        target_x[:-1],
+                        target_y[:-1],
+                        linewidth=3.0,
+                        color="black",
+                        zorder=3,
+                        markersize=4,
+                    )
+                (line5,) = ax.plot(
+                    target_x[-1],
+                    target_y[-1],
+                    "X",
+                    color="black",
+                    markeredgecolor="black",
+                    label="Targets",
+                    markersize=10,
                     zorder=3,
-                    markersize=4,
                 )
-            (line5,) = ax.plot(
-                target_np[-1, 0],
-                target_np[-1, 1],
-                "o",
-                color="maroon",
-                markeredgecolor="black",
-                label="target",
-                markersize=10,
-                zorder=3,
-            )
             lines.extend([line5])
+            legend_elements.append(
+                Line2D(
+                    [0],
+                    [0],
+                    marker="X",
+                    color="white",
+                    markerfacecolor="black",
+                    markeredgecolor="black",
+                    label="Targets",
+                    markersize=10,
+                )
+            )
 
         # Legend
+        legend_elements.append(
+            Line2D(
+                [0],
+                [0],
+                marker="^",
+                color="white",
+                markeredgecolor="black",
+                markerfacecolor="white",
+                label="Avg Estimates",
+                markersize=12,
+            )
+        )
+    
         ax.legend(
-            handles=lines,
-            loc="upper left",
-            bbox_to_anchor=(1.04, 1.0),
+            handles=legend_elements,
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.1),
             fancybox=True,
             shadow=True,
-            ncol=1,
+            ncol=len(legend_elements),
         )
 
         # X/Y Limits
         if self.openstreetmap is None:
-            map_width = 600
+            map_width = map_distance * 2.1
             min_map = -1 * int(map_width / 2)
             max_map = int(map_width / 2)
             ax.set_xlim(min_map, max_map)
             ax.set_ylim(min_map, max_map)
 
         # Sidebar Text
-        # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
-        actual_str = "Actual\n"
-        actual_str += (
-            "Heading = {:.0f} deg\n".format(data.get("heading", None))
-            if data.get("heading", None)
-            else "Heading = unknown\n"
-        )
-        actual_str += (
-            "Speed = {:.2f} m/s".format(data.get("action_taken", None)[1])
-            if data.get("action_taken", None)
-            else "Speed = unknown\n"
-        )
-
-        proposal_str = "Proposed\n"
-        proposal_str += (
-            "Heading = {:.0f} deg\n".format(data.get("action_proposal", None)[0])
-            if None not in data.get("action_proposal", (None, None))
-            else "Heading = unknown\n"
-        )
-        proposal_str += (
-            "Speed = {:.2f} m/s".format(data.get("action_proposal", None)[1])
-            if None not in data.get("action_proposal", (None, None))
-            else "Speed = unknown\n"
-        )
-
-        last_mean_hyp = self.pf_stats["mean_hypothesis"][-1][0]
-        last_map_hyp = self.pf_stats["map_hypothesis"][-1][0]
-
-        rssi_str = "RSSI\n"
-        rssi_str += (
-            "Observed = {:.1f} dB\n".format(env.last_observation)
-            if env.last_observation
-            else "Observed = unknown\n"
-        )
-        rssi_str += (
-            "Expected = {:.1f} dB\n".format(self.expected_target_rssi)
-            if self.expected_target_rssi
-            else "Expected = unknown\n"
-        )
-        rssi_str += (
-            "Difference = {:.1f} dB\n".format(
-                env.last_observation - self.expected_target_rssi
+        if sidebar:
+            self.pf_stats["map_state"][-1][0]
+            map_r = (
+                f"{self.pf_stats['map_state'][-1][0]:.0f} m"
+                if self.pf_stats["map_state"][-1][0] is not None
+                else f"unknown"
             )
-            if (env.last_observation and self.expected_target_rssi)
-            else ""
-        )
-        # rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
-        # rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
-        rssi_str += (
-            "MLE estimate = {:.1f} dB\n".format(last_mean_hyp)
-            if last_mean_hyp
-            else "MLE estimate = unknown"
-        )
-        rssi_str += (
-            "MAP estimate = {:.1f} dB".format(last_map_hyp)
-            if last_map_hyp
-            else "MAP estimate = unknown"
-        )
 
-        if len(fig.texts) == 0:
-            props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
-            text = fig.text(
-                1.04,
-                0.75,
-                actual_str,
-                transform=ax.transAxes,
-                fontsize=14,
-                verticalalignment="top",
-                bbox=props,
+            if self.pf_stats["map_state"][-1][0] is not None:
+                map_theta = self.pf_stats["map_state"][-1][1]
+                map_theta = np.degrees(np.arctan2(np.sin(map_theta), np.cos(map_theta)))
+                map_theta = f"{map_theta:.0f} deg"
+            else:
+                map_theta = f"unknown"
+
+            # map_theta = np.degrees(np.arctan2(np.sin(map_theta),np.cos(map_theta)))
+            rel_centroid_x, rel_centroid_y = env.get_particle_centroids()[t]
+            centroid_r, centroid_theta = cart2pol(rel_centroid_x, rel_centroid_y)
+            centroid_theta = np.degrees(centroid_theta)
+            mean_estimate_str = (
+                f"TARGET ESTIMATE (mean)\n"
+                f"Distance = {centroid_r:.0f} m\n"
+                f"Bearing = {centroid_theta:.0f} deg"
             )
-            props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
-            text = fig.text(
-                1.04,
-                0.5,
-                proposal_str,
-                transform=ax.transAxes,
-                fontsize=14,
-                verticalalignment="top",
-                bbox=props,
+            map_estimate_str = (
+                f"TARGET ESTIMATE (MAP)\n"
+                f"Distance = {map_r}\n"
+                f"Bearing = {map_theta}"
             )
-            props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
-            text = fig.text(
-                1.04,
-                0.25,
-                rssi_str,
-                transform=ax.transAxes,
-                fontsize=14,
-                verticalalignment="top",
-                bbox=props,
+
+            # actual_str = r'$\bf{Actual}$''\n' # prettier format but adds ~0.04 seconds ???
+            actual_heading_str = (
+                f"{data.get('heading'):.0f} deg"
+                if data.get("heading", None)
+                else f"unknown"
             )
-        else:
-            fig.texts[0].set_text(actual_str)
-            fig.texts[1].set_text(proposal_str)
-            fig.texts[2].set_text(rssi_str)
+            actual_speed_str = (
+                f"{data.get('action_taken')[1]:.2f} m/s"
+                if data.get("action_taken", None)
+                else f"unknown"
+            )
+            actual_str = (
+                f"SENSOR ACTUAL\n"
+                f"Heading = {actual_heading_str}\n"
+                f"Speed = {actual_speed_str}"
+            )
+
+            proposal_heading_str = (
+                f"{data.get('action_proposal')[0]:.0f} deg"
+                if None not in data.get("action_proposal", (None, None))
+                else f"unknown"
+            )
+            proposal_speed_str = (
+                f"{data.get('action_proposal')[1]:.2f} m/s"
+                if None not in data.get("action_proposal", (None, None))
+                else f"unknown"
+            )
+            proposal_str = (
+                f"SENSOR PROPOSAL\n"
+                f"Heading = {proposal_heading_str}\n"
+                f"Speed = {proposal_speed_str}"
+            )
+
+            rssi_observed_str = (
+                f"{env.last_observation} dB" if env.last_observation else f"unknown"
+            )
+            rssi_expected_str = (
+                f"{self.expected_target_rssi:.0f} dB"
+                if self.expected_target_rssi
+                else f"unknown"
+            )
+            rssi_difference_str = (
+                f"Difference = {env.last_observation - self.expected_target_rssi:.0f} dB\n"
+                if (env.last_observation and self.expected_target_rssi)
+                else ""
+            )
+            rssi_mean_str = (
+                f"{self.pf_stats['mean_hypothesis'][-1][0]:.0f} dB"
+                if self.pf_stats["mean_hypothesis"][-1][0]
+                else f"unknown"
+            )
+            rssi_map_str = (
+                f"{self.pf_stats['map_hypothesis'][-1][0]:.0f} dB"
+                if self.pf_stats["map_hypothesis"][-1][0]
+                else f"unknown"
+            )
+            rssi_str = (
+                f"RSSI\n"
+                f"Observed = {rssi_observed_str}\n"
+                f"Expected = {rssi_expected_str}\n"
+                # f"{rssi_difference_str}"
+                f"Mean estimate = {rssi_mean_str}\n"
+                f"MAP estimate = {rssi_map_str}"
+            )
+            # rssi_str += 'Target heading = {} \n'.format(target_heading) if target_heading else ''
+            # rssi_str += 'Target relative heading = {} \n'.format(target_relative_heading) if target_relative_heading else ''
+
+            sidebar_str = (
+                f"{mean_estimate_str}"
+                f"\n\n===============\n\n"
+                f"{map_estimate_str}"
+                f"\n\n===============\n\n"
+                f"{actual_str}"
+                f"\n\n===============\n\n"
+                f"{proposal_str}"
+                f"\n\n===============\n\n"
+                f"{rssi_str}"
+            )
+
+            if len(fig.texts) == 0:
+                props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
+                text = fig.text(
+                    1.04,
+                    1,
+                    sidebar_str,
+                    transform=ax.transAxes,
+                    fontsize=14,
+                    verticalalignment="top",
+                    bbox=props,
+                )
+            else:
+                fig.texts[0].set_text(sidebar_str)
+
+            # if len(fig.texts) == 0:
+            #     props = dict(boxstyle="round", facecolor="mistyrose", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         1,
+            #         estimate_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="palegreen", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.85,
+            #         actual_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="paleturquoise", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.70,
+            #         proposal_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            #     props = dict(boxstyle="round", facecolor="khaki", alpha=0.5)
+            #     text = fig.text(
+            #         1.04,
+            #         0.55,
+            #         rssi_str,
+            #         transform=ax.transAxes,
+            #         fontsize=14,
+            #         verticalalignment="top",
+            #         bbox=props,
+            #     )
+            # else:
+            #     fig.texts[0].set_text(estimate_str)
+            #     fig.texts[1].set_text(actual_str)
+            #     fig.texts[2].set_text(proposal_str)
+            #     fig.texts[3].set_text(rssi_str)
 
         self.native_plot = "true" if time_step % self.plot_every_n == 0 else "false"
         if self.native_plot == "true":
             plt.draw()
-            plt.pause(0.001)
+            # plt.pause(0.001)
+            fig.canvas.start_event_loop(0.001)
+            fig.canvas.draw_idle()
         if self.make_gif == "true":
             png_filename = os.path.join(self.plot_dir, "png", f"{time_step}.png")
             print(f"saving plots in {png_filename}")
@@ -806,6 +1376,8 @@ class Results:
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
 
+        self.history_length = 50 
+        
         if len(self.abs_target_hist) < self.history_length:
             self.abs_target_hist = [abs_target] * self.history_length
             self.abs_sensor_hist = [abs_sensor] * self.history_length
@@ -1043,7 +1615,6 @@ class Results:
             heatmap_combined = None
             all_particles_x, all_particles_y = [], []
             for t in range(env.state.n_targets):
-
                 particles_x, particles_y = pol2cart(
                     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
                 )
@@ -1348,7 +1919,6 @@ class Results:
         fig=None,
         ax=None,
     ):
-        print(belief.shape)
         if len(self.abs_target_hist) < self.history_length:
             self.abs_target_hist = [abs_target] * self.history_length
             self.abs_sensor_hist = [abs_sensor] * self.history_length
@@ -1484,18 +2054,15 @@ class Results:
         plt.close(fig)
 
 
-def write_header_log(config, method, global_start_time):
-
+def write_config_log(config, logdir):
     if isinstance(config, configparser.ConfigParser):
         config2log = {section: dict(config[section]) for section in config.sections()}
     else:
         config2log = dict(config)
 
-    # write output header
-    if not os.path.isdir(f"{RUN_DIR}/{method}/"):
-        os.makedirs(f"{RUN_DIR}/{method}/")
-    header_filename = f"{RUN_DIR}/{method}/{global_start_time}_header.txt"
-    with open(header_filename, "w", encoding="UTF-8") as f:
+    # write config to file
+    config_filename = f"{logdir}config.log"
+    with open(config_filename, "w", encoding="UTF-8") as f:
         f.write(json.dumps(config2log))
 
 
@@ -1551,7 +2118,6 @@ def particles_centroid_xy(particles):
 
 
 def angle_diff(angle):
-
     diff = angle % 360
 
     diff = (diff + 360) % 360
@@ -1644,5 +2210,72 @@ def tracking_error(all_targets, all_particles):
         centroid_distance_error = results[3]
         rmse = results[4]
         mae = results[5]
+
+    return r_error, theta_error, heading_error, centroid_distance_error, rmse, mae
+
+
+def tracking_metrics_separable(all_targets, all_particles):
+    """
+    Calculate different tracking metrics
+    """
+    results = []
+    r_error = None
+    theta_error = None
+    heading_error = None
+    centroid_distance_error = None
+    rmse = None
+    mae = None
+    n_targets, n_particles, n_states = all_particles.shape
+
+    for t in range(n_targets):
+        target = all_targets[t]
+        particles = all_particles[t]
+
+        target_r = target[0]
+        target_theta = np.radians(target[1])
+        target_heading = target[2]
+        target_x, target_y = pol2cart(target_r, target_theta)
+
+        (
+            particles_x,
+            particles_y,
+            mean_x,
+            mean_y,
+            mean_r,
+            mean_theta,
+            mean_heading,
+            mean_spd,
+        ) = particles_mean_belief(particles)
+
+        r_error = np.mean(np.abs(target_r - particles[:, 0]))
+        theta_error = np.mean(np.abs(angle_diff(target[1] - particles[:, 1])))
+        heading_diff = np.abs(np.mean(target_heading - particles[:, 2])) % 360
+        heading_error = heading_diff if heading_diff <= 180 else 360 - heading_diff
+
+        # centroid euclidean distance error x,y
+        centroid_distance_error = np.sqrt(
+            (mean_x - target_x) ** 2 + (mean_y - target_y) ** 2
+        )
+
+        mae = np.mean(
+            np.sqrt((particles_x - target_x) ** 2 + (particles_y - target_y) ** 2)
+        )
+
+        # root mean square error
+        rmse = np.sqrt(
+            np.mean((particles_x - target_x) ** 2 + (particles_y - target_y) ** 2)
+        )
+
+        results.append(
+            [r_error, theta_error, heading_error, centroid_distance_error, rmse, mae]
+        )
+    results = np.array(results).T
+
+    r_error = results[0]
+    theta_error = results[1]
+    heading_error = results[2]
+    centroid_distance_error = results[3]
+    rmse = results[4]
+    mae = results[5]
 
     return r_error, theta_error, heading_error, centroid_distance_error, rmse, mae

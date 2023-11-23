@@ -1,13 +1,13 @@
 """
 Tests for sigscan.py
 """
-#import signal
+# import signal
 
-#import httpx
-#import matplotlib.pyplot as plt
-#import pytest
+# import httpx
+# import matplotlib.pyplot as plt
+# import pytest
 
-#from birdseye.utils import Results
+# from birdseye.utils import Results
 from sigscan import SigScan
 
 
@@ -23,7 +23,7 @@ class MockMessageObject:
         self.payload = payload
 
 
-#def test_run_flask():
+# def test_run_flask():
 #    """
 #    Test the run_flask function
 #    """
@@ -41,7 +41,7 @@ class MockMessageObject:
 #        signal.raise_signal(signal.SIGINT)
 #    assert pytest_wrapped_e.type == KeyboardInterrupt
 
-    
+
 def test_sigscan():
     """
     Test the SigScan class

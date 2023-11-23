@@ -2,6 +2,8 @@ import random
 
 import numpy as np
 from scipy.ndimage.filters import gaussian_filter
+from timeit import default_timer as timer
+
 
 from .utils import cart2pol
 from .utils import pol2cart
@@ -37,10 +39,11 @@ class RFMultiState(State):
         target_speed_range=None,
         target_movement=None,
         target_start=None,
+        sensor_speed=None,
+        particle_distance=None,
         reward=None,
         simulated=True,
     ):
-
         self.state_dim = 4
         # Target Settings
         # Transition probability
@@ -51,6 +54,9 @@ class RFMultiState(State):
             [float(t) for t in target_speed_range.strip("'[]").split(",")]
             if target_speed_range is not None
             else [self.target_speed]
+        )
+        self.particle_distance = (
+            float(particle_distance) if particle_distance is not None else 200
         )
         # Target movement pattern
         self.target_movement = (
@@ -66,12 +72,14 @@ class RFMultiState(State):
         # Setup an initial random state
         self.target_state = None
         if simulated:
-            self.update_state = self.update_sim_state
+            self.update_state = self.update_state_vectorized
+            # self.update_state = self.update_sim_state
             self.target_state = self.init_target_state()
         else:
             self.update_state = self.update_real_state
         # Setup an initial sensor state
         self.sensor_state = self.init_sensor_state()
+        self.sensor_speed = float(sensor_speed) if sensor_speed is not None else 1.0
 
         # Reward
         # Setup reward
@@ -81,7 +89,10 @@ class RFMultiState(State):
             "entropy_collision_reward": self.entropy_collision_reward,
             "heuristic_reward": self.heuristic_reward,
         }
-        self.reward_func = self.AVAIL_REWARDS[reward]
+        if callable(reward):
+            self.reward_func = reward
+        else:
+            self.reward_func = self.AVAIL_REWARDS[reward]
         if reward == "range_reward":
             self.belief_mdp = False
         elif reward in ["entropy_collision_reward", "heuristic_reward"]:
@@ -128,10 +139,10 @@ class RFMultiState(State):
         # state is [range, heading, relative course, own speed]
         return np.array(
             [
-                random.randint(5, 100),
+                random.randint(1, self.particle_distance),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
-                random.randint(0, 1),
+                self.target_speed,
             ]
         )
 
@@ -146,7 +157,8 @@ class RFMultiState(State):
         # state is [range, heading, relative course, own speed]
         return np.array(
             [
-                random.randint(50, self.target_start + 25),
+                # random.randint(50, self.target_start + 25),
+                random.randint(50, 100),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
                 self.target_speed,
@@ -166,6 +178,7 @@ class RFMultiState(State):
         particles=None,
         action_penalty=-1.0,
         delta=20,
+        **kwargs,
     ):
         """Function to calculate reward based on state and selected action
 
@@ -211,7 +224,13 @@ class RFMultiState(State):
 
     # returns reward as a function of range, action, and action penalty or as a function of range only
     def range_reward(
-        self, state, action=None, action_idx=None, particles=None, action_penalty=-0.05
+        self,
+        state,
+        action=None,
+        action_idx=None,
+        particles=None,
+        action_penalty=-0.05,
+        **kwargs,
     ):
         """Function to calculate reward based on state and selected action
 
@@ -270,7 +289,6 @@ class RFMultiState(State):
         delta=15,
         collision_weight=1,
     ):
-
         map_width = 600
         min_map = -1 * int(map_width / 2)
         max_map = int(map_width / 2)
@@ -281,7 +299,6 @@ class RFMultiState(State):
 
         H = 0
         for t in range(self.n_targets):
-
             pf_r = particles[:, 4 * t]
             pf_theta = np.radians(particles[:, (4 * t) + 1])
             pf_x, pf_y = pol2cart(pf_r, pf_theta)
@@ -297,6 +314,111 @@ class RFMultiState(State):
         cost = H + collision_weight * collision_rate
 
         return -1.0 * cost
+
+    def update_state_vectorized(self, state, control, **kwargs):
+        """Update state based on state and action
+
+        Parameters
+        ----------
+        state_vars : list
+            List of current state variables
+        control : action (tuple)
+            Action tuple
+
+        Returns
+        -------
+        State (array_like)
+            Updated state values array
+        """
+        original_shape = state.shape
+        state = np.atleast_2d(state)
+        total_start = timer()
+        # Get current state vars
+        start = timer()
+        r = state[:, 0]
+        theta = state[:, 1]
+        crs = state[:, 2]
+        spd = state[:, 3]
+
+        # r, theta, crs, spd = state
+        # spd = self.target_speed
+
+        control_theta = control[0]
+        control_spd = control[1]
+
+        end = timer()
+        # print(f"1: {end-start}")
+
+        start = timer()
+        theta = theta % 360
+        theta -= control_theta
+        theta = theta % 360
+        theta[theta < 0] += 360
+        end = timer()
+        # print(f"2: {end-start}")
+        # if theta < 0:
+        #     theta += 360
+
+        start = timer()
+        crs = crs % 360
+        crs -= control[0]
+        crs[crs < 0] += 360
+        # if crs < 0:
+        #     crs += 360
+        crs = crs % 360
+        end = timer()
+        # print(f"3: {end-start}")
+        start = timer()
+        # Get cartesian coords
+        x, y = pol2cart(r, np.radians(theta))
+        end = timer()
+        # print(f"4: {end-start}")
+        start = timer()
+        # Generate next course given current course
+        crs += np.random.choice(
+            [0, -30, 30],
+            size=len(crs),
+            p=[
+                self.prob_target_change_crs,
+                (1 - self.prob_target_change_crs) / 2,
+                (1 - self.prob_target_change_crs) / 2,
+            ],
+        )
+        # crs += 30 * np.ones(len(crs))
+        # if random.random() >= self.prob_target_change_crs:
+        #     crs += random.choice([-1, 1]) * 30
+
+        crs %= 360
+        crs[crs < 0] += 360
+        end = timer()
+        # print(f"5: {end-start}")
+        start = timer()
+        # if crs < 0:
+        #     crs += 360
+
+        # Transform changes to coords to cartesian
+        dx, dy = pol2cart(spd, np.radians(crs))
+        end = timer()
+        # print(f"6: {end-start}")
+        start = timer()
+        new_x = x + dx - control_spd
+        new_y = y + dy
+        # pos = [x + dx - control_spd, y + dy]
+
+        r = np.sqrt(new_x**2 + new_y**2)
+        theta_rad = np.arctan2(new_y, new_x)
+        theta = np.degrees(theta_rad)
+        theta[theta < 0] += 360
+        end = timer()
+        # print(f"7: {end-start}")
+        # print(f"total: {end-total_start}")
+        # if theta < 0:
+        #     theta += 360
+
+        # return (r, theta, crs, spd)
+        new_state = np.stack((r, theta, crs, spd), axis=-1)
+        new_state = np.reshape(new_state, original_shape)
+        return new_state
 
     # returns new state given last state and action (control)
 
@@ -320,7 +442,7 @@ class RFMultiState(State):
         # Get current state vars
         r, theta, crs, spd = state
 
-        spd = random.randint(0, 1)
+        spd = self.target_speed  # 0.5, random.randint(0, 1)
 
         control_spd = control[1]
 
@@ -418,7 +540,6 @@ class RFMultiState(State):
         return [r, theta_deg, crs, spd]
 
     def update_real_sensor(self, distance, course, heading):
-
         r, theta_deg, prev_heading, spd = self.sensor_state
         heading = heading if heading else prev_heading
 
@@ -496,7 +617,6 @@ class RFState(State):
         target_start=None,
         reward=None,
     ):
-
         # Transition probability
         self.prob_target_change_crs = prob
         # Target speed
@@ -637,7 +757,6 @@ class RFState(State):
         return -1.0 * cost
 
     # returns new state given last state and action (control)
-
     def update_state(self, state, control, target_update=False):
         """Update state based on state and action
 
