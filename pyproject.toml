@@ -17,7 +17,7 @@ paho-mqtt = "1.6.1"
 pandas = "2.1.2"
 pfilter = "0.2.5"
 requests = "2.31.0"
-scipy = "1.11.3"
+scipy = "1.11.4"
 tqdm = "4.66.1"
 seaborn = "^0.13.0"
 
