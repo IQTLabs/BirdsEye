@@ -16,7 +16,9 @@ deployment, or where more sensitive sensors do not
 function or cannot be installed due to the nature of
 the environment.
 
-This repository is the official implementation of the work published [here](https://doi.org/10.1109/ROSE52750.2021.9611756):
+This repository is the official implementation of the following work [Tindall et al., 2023](https://ieeexplore.ieee.org/abstract/document/10107397) and [Tindall et al., 2021](https://doi.org/10.1109/ROSE52750.2021.9611756):
+> L. Tindall, E. Mair and T. Q. Nguyen, "Radio Frequency Signal Strength Based Multitarget Tracking With Robust Path Planning," in IEEE Access, vol. 11, pp. 43472-43484, 2023, doi: 10.1109/ACCESS.2023.3269758.
+
 > L. Tindall, Z. Hampel-Arias, J. Goldfrank, E. Mair and T. Q. Nguven, "Localizing Radio Frequency Targets Using Reinforcement Learning," 2021 IEEE International Symposium on Robotic and Sensors Environments (ROSE), 2021, pp. 1-7, doi: 10.1109/ROSE52750.2021.9611756.
 
 
