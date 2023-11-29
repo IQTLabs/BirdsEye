@@ -150,14 +150,11 @@ class Geolocate:
         if predictions:
             self.data["rssi"] = {}
             for class_name in predictions.keys(): 
-                #self.class_map[class_name] = self.class_map.get(class_name, len(self.class_map))
-                #if class_name not in self.class_map:
-                #    self.class_map[class_name] = self.class_iter
-                #    self.class_iter += 1
                 
                 self.data["rssi"][class_name] = np.mean(
-                    [float(prediction["rssi"]) for prediction in predictions[class_name]]
+                    [float(prediction.get("rssi_max", metadata["rssi_max"])) for prediction in predictions[class_name]]
                 )
+
         elif metadata: 
             # TODO: how to handle when tracking multiple targets
             #self.data["rssi"] = float(metadata["rssi_mean"])
@@ -241,6 +238,18 @@ class Geolocate:
                 host=host_name, port=port, debug=False, use_reloader=False
             )
         ).start()
+    
+    def get_replay_json(self, replay_file):
+        with open(replay_file, "r", encoding="UTF-8") as open_file:
+            replay_data = json.load(open_file)
+            for ts in replay_data:
+                yield replay_data[ts]
+    
+    def get_replay_log(self, replay_file):
+        with open(replay_file, "r", encoding="UTF-8") as open_file:
+            for line in open_file:
+                replay_data = json.loads(line)
+                yield replay_data
 
     def main(self):
         """
@@ -338,9 +347,10 @@ class Geolocate:
                 mqtt_host, mqtt_port, self.data_handler
             )
         else:
-            with open(replay_file, "r", encoding="UTF-8") as open_file:
-                replay_data = json.load(open_file)
-                replay_ts = sorted(replay_data.keys())
+            if replay_file.endswith(".log"):
+                get_replay_data = self.get_replay_log(replay_file)
+            elif replay_file.endswith(".json"):
+                get_replay_data = self.get_replay_json(replay_file)
         ###########
 
         # BirdsEye
@@ -373,6 +383,10 @@ class Geolocate:
             threshold=threshold,
             data=self.data,
         )  # fading sigm = 8dB, threshold = -120dB
+
+        # Test expected RSSI
+        # for distance in [10, 20, 30, 40, 50, 60, 70]:
+        #     print(f"{distance=}, rssi={sensor.observation([distance,0],0,0)}")
 
         # Action space
         # actions = WalkingActions()
@@ -451,7 +465,7 @@ class Geolocate:
         control_actions = []
         step_time = 0
 
-        while self.data["gps"] != "fix":
+        while self.data["gps"] != "fix" and not replay_file:
             time.sleep(1)
             logging.info("Waiting for GPS...")
 
@@ -461,9 +475,12 @@ class Geolocate:
 
             if replay_file:
                 # load data from saved file
-                if time_step == len(replay_ts):
+                try: 
+                    replay_data = next(get_replay_data)
+                except StopIteration:
                     break
-                self.data_handler(replay_data[replay_ts[time_step]])
+                
+                self.data_handler(replay_data)
 
             action_start = timer()
 
