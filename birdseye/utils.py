@@ -880,11 +880,12 @@ class Results:
         )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
 
         separable_color_array = [
-            ["lightgreen", "green"],
             ["deepskyblue", "blue"],
             ["pink", "red"],
             ["wheat", "orange"],
+            ["lightgreen", "green"],
         ]
+        sensor_color = "green"
         legend_elements = []
         for t in range(env.state.n_targets):
             # PLOT PARTICLES
@@ -947,7 +948,7 @@ class Results:
                 color=centroid_color,
                 markeredgecolor="black",
                 label="Mean Estimate",
-                markersize=12,
+                markersize=20,
                 zorder=7,
             )
 
@@ -1034,16 +1035,24 @@ class Results:
         if self.transform is not None:
             sensor_x += self.transform[0]
             sensor_y += self.transform[1]
+
         if len(self.sensor_hist) > 1:
+            arrow_x, arrow_y = pol2cart(
+                6, np.radians(env.state.sensor_state[2])
+            )
             line4 = mpatches.FancyArrow(
-                sensor_x[-2],
-                sensor_y[-2],
-                4 * (sensor_x[-1] - sensor_x[-2]),
-                4 * (sensor_y[-1] - sensor_y[-2]),
-                width=2.5,
-                head_width=9,
-                head_length=6,
-                facecolor="rebeccapurple",
+                # sensor_x[-2],
+                # sensor_y[-2],
+                # 4 * (sensor_x[-1] - sensor_x[-2]),
+                # 4 * (sensor_y[-1] - sensor_y[-2]),
+                sensor_x[-1],
+                sensor_y[-1],
+                arrow_x,
+                arrow_y,
+                width=5,
+                head_width=15,
+                head_length=15,
+                facecolor=sensor_color,
                 zorder=7,
                 # edgecolor="black",
                 label="Sensor",
@@ -1051,10 +1060,10 @@ class Results:
             )
             ax.add_patch(line4)
             ax.plot(
-                sensor_x[len(sensor_x)-self.history_length:-1],
-                sensor_y[len(sensor_x)-self.history_length:-1],
+                sensor_x[len(sensor_x)-self.history_length:],
+                sensor_y[len(sensor_x)-self.history_length:],
                 linewidth=5,
-                color="rebeccapurple",
+                color=sensor_color,
                 # markeredgecolor="black",
                 # markersize=4,
                 zorder=6,
@@ -1072,7 +1081,7 @@ class Results:
             lines.extend([line4])
             legend_elements.append(
                 mpatches.Patch(
-                    facecolor="rebeccapurple", edgecolor="black", label="Sensor"
+                    facecolor=sensor_color, edgecolor="black", label="Sensor"
                 )
             )
 

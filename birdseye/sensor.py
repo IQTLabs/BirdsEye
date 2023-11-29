@@ -46,7 +46,10 @@ def get_radiation_pattern(antenna_filename=None):
 
 def get_directivity(radiation_pattern, theta):
     theta_degrees = theta * 180 / np.pi
-    theta_degrees = theta_degrees.astype(int)
+    if isinstance(theta_degrees, np.ndarray): 
+        theta_degrees = theta_degrees.astype(int)
+    else: 
+        theta_degrees = int(theta_degrees)
     return radiation_pattern[theta_degrees % len(radiation_pattern)]
 
 
@@ -62,7 +65,7 @@ def rssi(
     Calculate the received signal strength at a receiver in dB
     """
     power_rx = (
-        float(power_tx)
+        float(power_tx) - 30 # -30 dbm to dbW
         + directivity_rx
         + float(directivity_tx)
         + (20 * np.log10(speed_of_light / (4 * np.pi)))
@@ -302,7 +305,7 @@ class SingleRSSISeparable(Sensor):
                 power_tx=self.power_tx[target],
                 directivity_tx=self.directivity_tx[target],
                 freq=self.freq[target],
-                fading_sigma=self.fading_sigma,
+                fading_sigma=fading_sigma,
             )
         )
         rssi_power = power_to_dB(power)
@@ -329,7 +332,7 @@ class SingleRSSISeparable(Sensor):
                 power_tx=self.power_tx[target],
                 directivity_tx=self.directivity_tx[target],
                 freq=self.freq[target],
-                fading_sigma=self.fading_sigma,
+                fading_sigma=fading_sigma,
             )
         )
         rssi_power = power_to_dB(power)
