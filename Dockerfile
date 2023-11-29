@@ -5,18 +5,19 @@ ENV PYTHONUNBUFFERED 1
 COPY pyproject.toml .
 COPY poetry.lock .
 
-RUN apt-get update && apt-get install -y libjpeg-dev python3 python3-pip python3-venv
+RUN apt-get update && apt-get install -y libjpeg-dev python3 python3-pip 
 ENV PATH="${PATH}:/root/.local/bin"
-RUN apt-get update && apt-get install -y --no-install-recommends curl gcc git g++ libev-dev libyaml-dev tini && \
-  python3 -m pip install pipx && \
-  python3 -m pipx ensurepath && \
-  pipx install poetry && \
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends curl gcc git g++ libev-dev libyaml-dev tini && \
+  curl -sSL https://install.python-poetry.org | python3 - --version 1.4.2 && \
   poetry config virtualenvs.create false && \
+  python3 -m pip install --no-cache-dir --upgrade pip && \
   poetry install --no-root && \
   apt-get purge -y gcc g++ && apt -y autoremove --purge && rm -rf /var/cache/* /root/.cache/*
 
 COPY . /BirdsEye
 WORKDIR /BirdsEye
 EXPOSE 4999
+RUN python3 geolocate.py --help
 ENTRYPOINT ["python3", "geolocate.py"]
 CMD ["geolocate.ini"]
