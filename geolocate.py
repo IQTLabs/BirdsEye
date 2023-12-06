@@ -11,7 +11,7 @@ import threading
 import time
 
 from datetime import datetime
-from flask import Flask, render_template
+from flask import Flask, render_template, send_from_directory, redirect, request, url_for, make_response, jsonify
 from io import BytesIO
 from timeit import default_timer as timer
 
@@ -119,6 +119,36 @@ class Geolocate:
         self.static_position = None
         self.static_heading = None
 
+        #### CONFIGS
+        default_config = {
+            "local_plot": "false",
+            "make_gif": "false",
+            "n_targets": "2",
+            "antenna_type": "logp",
+            "planner_method": "repp",
+            "target_speed": "0.5",
+            "sensor_speed": "1.0",
+            "power_tx": "26.0",
+            "directivity_tx": "1.0",
+            "freq": "5.7e9",
+            "fading_sigma": "8.0",
+            "threshold": "-120",
+            "mcts_depth": "3",
+            "mcts_c": "20.0",
+            "mcts_simulations": "100",
+            "mcts_n_downsample": "400",
+            "static_position": None,
+            "static_heading": None,
+            "replay_file": None,
+            "mqtt_host": ORCHESTRATOR,
+            "mqtt_port": "1883",
+            "flask_host": "0.0.0.0",  # nosec
+            "flask_port": "4999",
+            "use_flask": "false",
+        }
+        default_config.update(self.config)
+        self.config = default_config
+
     def data_handler(self, message_data):
         """
         Generic data processor
@@ -207,6 +237,51 @@ class Geolocate:
         """
         app = Flask(__name__)
 
+        @app.route('/gui/<path:filename>')
+        def gui_file(filename):
+            return send_from_directory('gui', filename)
+
+        @app.route("/gui/data")
+        def gui_data():
+            data = base64.b64encode(self.image_buf.getvalue()).decode("ascii")
+            img = "data:image/png;base64,"+data
+            return jsonify(img)
+
+        @app.route('/refresh')
+        def refresh():
+            os.makedirs('gui', exist_ok=True)
+            with open("gui/map.png", "wb") as img:
+                img.write(self.image_buf.getbuffer())
+            # newmapp = np.random.rand(500,500,3) * 255    
+            # data = Image.fromarray(newmapp.astype('uint8')).convert('RGBA')
+            # data.save('gui/map.png')
+            return "OK" 
+
+        @app.route('/gui/form', methods = ['POST', 'GET'])
+        def gui_form():
+            if request.method == 'POST':
+                user = request.form.get('name', None)
+                self.config['n_targets'] = request.form.get('n_targets', self.config['n_targets'])
+                reset = request.form.get('reset', None)
+                if reset == "reset":
+                    self.stop()
+                    self.image_buf = BytesIO()
+                    self.start()
+                return redirect(request.referrer)
+
+        @app.route("/guiFile")
+        def gui_from_file():
+            if not self.image_buf.getbuffer().nbytes:
+                return render_template("loading.html")
+            return render_template("gui_from_file.html", config=self.config)
+
+        @app.route("/guiBuffer")
+        def gui_from_buffer():
+            if not self.image_buf.getbuffer().nbytes:
+                return render_template("loading.html")
+            return render_template("gui_from_buffer.html", config=self.config)
+
+
         @app.route("/")
         def index():
             flask_start_time = timer()
@@ -251,41 +326,21 @@ class Geolocate:
                 replay_data = json.loads(line)
                 yield replay_data
 
-    def main(self):
+    def start(self):
+        self.stop_threads = False
+        self.main_thread = threading.Thread(target=self.main, args=[lambda: self.stop_threads])
+        self.main_thread.start()
+        logging.info("Main thread started.")
+
+    def stop(self): 
+        self.stop_threads = True
+        self.main_thread.join()
+        logging.info("Main thread stopped.")
+        
+    def main(self, stopped):
         """
         Main loop
         """
-
-        #### CONFIGS
-        default_config = {
-            "local_plot": "false",
-            "make_gif": "false",
-            "n_targets": "2",
-            "antenna_type": "logp",
-            "planner_method": "repp",
-            "target_speed": "0.5",
-            "sensor_speed": "1.0",
-            "power_tx": "26.0",
-            "directivity_tx": "1.0",
-            "freq": "5.7e9",
-            "fading_sigma": "8.0",
-            "threshold": "-120",
-            "mcts_depth": "3",
-            "mcts_c": "20.0",
-            "mcts_simulations": "100",
-            "mcts_n_downsample": "400",
-            "static_position": None,
-            "static_heading": None,
-            "replay_file": None,
-            "mqtt_host": ORCHESTRATOR,
-            "mqtt_port": "1883",
-            "flask_host": "0.0.0.0",  # nosec
-            "flask_port": "4999",
-            "use_flask": "false",
-        }
-        default_config.update(self.config)
-        self.config = default_config
-
         self.static_position = self.config["static_position"]
         if self.static_position:
             self.static_position = [float(i) for i in self.static_position.split(",")]
@@ -465,11 +520,11 @@ class Geolocate:
         control_actions = []
         step_time = 0
 
-        while self.data["gps"] != "fix" and not replay_file:
+        while self.data["gps"] != "fix" and not replay_file and not stopped():
             time.sleep(1)
             logging.info("Waiting for GPS...")
 
-        while True:
+        while True and not stopped():
             loop_start = timer()
             self.data["utc_time"] = datetime.utcnow().timestamp()
 
@@ -585,4 +640,4 @@ if __name__ == "__main__":  # pragma: no cover
     logging.getLogger("matplotlib.font_manager").disabled = True
 
     instance = Geolocate(config_path=args.config_path)
-    instance.main()
+    instance.start()
