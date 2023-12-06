@@ -1,0 +1,36 @@
+<html>
+<head>
+    <title>BirdsEye</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+</head>
+<body>
+    <img id="map" src="" />
+    <form action = "{{ url_for('gui_form') }}" method = "post">
+        <p>Number of targets:</p>
+        <p><input type = "text" name="n_targets" value="{{ config.n_targets }}"/></p>
+        
+        <p><button name="reset" type="submit" value="reset">Reset</button></p>
+    </form>
+    <script>
+      $(document).ready(function(){
+        setInterval(refreshFunction, 1000);
+      });
+
+      function refreshFunction(){
+        fetch("/refresh")
+        .then(res => {
+            d = new Date();
+            $("#map").attr("src", "{{ url_for('gui_file', filename='map.png') }}?"+d.getTime());                       
+            
+        })
+        .catch(err => alert("Error: " + err));
+
+        // including jquery version
+        // $.get('/refresh', function(){            
+        //     d = new Date();
+        //     $("#map").attr("src", "{{ url_for('gui_file', filename='map.png') }}?"+d.getTime());            
+        // });
+      }
+    </script>
+</body>
+</html>
