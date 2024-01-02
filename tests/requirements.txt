@@ -1,5 +1,5 @@
 httpx==0.25.2
 pylint==3.0.2
-pytest==7.4.3
+pytest==7.4.4
 pytest-cov==4.1.0
 pytype==2023.11.29
