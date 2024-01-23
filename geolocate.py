@@ -111,6 +111,8 @@ class Geolocate:
             "action_taken": None,
             "needs_processing": False,
             "gps": None,
+            "targets": {},
+            "target_gps": None,
         }
         config = configparser.ConfigParser()
         config.read(config_path)
@@ -148,6 +150,23 @@ class Geolocate:
         }
         default_config.update(self.config)
         self.config = default_config
+
+    def target_handler(self, message_data):
+
+        logging.info(f"Received gamutrf/target MQTT message: {message_data}")
+
+        if message_data["gps_stale"].lower() != "false" or int(message_data["gps_fix_type"]) < 2:
+            return "No target GPS."
+
+        self.data["target_gps"] = "fix"
+        target_name = message_data["target_name"]
+        if target_name not in self.data["targets"]: 
+            self.data["targets"][target_name] = {"idx":len(self.data["targets"])}
+        
+        self.data["targets"][target_name]["position"] = (
+            message_data["latitude"], 
+            message_data["longitude"]
+        )
 
     def data_handler(self, message_data):
         """
@@ -398,8 +417,12 @@ class Geolocate:
 
         ###### MQTT or replay from file
         if replay_file is None:
+            topics = [
+                ("gamutrf/inference", self.data_handler),
+                ("gamutrf/targets", self.target_handler),
+            ]
             mqtt_client = birdseye.mqtt.BirdsEyeMQTT(
-                mqtt_host, mqtt_port, self.data_handler
+                mqtt_host, mqtt_port, topics
             )
         else:
             if replay_file.endswith(".log"):
@@ -520,7 +543,7 @@ class Geolocate:
         control_actions = []
         step_time = 0
 
-        while self.data["gps"] != "fix" and not replay_file and not stopped():
+        while self.data["gps"] != "fix" and self.data["target_gps"] != "fix" and not replay_file and not stopped():
             time.sleep(1)
             logging.info("Waiting for GPS...")
 
