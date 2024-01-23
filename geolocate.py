@@ -11,7 +11,16 @@ import threading
 import time
 
 from datetime import datetime
-from flask import Flask, render_template, send_from_directory, redirect, request, url_for, make_response, jsonify
+from flask import (
+    Flask,
+    render_template,
+    send_from_directory,
+    redirect,
+    request,
+    url_for,
+    make_response,
+    jsonify,
+)
 from io import BytesIO
 from timeit import default_timer as timer
 
@@ -69,24 +78,26 @@ class GamutRFSensor(birdseye.sensor.SingleRSSISeparable):
 
         if observation is None:
             return default_observation
-        
-        if type(observation) == dict: 
+
+        if type(observation) == dict:
             format_observation = default_observation
             for class_name in observation:
-                self.class_map[class_name] = self.class_map.get(class_name, len(self.class_map))
+                self.class_map[class_name] = self.class_map.get(
+                    class_name, len(self.class_map)
+                )
                 format_observation[self.class_map[class_name]] = observation[class_name]
             observation = format_observation
 
         if type(observation) != list:
             observation = [observation]
 
-        if len(observation) != self.n_targets: 
+        if len(observation) != self.n_targets:
             raise ValueError("len(observation) != n_targets")
 
-        for i in range(len(observation)): 
+        for i in range(len(observation)):
             if observation[i] and observation[i] < self.threshold:
                 observation[i] = None
-        
+
         return observation
 
 
@@ -152,20 +163,22 @@ class Geolocate:
         self.config = default_config
 
     def target_handler(self, message_data):
-
         logging.info(f"Received gamutrf/target MQTT message: {message_data}")
 
-        if message_data["gps_stale"].lower() != "false" or int(message_data["gps_fix_type"]) < 2:
+        if (
+            message_data["gps_stale"].lower() != "false"
+            or int(message_data["gps_fix_type"]) < 2
+        ):
             return "No target GPS."
 
         self.data["target_gps"] = "fix"
         target_name = message_data["target_name"]
-        if target_name not in self.data["targets"]: 
-            self.data["targets"][target_name] = {"idx":len(self.data["targets"])}
-        
+        if target_name not in self.data["targets"]:
+            self.data["targets"][target_name] = {"idx": len(self.data["targets"])}
+
         self.data["targets"][target_name]["position"] = (
-            message_data["latitude"], 
-            message_data["longitude"]
+            message_data["latitude"],
+            message_data["longitude"],
         )
 
     def data_handler(self, message_data):
@@ -198,19 +211,21 @@ class Geolocate:
         metadata = message_data.get("metadata", None)
         if predictions:
             self.data["rssi"] = {}
-            for class_name in predictions.keys(): 
-                
+            for class_name in predictions.keys():
                 self.data["rssi"][class_name] = np.mean(
-                    [float(prediction.get("rssi_max", metadata["rssi_max"])) for prediction in predictions[class_name]]
+                    [
+                        float(prediction.get("rssi_max", metadata["rssi_max"]))
+                        for prediction in predictions[class_name]
+                    ]
                 )
 
-        elif metadata: 
+        elif metadata:
             # TODO: how to handle when tracking multiple targets
-            #self.data["rssi"] = float(metadata["rssi_mean"])
-            #self.data["rssi"] = float(metadata["rssi_min"])
-            #self.data["rssi"] = float(metadata.get["rssi_max"])
+            # self.data["rssi"] = float(metadata["rssi_mean"])
+            # self.data["rssi"] = float(metadata["rssi_min"])
+            # self.data["rssi"] = float(metadata.get["rssi_max"])
             pass
-        else: 
+        else:
             self.data["rssi"] = message_data.get("rssi", None)
 
         self.data["position"] = message_data.get("position", self.data["position"])
@@ -256,32 +271,34 @@ class Geolocate:
         """
         app = Flask(__name__)
 
-        @app.route('/gui/<path:filename>')
+        @app.route("/gui/<path:filename>")
         def gui_file(filename):
-            return send_from_directory('gui', filename)
+            return send_from_directory("gui", filename)
 
         @app.route("/gui/data")
         def gui_data():
             data = base64.b64encode(self.image_buf.getvalue()).decode("ascii")
-            img = "data:image/png;base64,"+data
+            img = "data:image/png;base64," + data
             return jsonify(img)
 
-        @app.route('/refresh')
+        @app.route("/refresh")
         def refresh():
-            os.makedirs('gui', exist_ok=True)
+            os.makedirs("gui", exist_ok=True)
             with open("gui/map.png", "wb") as img:
                 img.write(self.image_buf.getbuffer())
-            # newmapp = np.random.rand(500,500,3) * 255    
+            # newmapp = np.random.rand(500,500,3) * 255
             # data = Image.fromarray(newmapp.astype('uint8')).convert('RGBA')
             # data.save('gui/map.png')
-            return "OK" 
+            return "OK"
 
-        @app.route('/gui/form', methods = ['POST', 'GET'])
+        @app.route("/gui/form", methods=["POST", "GET"])
         def gui_form():
-            if request.method == 'POST':
-                user = request.form.get('name', None)
-                self.config['n_targets'] = request.form.get('n_targets', self.config['n_targets'])
-                reset = request.form.get('reset', None)
+            if request.method == "POST":
+                user = request.form.get("name", None)
+                self.config["n_targets"] = request.form.get(
+                    "n_targets", self.config["n_targets"]
+                )
+                reset = request.form.get("reset", None)
                 if reset == "reset":
                     self.stop()
                     self.image_buf = BytesIO()
@@ -299,7 +316,6 @@ class Geolocate:
             if not self.image_buf.getbuffer().nbytes:
                 return render_template("loading.html")
             return render_template("gui_from_buffer.html", config=self.config)
-
 
         @app.route("/")
         def index():
@@ -332,13 +348,13 @@ class Geolocate:
                 host=host_name, port=port, debug=False, use_reloader=False
             )
         ).start()
-    
+
     def get_replay_json(self, replay_file):
         with open(replay_file, "r", encoding="UTF-8") as open_file:
             replay_data = json.load(open_file)
             for ts in replay_data:
                 yield replay_data[ts]
-    
+
     def get_replay_log(self, replay_file):
         with open(replay_file, "r", encoding="UTF-8") as open_file:
             for line in open_file:
@@ -347,15 +363,17 @@ class Geolocate:
 
     def start(self):
         self.stop_threads = False
-        self.main_thread = threading.Thread(target=self.main, args=[lambda: self.stop_threads])
+        self.main_thread = threading.Thread(
+            target=self.main, args=[lambda: self.stop_threads]
+        )
         self.main_thread.start()
         logging.info("Main thread started.")
 
-    def stop(self): 
+    def stop(self):
         self.stop_threads = True
         self.main_thread.join()
         logging.info("Main thread stopped.")
-        
+
     def main(self, stopped):
         """
         Main loop
@@ -421,9 +439,7 @@ class Geolocate:
                 ("gamutrf/inference", self.data_handler),
                 ("gamutrf/targets", self.target_handler),
             ]
-            mqtt_client = birdseye.mqtt.BirdsEyeMQTT(
-                mqtt_host, mqtt_port, topics
-            )
+            mqtt_client = birdseye.mqtt.BirdsEyeMQTT(mqtt_host, mqtt_port, topics)
         else:
             if replay_file.endswith(".log"):
                 get_replay_data = self.get_replay_log(replay_file)
@@ -543,7 +559,12 @@ class Geolocate:
         control_actions = []
         step_time = 0
 
-        while self.data["gps"] != "fix" and self.data["target_gps"] != "fix" and not replay_file and not stopped():
+        while (
+            self.data["gps"] != "fix"
+            and self.data["target_gps"] != "fix"
+            and not replay_file
+            and not stopped()
+        ):
             time.sleep(1)
             logging.info("Waiting for GPS...")
 
@@ -553,11 +574,11 @@ class Geolocate:
 
             if replay_file:
                 # load data from saved file
-                try: 
+                try:
                     replay_data = next(get_replay_data)
                 except StopIteration:
                     break
-                
+
                 self.data_handler(replay_data)
 
             action_start = timer()
@@ -652,7 +673,9 @@ class Geolocate:
 
 if __name__ == "__main__":  # pragma: no cover
     parser = argparse.ArgumentParser()
-    parser.add_argument("config_path", help="Path to config file, geolocate.ini provided as example.")
+    parser.add_argument(
+        "config_path", help="Path to config file, geolocate.ini provided as example."
+    )
     parser.add_argument("--log", default="INFO", help="Log level")
     args = parser.parse_args()
 

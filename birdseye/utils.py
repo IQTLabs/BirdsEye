@@ -676,7 +676,7 @@ class Results:
         config={},
         enable_heatmap=False,
         enable_gps_plot=False,
-        class_map={}
+        class_map={},
     ):
         self.num_iters = num_iters
         self.experiment_name = experiment_name
@@ -803,7 +803,6 @@ class Results:
         Create a live plot
         """
 
-        
         lines = (
             []
         )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
@@ -819,24 +818,23 @@ class Results:
             ["lightskyblue", "darkblue", "blue"],
         ]
         sensor_color = "green"
-        
 
         # Target only openstreetmap
-        if (
-            self.openstreetmap is None
-            and data.get("targets", None) 
-        ):
+        if self.openstreetmap is None and data.get("targets", None):
             self.target_only_map = True
             print(data["targets"])
             self.openstreetmap = GPSVis(
-                position=data["targets"][list(data["targets"])[0]]["position"], distance=map_distance
+                position=data["targets"][list(data["targets"])[0]]["position"],
+                distance=map_distance,
             )
-            self.openstreetmap.set_origin(data["targets"][list(data["targets"])[0]]["position"])
+            self.openstreetmap.set_origin(
+                data["targets"][list(data["targets"])[0]]["position"]
+            )
             self.transform = np.array(
                 [self.openstreetmap.origin[0], self.openstreetmap.origin[1]]
             )
 
-        # Openstreetmap 
+        # Openstreetmap
         if (
             (self.openstreetmap is None or self.target_only_map)
             and data.get("position", None) is not None
@@ -853,8 +851,8 @@ class Results:
             )
 
         self.time_step = time_step
-        
-        # Particle filter statistics 
+
+        # Particle filter statistics
         self.pf_stats["mean_hypothesis"].append(
             env.pf.mean_hypothesis if hasattr(env.pf, "mean_hypothesis") else [None]
         )
@@ -873,7 +871,7 @@ class Results:
         self.sensor_hist.append(abs_sensor)
 
         # Sensor state history (from gps)
-        if self.openstreetmap and data.get("position", None) is not None: 
+        if self.openstreetmap and data.get("position", None) is not None:
             self.sensor_gps_hist.append(
                 self.openstreetmap.scale_to_img(
                     data["position"],
@@ -889,20 +887,23 @@ class Results:
             self.target_hist.append(env.get_absolute_target())
 
         # Target state history (from gps)
-        if self.openstreetmap and data.get("target_gps", None) is not None: 
-
+        if self.openstreetmap and data.get("target_gps", None) is not None:
             for t in data["targets"]:
-                if t not in self.target_gps_hist: 
+                if t not in self.target_gps_hist:
                     self.target_gps_hist[t] = []
                 self.target_gps_hist[t].append(
                     self.openstreetmap.scale_to_img(
                         data["targets"][t]["position"],
-                        (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
+                        (
+                            self.openstreetmap.width_meters,
+                            self.openstreetmap.height_meters,
+                        ),
                     )
-                    
                 )
-                print(f"\n{t}:{data['targets'][t]['position']}, {self.target_gps_hist[t][-1]}\n")
-        
+                print(
+                    f"\n{t}:{data['targets'][t]['position']}, {self.target_gps_hist[t][-1]}\n"
+                )
+
         # Target state history (old version; from file )
         if self.openstreetmap and data.get("drone_position", None) is not None:
             # print(f"{data['drone_position']=}")
@@ -912,10 +913,9 @@ class Results:
                     (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
                 )
             )
-          
 
-        #target_heading = None
-        #target_relative_heading = None
+        # target_heading = None
+        # target_relative_heading = None
 
         # Calculate extra data if target is known
         if (
@@ -1016,8 +1016,8 @@ class Results:
                     lines.extend([])
 
                 target_class_name = f"Target {t} particles"
-                for class_name, class_idx in self.class_map.items(): 
-                    if t == class_idx: 
+                for class_name, class_idx in self.class_map.items():
+                    if t == class_idx:
                         target_class_name = f"{class_name} particles"
 
                 legend_elements.append(
@@ -1047,7 +1047,6 @@ class Results:
 
         # Plot sensor
         if env.simulated or self.sensor_gps_hist:
-
             if self.sensor_gps_hist:
                 temp_np = np.array(self.sensor_gps_hist)
                 sensor_x = temp_np[:, 0]
@@ -1064,9 +1063,7 @@ class Results:
                     sensor_x += self.transform[0]
                     sensor_y += self.transform[1]
 
-                arrow_x, arrow_y = pol2cart(
-                    6, np.radians(env.state.sensor_state[2])
-                )
+                arrow_x, arrow_y = pol2cart(6, np.radians(env.state.sensor_state[2]))
             line4 = mpatches.FancyArrow(
                 sensor_x[-1],
                 sensor_y[-1],
@@ -1085,8 +1082,8 @@ class Results:
             lines.extend([line4])
             if len(self.sensor_hist) > 1:
                 ax.plot(
-                    sensor_x[len(sensor_x)-self.history_length:],
-                    sensor_y[len(sensor_x)-self.history_length:],
+                    sensor_x[len(sensor_x) - self.history_length :],
+                    sensor_y[len(sensor_x) - self.history_length :],
                     linewidth=5,
                     color=sensor_color,
                     # markeredgecolor="black",
@@ -1098,14 +1095,13 @@ class Results:
                 mpatches.Patch(
                     facecolor=sensor_color, edgecolor="black", label="Sensor"
                 )
-            ) 
+            )
 
         # Plot targets
         if self.target_hist or self.target_gps_hist:
-            
-            if env.simulated: 
+            if env.simulated:
                 n_target_hist = env.state.n_targets
-            else: 
+            else:
                 n_target_hist = len(self.target_gps_hist)
             for t in range(n_target_hist):
                 if env.simulated:
@@ -1132,30 +1128,30 @@ class Results:
                         zorder=3,
                         markersize=4,
                     )
-                
+
                 (line5,) = ax.plot(
                     target_x[-1],
                     target_y[-1],
                     "X",
                     color="black",
                     markeredgecolor="black",
-                    #label="Targets",
+                    # label="Targets",
                     markersize=8,
                     zorder=3,
                 )
-                
+
                 target_class_name = f"Target {t}"
                 if self.target_gps_hist:
                     target_class_name = list(self.target_gps_hist)[t]
                 ax.text(
-                    target_x[-1], 
-                    target_y[-1], 
-                    f"{target_class_name}", 
-                    color="black", 
+                    target_x[-1],
+                    target_y[-1],
+                    f"{target_class_name}",
+                    color="black",
                     fontsize=16,
                     fontweight="bold",
                 )
-                #lines.extend([line5])
+                # lines.extend([line5])
                 legend_elements.append(
                     Line2D(
                         [0],
@@ -1394,8 +1390,8 @@ class Results:
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
 
-        self.history_length = 50 
-        
+        self.history_length = 50
+
         if len(self.abs_target_hist) < self.history_length:
             self.abs_target_hist = [abs_target] * self.history_length
             self.abs_sensor_hist = [abs_sensor] * self.history_length

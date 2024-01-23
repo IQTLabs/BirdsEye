@@ -12,9 +12,9 @@ class BirdsEyeMQTT:
         try:
             self.client = paho.mqtt.client.Client()
             self.client.on_connect = self.on_connect
-            #self.client.on_message = self.on_message
+            # self.client.on_message = self.on_message
             self.client.on_publish = self.on_publish
-            #self.message_handler = message_handler
+            # self.message_handler = message_handler
             self.client.connect(mqtt_host, mqtt_port, 60)
             self.client.loop_start()
 
@@ -31,6 +31,7 @@ class BirdsEyeMQTT:
         def on_message(client, userdata, json_message):
             json_data = json.loads(json_message.payload)
             message_handler(json_data)
+
         return on_message
 
     def on_connect(self, client, userdata, flags, result_code):
@@ -38,7 +39,7 @@ class BirdsEyeMQTT:
             f"Connected to MQTT broker {self.mqtt_host}:{self.mqtt_port} with result code {result_code}"
         )
         for topic, handler in self.topics:
-            self.client.subscribe(topic) 
+            self.client.subscribe(topic)
             self.client.message_callback_add(topic, self.on_message_func(handler))
 
     def on_publish(self, client, userdata, mid):
