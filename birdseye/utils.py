@@ -676,7 +676,7 @@ class Results:
         config={},
         enable_heatmap=False,
         enable_gps_plot=False,
-        class_map={}
+        class_map={},
     ):
         self.num_iters = num_iters
         self.experiment_name = experiment_name
@@ -729,12 +729,14 @@ class Results:
         self.target_hist = []
         self.sensor_hist = []
         self.sensor_gps_hist = []
+        self.target_gps_hist = {}
         self.history_length = 10
         self.time_step = 0
         self.texts = []
         self.openstreetmap = None
         self.transform = None
         self.expected_target_rssi = None
+        self.target_only_map = False
 
         if config:
             write_config_log(config, self.logdir)
@@ -800,11 +802,46 @@ class Results:
         """
         Create a live plot
         """
+
+        lines = (
+            []
+        )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
+        legend_elements = []
+        separable_color_array = [
+            ["deepskyblue", "blue"],
+            ["pink", "red"],
+            ["wheat", "orange"],
+            ["lightgreen", "green"],
+        ]
+        color_array = [
+            ["salmon", "darkred", "red"],
+            ["lightskyblue", "darkblue", "blue"],
+        ]
+        sensor_color = "green"
+
+        # Target only openstreetmap
+        if self.openstreetmap is None and data.get("targets", None):
+            self.target_only_map = True
+            print(data["targets"])
+            self.openstreetmap = GPSVis(
+                position=data["targets"][list(data["targets"])[0]]["position"],
+                distance=map_distance,
+            )
+            self.openstreetmap.set_origin(
+                data["targets"][list(data["targets"])[0]]["position"]
+            )
+            self.transform = np.array(
+                [self.openstreetmap.origin[0], self.openstreetmap.origin[1]]
+            )
+
+        # Openstreetmap
         if (
-            self.openstreetmap is None
+            (self.openstreetmap is None or self.target_only_map)
             and data.get("position", None) is not None
             and data.get("heading", None) is not None
         ):
+            self.target_only_map = False
+            self.target_gps_hist = {}
             self.openstreetmap = GPSVis(
                 position=data["position"], distance=map_distance
             )
@@ -814,6 +851,8 @@ class Results:
             )
 
         self.time_step = time_step
+
+        # Particle filter statistics
         self.pf_stats["mean_hypothesis"].append(
             env.pf.mean_hypothesis if hasattr(env.pf, "mean_hypothesis") else [None]
         )
@@ -827,16 +866,58 @@ class Results:
             env.pf.map_state if hasattr(env.pf, "map_state") else [None]
         )
 
+        # Sensor state history (from internal state)
         abs_sensor = env.state.sensor_state
-        abs_particles = env.get_absolute_particles()
         self.sensor_hist.append(abs_sensor)
 
+        # Sensor state history (from gps)
+        if self.openstreetmap and data.get("position", None) is not None:
+            self.sensor_gps_hist.append(
+                self.openstreetmap.scale_to_img(
+                    data["position"],
+                    (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
+                )
+            )
+
+        # Particle states
+        abs_particles = env.get_absolute_particles()
+
+        # Target state history (from internal state)
         if env.simulated:
             self.target_hist.append(env.get_absolute_target())
 
-        target_heading = None
-        target_relative_heading = None
+        # Target state history (from gps)
+        if self.openstreetmap and data.get("target_gps", None) is not None:
+            for t in data["targets"]:
+                if t not in self.target_gps_hist:
+                    self.target_gps_hist[t] = []
+                self.target_gps_hist[t].append(
+                    self.openstreetmap.scale_to_img(
+                        data["targets"][t]["position"],
+                        (
+                            self.openstreetmap.width_meters,
+                            self.openstreetmap.height_meters,
+                        ),
+                    )
+                )
+                print(
+                    f"\n{t}:{data['targets'][t]['position']}, {self.target_gps_hist[t][-1]}\n"
+                )
 
+        # Target state history (old version; from file )
+        if self.openstreetmap and data.get("drone_position", None) is not None:
+            # print(f"{data['drone_position']=}")
+            self.target_hist.append(
+                self.openstreetmap.scale_to_img(
+                    data["drone_position"],
+                    (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
+                )
+            )
+
+        # target_heading = None
+        # target_relative_heading = None
+
+        # Calculate extra data if target is known
         if (
             data.get("position", None) is not None
             and data.get("drone_position", None) is not None
@@ -857,194 +938,133 @@ class Results:
         ax.clear()
         if self.openstreetmap is not None:
             self.openstreetmap.plot_map(axis1=ax)
-        # TODO get variables
+
         if separable:
             ax.set_title("Time = {}".format(time_step))
         else:
             abs_particles = np.moveaxis(abs_particles, 1, 0)
-            # ax.set_title(
-            #     "Time = {}, Frequency = {}, Bandwidth = {}, Gain = {}".format(
-            #         time_step, None, None, None
-            #     )
-            # )
             ax.set_title(
                 f"Time = {str(datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}"
             )
 
-        color_array = [
-            ["salmon", "darkred", "red"],
-            ["lightskyblue", "darkblue", "blue"],
-        ]
-        lines = (
-            []
-        )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
-
-        separable_color_array = [
-            ["deepskyblue", "blue"],
-            ["pink", "red"],
-            ["wheat", "orange"],
-            ["lightgreen", "green"],
-        ]
-        sensor_color = "green"
-        legend_elements = []
-        for t in range(env.state.n_targets):
-            # PLOT PARTICLES
-            # particles_x, particles_y = pol2cart(
-            #     abs_particles[:, t, 0], np.radians(abs_particles[:, t, 1])
-            # )
-            particles_x, particles_y = pol2cart(
-                abs_particles[t, :, 0], np.radians(abs_particles[t, :, 1])
-            )
-            if self.transform is not None:
-                particles_x += self.transform[0]
-                particles_y += self.transform[1]
-            if separable:
-                particle_color = separable_color_array[t][0]
-            else:
-                particle_color = "salmon"
-            (line1,) = ax.plot(
-                particles_x,
-                particles_y,
-                "o",
-                color=particle_color,
-                markersize=4,
-                markeredgecolor="black",
-                label="Particles",
-                alpha=0.4,
-                zorder=1,
-            )
-
-            # PLOT HEATMAP OVER STREET MAP
-            if self.enable_heatmap and self.openstreetmap:
-                heatmap, xedges, yedges = np.histogram2d(
+        # Plot particles
+        if env.simulated or (self.openstreetmap and not self.target_only_map):
+            for t in range(env.state.n_targets):
+                particles_x, particles_y = pol2cart(
+                    abs_particles[t, :, 0], np.radians(abs_particles[t, :, 1])
+                )
+                if self.transform is not None:
+                    particles_x += self.transform[0]
+                    particles_y += self.transform[1]
+                if separable:
+                    particle_color = separable_color_array[t][0]
+                else:
+                    particle_color = "salmon"
+                (line1,) = ax.plot(
                     particles_x,
                     particles_y,
-                    bins=(self.openstreetmap.xedges, self.openstreetmap.yedges),
+                    "o",
+                    color=particle_color,
+                    markersize=4,
+                    markeredgecolor="black",
+                    label="Particles",
+                    alpha=0.4,
+                    zorder=1,
                 )
-                heatmap = gaussian_filter(heatmap, sigma=8)
-                extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
-                im = ax.imshow(
-                    heatmap.T,
-                    extent=extent,
-                    origin="lower",
-                    cmap="jet",
-                    interpolation="nearest",
-                    alpha=0.2,
+
+                # PLOT HEATMAP OVER STREET MAP
+                if self.enable_heatmap and self.openstreetmap:
+                    heatmap, xedges, yedges = np.histogram2d(
+                        particles_x,
+                        particles_y,
+                        bins=(self.openstreetmap.xedges, self.openstreetmap.yedges),
+                    )
+                    heatmap = gaussian_filter(heatmap, sigma=8)
+                    extent = [xedges[0], xedges[-1], yedges[0], yedges[-1]]
+                    im = ax.imshow(
+                        heatmap.T,
+                        extent=extent,
+                        origin="lower",
+                        cmap="jet",
+                        interpolation="nearest",
+                        alpha=0.2,
+                    )
+                    # plt.colorbar(im)
+
+                # PLOT CENTROIDS
+                centroid_x = np.mean(particles_x)
+                centroid_y = np.mean(particles_y)
+                if separable:
+                    centroid_color = separable_color_array[t][1]
+                else:
+                    centroid_color = "magenta"
+
+                (line2,) = ax.plot(
+                    centroid_x,
+                    centroid_y,
+                    "^",
+                    color=centroid_color,
+                    markeredgecolor="black",
+                    label="Mean Estimate",
+                    markersize=20,
+                    zorder=7,
                 )
-                # plt.colorbar(im)
 
-            # PLOT CENTROIDS
-            centroid_x = np.mean(particles_x)
-            centroid_y = np.mean(particles_y)
-            if separable:
-                centroid_color = separable_color_array[t][1]
-            else:
-                centroid_color = "magenta"
+                if t == 0:
+                    lines.extend([line1, line2])
+                else:
+                    lines.extend([])
 
-            (line2,) = ax.plot(
-                centroid_x,
-                centroid_y,
-                "^",
-                color=centroid_color,
-                markeredgecolor="black",
-                label="Mean Estimate",
-                markersize=20,
-                zorder=7,
-            )
+                target_class_name = f"Target {t} particles"
+                for class_name, class_idx in self.class_map.items():
+                    if t == class_idx:
+                        target_class_name = f"{class_name} particles"
 
-            if t == 0:
-                lines.extend([line1, line2])
-            else:
-                lines.extend([])
-
-            target_class_name = f"Target {t}"
-            for class_name, class_idx in self.class_map.items(): 
-                if t == class_idx: 
-                    target_class_name = class_name
-
+                legend_elements.append(
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="o",
+                        color="white",
+                        markersize=8,
+                        markeredgecolor="black",
+                        markerfacecolor=centroid_color,
+                        label=target_class_name,
+                    )
+                )
             legend_elements.append(
                 Line2D(
                     [0],
                     [0],
-                    marker="o",
+                    marker="^",
                     color="white",
-                    markersize=8,
                     markeredgecolor="black",
-                    markerfacecolor=centroid_color,
-                    label=target_class_name,
+                    markerfacecolor="white",
+                    label="Avg Estimates",
+                    markersize=12,
                 )
             )
 
-        # PLOT SENSOR
-        if (
-            self.enable_gps_plot and self.openstreetmap and data["position"] is not None
-        ):  # and not data["needs_processing"]:
-            self.sensor_gps_hist.append(
-                self.openstreetmap.scale_to_img(
-                    data["position"],
-                    (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
-                )
-            )
-
-            temp_np = np.array(self.sensor_gps_hist)
-            sensor_x = temp_np[:, 0]
-            sensor_y = temp_np[:, 1]
-
-            if len(self.sensor_gps_hist) > 1:
-                # print(f"{data['heading']=}")
-                # print(f"{data['previous_heading']=}")
+        # Plot sensor
+        if env.simulated or self.sensor_gps_hist:
+            if self.sensor_gps_hist:
+                temp_np = np.array(self.sensor_gps_hist)
+                sensor_x = temp_np[:, 0]
+                sensor_y = temp_np[:, 1]
                 arrow_x, arrow_y = pol2cart(
-                    4, np.radians(data.get("heading", data["previous_heading"]))
+                    6, np.radians(data.get("heading", data["previous_heading"]))
                 )
-                ax.arrow(
-                    sensor_x[-1],
-                    sensor_y[-1],
-                    arrow_x,
-                    arrow_y,
-                    width=1.5,
-                    color="green",
-                    zorder=4,
+            else:
+                sensor_x, sensor_y = pol2cart(
+                    np.array(self.sensor_hist)[:, 0],
+                    np.radians(np.array(self.sensor_hist)[:, 1]),
                 )
-                ax.plot(
-                    sensor_x[len(sensor_x)-self.history_length:-1],
-                    sensor_y[len(sensor_y)-self.history_length:-1],
-                    linewidth=3.0,
-                    color="green",
-                    markeredgecolor="black",
-                    markersize=4,
-                    zorder=4,
-                )
-            (line4,) = ax.plot(
-                sensor_x[-1],
-                sensor_y[-1],
-                "p",
-                color="green",
-                label="SensorGPS",
-                markersize=10,
-                zorder=4,
-            )
-            lines.extend([line4])
-            legend_elements.append(
-                mpatches.Patch(facecolor="green", edgecolor="black", label="SensorGPS")
-            )
+                if self.transform is not None:
+                    sensor_x += self.transform[0]
+                    sensor_y += self.transform[1]
 
-        sensor_x, sensor_y = pol2cart(
-            np.array(self.sensor_hist)[:, 0],
-            np.radians(np.array(self.sensor_hist)[:, 1]),
-        )
-        if self.transform is not None:
-            sensor_x += self.transform[0]
-            sensor_y += self.transform[1]
-
-        if len(self.sensor_hist) > 1:
-            arrow_x, arrow_y = pol2cart(
-                6, np.radians(env.state.sensor_state[2])
-            )
+                arrow_x, arrow_y = pol2cart(6, np.radians(env.state.sensor_state[2]))
             line4 = mpatches.FancyArrow(
-                # sensor_x[-2],
-                # sensor_y[-2],
-                # 4 * (sensor_x[-1] - sensor_x[-2]),
-                # 4 * (sensor_y[-1] - sensor_y[-2]),
                 sensor_x[-1],
                 sensor_y[-1],
                 arrow_x,
@@ -1059,54 +1079,39 @@ class Results:
                 linewidth=1,
             )
             ax.add_patch(line4)
-            ax.plot(
-                sensor_x[len(sensor_x)-self.history_length:],
-                sensor_y[len(sensor_x)-self.history_length:],
-                linewidth=5,
-                color=sensor_color,
-                # markeredgecolor="black",
-                # markersize=4,
-                zorder=6,
-                # path_effects=[pe.Stroke(linewidth=7, foreground='black')]
-            )
-            # (line4,) = ax.plot(
-            #     sensor_x[-1],
-            #     sensor_y[-1],
-            #     "p",
-            #     color="blue",
-            #     label="sensor",
-            #     markersize=10,
-            #     zorder=4,
-            # )
             lines.extend([line4])
+            if len(self.sensor_hist) > 1:
+                ax.plot(
+                    sensor_x[len(sensor_x) - self.history_length :],
+                    sensor_y[len(sensor_x) - self.history_length :],
+                    linewidth=5,
+                    color=sensor_color,
+                    # markeredgecolor="black",
+                    # markersize=4,
+                    zorder=6,
+                    # path_effects=[pe.Stroke(linewidth=7, foreground='black')]
+                )
             legend_elements.append(
                 mpatches.Patch(
                     facecolor=sensor_color, edgecolor="black", label="Sensor"
                 )
             )
 
-        if self.openstreetmap and data.get("drone_position", None) is not None:
-            # print(f"{data['drone_position']=}")
-            self.target_hist.append(
-                self.openstreetmap.scale_to_img(
-                    data["drone_position"],
-                    (self.openstreetmap.width_meters, self.openstreetmap.height_meters),
-                )
-            )
-
-        # PLOT TARGETS
-        if self.target_hist:
-            # target_np = np.array(self.target_hist)
-            # print(f"{self.target_hist[-1]=}")
-            # assert len(self.target_hist.shape) == 3
-            for t in range(env.state.n_targets):
+        # Plot targets
+        if self.target_hist or self.target_gps_hist:
+            if env.simulated:
+                n_target_hist = env.state.n_targets
+            else:
+                n_target_hist = len(self.target_gps_hist)
+            for t in range(n_target_hist):
                 if env.simulated:
                     target_x, target_y = pol2cart(
                         np.array(self.target_hist)[:, t, 0],
                         np.radians(np.array(self.target_hist)[:, t, 1]),
                     )
                 else:
-                    temp_np = np.array(self.target_hist)
+                    temp_np = np.array(list(self.target_gps_hist.values())[t])
+                    # temp_np = np.array(self.target_hist)
                     target_x = temp_np[:, 0]
                     target_y = temp_np[:, 1]
 
@@ -1114,53 +1119,53 @@ class Results:
                 #     target_x += self.transform[0]
                 #     target_y += self.transform[1]
 
-                if len(self.target_hist) > 1:
+                if len(target_x) > 1:
                     ax.plot(
-                        target_x[:-1],
-                        target_y[:-1],
+                        target_x,
+                        target_y,
                         linewidth=3.0,
                         color="black",
                         zorder=3,
                         markersize=4,
                     )
+
                 (line5,) = ax.plot(
                     target_x[-1],
                     target_y[-1],
                     "X",
                     color="black",
                     markeredgecolor="black",
-                    label="Targets",
-                    markersize=10,
+                    # label="Targets",
+                    markersize=8,
                     zorder=3,
                 )
-            lines.extend([line5])
-            legend_elements.append(
-                Line2D(
-                    [0],
-                    [0],
-                    marker="X",
-                    color="white",
-                    markerfacecolor="black",
-                    markeredgecolor="black",
-                    label="Targets",
-                    markersize=10,
+
+                target_class_name = f"Target {t}"
+                if self.target_gps_hist:
+                    target_class_name = list(self.target_gps_hist)[t]
+                ax.text(
+                    target_x[-1],
+                    target_y[-1],
+                    f"{target_class_name}",
+                    color="black",
+                    fontsize=16,
+                    fontweight="bold",
                 )
-            )
+                # lines.extend([line5])
+                legend_elements.append(
+                    Line2D(
+                        [0],
+                        [0],
+                        marker="X",
+                        color="white",
+                        markerfacecolor="black",
+                        markeredgecolor="black",
+                        label=target_class_name,
+                        markersize=10,
+                    )
+                )
 
         # Legend
-        legend_elements.append(
-            Line2D(
-                [0],
-                [0],
-                marker="^",
-                color="white",
-                markeredgecolor="black",
-                markerfacecolor="white",
-                label="Avg Estimates",
-                markersize=12,
-            )
-        )
-    
         ax.legend(
             handles=legend_elements,
             loc="upper center",
@@ -1385,8 +1390,8 @@ class Results:
         # these are matplotlib.patch.Patch properties
         props = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
 
-        self.history_length = 50 
-        
+        self.history_length = 50
+
         if len(self.abs_target_hist) < self.history_length:
             self.abs_target_hist = [abs_target] * self.history_length
             self.abs_sensor_hist = [abs_sensor] * self.history_length
