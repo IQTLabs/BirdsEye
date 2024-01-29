@@ -5,6 +5,9 @@ services:
   geolocate:
     restart: always
     image: iqtlabs/birdseye:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     networks:
       - gamutrf
     ports:
