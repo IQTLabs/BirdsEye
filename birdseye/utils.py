@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.patheffects as pe
 import matplotlib.patches as mpatches
+from matplotlib.cm import get_cmap
 import numpy as np
 import pandas as pd
 import requests
@@ -1099,6 +1100,7 @@ class Results:
 
         # Plot targets
         if self.target_hist or self.target_gps_hist:
+            color_map=get_cmap("tab10").colors
             if env.simulated:
                 n_target_hist = env.state.n_targets
             else:
@@ -1124,7 +1126,7 @@ class Results:
                         target_x,
                         target_y,
                         linewidth=3.0,
-                        color="black",
+                        color=color_map[t],
                         zorder=3,
                         markersize=4,
                     )
@@ -1133,8 +1135,8 @@ class Results:
                     target_x[-1],
                     target_y[-1],
                     "X",
-                    color="black",
-                    markeredgecolor="black",
+                    color=color_map[t],
+                    markeredgecolor=color_map[t],
                     # label="Targets",
                     markersize=8,
                     zorder=3,
@@ -1147,7 +1149,7 @@ class Results:
                     target_x[-1],
                     target_y[-1],
                     f"{target_class_name}",
-                    color="black",
+                    color=color_map[t],
                     fontsize=16,
                     fontweight="bold",
                 )
@@ -1158,8 +1160,8 @@ class Results:
                         [0],
                         marker="X",
                         color="white",
-                        markerfacecolor="black",
-                        markeredgecolor="black",
+                        markerfacecolor=color_map[t],
+                        markeredgecolor=color_map[t],
                         label=target_class_name,
                         markersize=10,
                     )
