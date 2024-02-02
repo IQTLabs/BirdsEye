@@ -67,5 +67,5 @@ def fake_broker():
 
 def test_geolocate(fake_broker):
     instance = Geolocate(config_path="tests/test_geolocate.ini")
-    instance.start()
+    instance.start(setDaemon=True)
     instance.stop()

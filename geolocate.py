@@ -348,11 +348,13 @@ class Geolocate:
 
         host_name = flask_host
         port = flask_port
-        threading.Thread(
+        self.flask_thread = threading.Thread(
             target=lambda: app.run(
                 host=host_name, port=port, debug=False, use_reloader=False
             )
-        ).start()
+        )
+        self.flask_thread.daemon = self.setDaemon
+        self.flask_thread.start()
 
     def get_replay_json(self, replay_file):
         with open(replay_file, "r", encoding="UTF-8") as open_file:
@@ -366,7 +368,8 @@ class Geolocate:
                 replay_data = json.loads(line)
                 yield replay_data
 
-    def start(self):
+    def start(self, setDaemon=False):
+        self.setDaemon = setDaemon
         self.stop_threads = False
         self.init_data()
         self.main_thread = threading.Thread(
@@ -377,8 +380,8 @@ class Geolocate:
 
     def stop(self):
         self.stop_threads = True
-        self.main_thread.join()
         logging.info("Main thread stopped.")
+        self.main_thread.join()
 
     def main(self, stopped):
         """

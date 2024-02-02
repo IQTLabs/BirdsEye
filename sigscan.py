@@ -229,7 +229,7 @@ class SigScan:
         n_targets = int(self.config.get("n_targets", str(2)))
         particle_distance = float(self.config.get("particle_distance", str(200)))
         dqn_checkpoint = self.config.get("dqn_checkpoint", None)
-        max_iterations = int(self.config.get("max_iterations", 0))
+        max_iterations = int(self.config.get("max_iterations", str(0)))
         if planner_method in ["dqn", "DQN"] and dqn_checkpoint is None:
             if n_antennas == 1 and antenna_type == "directional" and n_targets == 2:
                 dqn_checkpoint = (
