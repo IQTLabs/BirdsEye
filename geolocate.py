@@ -148,7 +148,9 @@ class Geolocate:
         default_config.update(self.config)
         self.config = default_config
 
-    def init_data(self,):
+    def init_data(
+        self,
+    ):
         self.data = {
             "rssi": None,
             "position": None,
@@ -549,7 +551,7 @@ class Geolocate:
         if any_plot:
             fig = plt.figure(figsize=(14, 10), dpi=100)
             ax = fig.subplots()
-            fig.set_tight_layout(True)
+            fig.set_layout_engine("tight")
             plt.show(block=False)
 
         self.image_buf = BytesIO()

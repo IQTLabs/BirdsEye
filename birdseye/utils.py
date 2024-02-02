@@ -22,12 +22,12 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.patheffects as pe
 import matplotlib.patches as mpatches
-from matplotlib.cm import get_cmap
+from matplotlib import colormaps
 import numpy as np
 import pandas as pd
 import requests
 from PIL import Image
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 
 from .definitions import REPO_DIR
 from .definitions import RUN_DIR
@@ -835,10 +835,9 @@ class Results:
             )
 
         # Openstreetmap
-        if (
-            (self.openstreetmap is None or self.target_only_map)
-            and data.get("position", None) is not None
-        ):
+        if (self.openstreetmap is None or self.target_only_map) and data.get(
+            "position", None
+        ) is not None:
             self.target_only_map = False
             self.target_gps_hist = {}
             self.openstreetmap = GPSVis(
@@ -1101,7 +1100,7 @@ class Results:
 
         # Plot targets
         if self.target_hist or self.target_gps_hist:
-            color_map=get_cmap("tab10").colors
+            color_map = colormaps["tab10"].colors
             if env.simulated:
                 n_target_hist = env.state.n_targets
             else:

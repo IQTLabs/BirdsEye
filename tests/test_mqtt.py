@@ -3,6 +3,7 @@ Tests for mqtt.py
 """
 import birdseye.mqtt
 import pytest
+import socket
 
 MQTT_PORT = 1883
 

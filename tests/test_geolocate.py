@@ -4,6 +4,7 @@ Tests for geolocate.py
 import birdseye.mqtt
 from geolocate import *
 import pytest
+import socket
 
 MQTT_PORT = 1883
 

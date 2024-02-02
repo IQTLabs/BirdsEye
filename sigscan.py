@@ -229,6 +229,7 @@ class SigScan:
         n_targets = int(self.config.get("n_targets", str(2)))
         particle_distance = float(self.config.get("particle_distance", str(200)))
         dqn_checkpoint = self.config.get("dqn_checkpoint", None)
+        max_iterations = int(self.config.get("max_iterations", 0))
         if planner_method in ["dqn", "DQN"] and dqn_checkpoint is None:
             if n_antennas == 1 and antenna_type == "directional" and n_targets == 2:
                 dqn_checkpoint = (
@@ -331,13 +332,16 @@ class SigScan:
         # Flask
         fig = plt.figure(figsize=(18, 10), dpi=50)
         ax = fig.subplots()
-        fig.set_tight_layout(True)
+        fig.set_layout_engine("tight")
         time_step = 0
         if self.config.get("flask", "false").lower() == "true":
             self.run_flask(flask_host, flask_port, fig, results)
 
         # Main loop
         while True:
+            if max_iterations > 0 and max_iterations <= time_step:
+                break
+
             loop_start = timer()
             self.data["utc_time"] = datetime.utcnow().timestamp()
             time_step += 1

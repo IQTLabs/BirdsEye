@@ -9,15 +9,6 @@ from birdseye.mqtt import BirdsEyeMQTT
 
 
 def main(blocking=True):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--log", default="INFO", help="Log level.")
-    args = parser.parse_args()
-
-    numeric_level = getattr(logging, args.log.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % args.log)
-    logging.basicConfig(level=numeric_level)
-
     def message_handler(data):
         logging.info("Message handler received data: {}".format(data))
 
@@ -158,4 +149,12 @@ def main(blocking=True):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--log", default="INFO", help="Log level.")
+    args = parser.parse_args()
+
+    numeric_level = getattr(logging, args.log.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError("Invalid log level: %s" % args.log)
+    logging.basicConfig(level=numeric_level)
     main()
