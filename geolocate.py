@@ -117,6 +117,7 @@ class Geolocate:
         self.config_path = config_path
         self.static_position = None
         self.static_heading = None
+        self.setDaemon = False
 
         #### CONFIGS
         default_config = {
