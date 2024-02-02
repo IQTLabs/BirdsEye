@@ -7,16 +7,8 @@ from pynput.keyboard import Key
 
 from birdseye.mqtt import BirdsEyeMQTT
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--log", default="INFO")
-    args = parser.parse_args()
 
-    numeric_level = getattr(logging, args.log.upper(), None)
-    if not isinstance(numeric_level, int):
-        raise ValueError("Invalid log level: %s" % args.log)
-    logging.basicConfig(level=numeric_level)
-
+def main(blocking=True):
     def message_handler(data):
         logging.info("Message handler received data: {}".format(data))
 
@@ -86,9 +78,11 @@ if __name__ == "__main__":
     control_options = {"sensor": sensor_data, "target": target_data}
     control_map = {i: k for (i, k) in enumerate(control_options)}
     control_key = None
+    help_str = f"\nChoose the device to control by entering a number from {list(range(len(control_options)))}.\n{control_map}\n"
+    print(help_str)
 
     def on_key_release(key):
-        global control_key
+        nonlocal control_key
 
         if key == Key.esc:
             exit()
@@ -105,36 +99,37 @@ if __name__ == "__main__":
             pass
 
         if control_key is None:
-            print(
-                f"\nPlease select the device to control by pressing a number from {list(range(len(control_options)))}."
-            )
-            print(f"{control_map}")
+            print(help_str)
             return
 
         if key == Key.right:
-            print("\nRight key pressed\n")
+            print("\n\nRight key pressed. Moving right.\n")
             if control_key == "sensor":
                 sensor_data["position"][1] += 0.0001
             elif control_key == "target":
                 target_data["longitude"] += 0.0001
         elif key == Key.left:
-            print("\nLeft key pressed\n")
+            print("\n\nLeft key pressed. Moving left.\n")
             if control_key == "sensor":
                 sensor_data["position"][1] -= 0.0001
             elif control_key == "target":
                 target_data["longitude"] -= 0.0001
         elif key == Key.up:
-            print("\nUp key pressed\n")
+            print("\n\nUp key pressed. Moving up.\n")
             if control_key == "sensor":
                 sensor_data["position"][0] += 0.0001
             elif control_key == "target":
                 target_data["latitude"] += 0.0001
         elif key == Key.down:
-            print("\nDown key pressed\n")
+            print("\n\nDown key pressed. Moving down.\n")
             if control_key == "sensor":
                 sensor_data["position"][0] -= 0.0001
             elif control_key == "target":
                 target_data["latitude"] -= 0.0001
+        else:
+            print(f"Press Up/Down/Left/Right to control {control_key}.\n")
+            print(f"To change device being controlled:\n {help_str}")
+            return
 
         if control_key == "sensor":
             mqtt_client.client.publish(
@@ -145,5 +140,21 @@ if __name__ == "__main__":
             mqtt_client.client.publish("gamutrf/targets", json.dumps(target_data))
             logging.info("Started transmission to broker: {}".format(target_data))
 
-    with keyboard.Listener(on_release=on_key_release) as listener:
-        listener.join()
+    if blocking:
+        with keyboard.Listener(on_release=on_key_release) as listener:
+            listener.join()
+    else:
+        listener = keyboard.Listener(on_release=on_key_release)
+        listener.start()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--log", default="INFO", help="Log level.")
+    args = parser.parse_args()
+
+    numeric_level = getattr(logging, args.log.upper(), None)
+    if not isinstance(numeric_level, int):
+        raise ValueError("Invalid log level: %s" % args.log)
+    logging.basicConfig(level=numeric_level)
+    main()

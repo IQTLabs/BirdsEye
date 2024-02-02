@@ -20,6 +20,7 @@ requests = "2.31.0"
 scipy = "1.11.4"
 tqdm = "4.66.1"
 seaborn = "^0.13.0"
+pynput = "^1.7.6"
 
 
 [tool.poetry.group.dev.dependencies]

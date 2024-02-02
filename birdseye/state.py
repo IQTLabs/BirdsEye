@@ -1,7 +1,7 @@
 import random
 
 import numpy as np
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 from timeit import default_timer as timer
 
 
@@ -139,7 +139,7 @@ class RFMultiState(State):
         # state is [range, heading, relative course, own speed]
         return np.array(
             [
-                random.randint(1, self.particle_distance),
+                random.randint(1, int(self.particle_distance)),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
                 self.target_speed,
@@ -661,7 +661,9 @@ class RFState(State):
         # return np.array([random.randint(25,100), random.randint(0,359), random.randint(0,11)*30, self.target_speed])
         return np.array(
             [
-                random.randint(self.target_start - 25, self.target_start + 25),
+                random.randint(
+                    int(self.target_start - 25), int(self.target_start + 25)
+                ),
                 random.randint(0, 359),
                 random.randint(0, 11) * 30,
                 self.target_speed,

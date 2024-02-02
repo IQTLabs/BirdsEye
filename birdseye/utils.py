@@ -22,12 +22,12 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib.patheffects as pe
 import matplotlib.patches as mpatches
-from matplotlib.cm import get_cmap
+from matplotlib import colormaps
 import numpy as np
 import pandas as pd
 import requests
 from PIL import Image
-from scipy.ndimage.filters import gaussian_filter
+from scipy.ndimage import gaussian_filter
 
 from .definitions import REPO_DIR
 from .definitions import RUN_DIR
@@ -823,7 +823,6 @@ class Results:
         # Target only openstreetmap
         if self.openstreetmap is None and data.get("targets", None):
             self.target_only_map = True
-            print(data["targets"])
             self.openstreetmap = GPSVis(
                 position=data["targets"][list(data["targets"])[0]]["position"],
                 distance=map_distance,
@@ -836,11 +835,9 @@ class Results:
             )
 
         # Openstreetmap
-        if (
-            (self.openstreetmap is None or self.target_only_map)
-            and data.get("position", None) is not None
-            and data.get("heading", None) is not None
-        ):
+        if (self.openstreetmap is None or self.target_only_map) and data.get(
+            "position", None
+        ) is not None:
             self.target_only_map = False
             self.target_gps_hist = {}
             self.openstreetmap = GPSVis(
@@ -901,13 +898,12 @@ class Results:
                         ),
                     )
                 )
-                print(
-                    f"\n{t}:{data['targets'][t]['position']}, {self.target_gps_hist[t][-1]}\n"
-                )
+                # print(
+                #     f"\n{t}:{data['targets'][t]['position']}, {self.target_gps_hist[t][-1]}\n"
+                # )
 
         # Target state history (old version; from file )
         if self.openstreetmap and data.get("drone_position", None) is not None:
-            # print(f"{data['drone_position']=}")
             self.target_hist.append(
                 self.openstreetmap.scale_to_img(
                     data["drone_position"],
@@ -1048,13 +1044,16 @@ class Results:
 
         # Plot sensor
         if env.simulated or self.sensor_gps_hist:
+            arrow_x = None
+            arrow_y = None
             if self.sensor_gps_hist:
                 temp_np = np.array(self.sensor_gps_hist)
                 sensor_x = temp_np[:, 0]
                 sensor_y = temp_np[:, 1]
-                arrow_x, arrow_y = pol2cart(
-                    6, np.radians(data.get("heading", data["previous_heading"]))
-                )
+                if data.get("heading", None) or data.get("previous_heading", None):
+                    arrow_x, arrow_y = pol2cart(
+                        6, np.radians(data.get("heading", data["previous_heading"]))
+                    )
             else:
                 sensor_x, sensor_y = pol2cart(
                     np.array(self.sensor_hist)[:, 0],
@@ -1065,22 +1064,23 @@ class Results:
                     sensor_y += self.transform[1]
 
                 arrow_x, arrow_y = pol2cart(6, np.radians(env.state.sensor_state[2]))
-            line4 = mpatches.FancyArrow(
-                sensor_x[-1],
-                sensor_y[-1],
-                arrow_x,
-                arrow_y,
-                width=5,
-                head_width=15,
-                head_length=15,
-                facecolor=sensor_color,
-                zorder=7,
-                # edgecolor="black",
-                label="Sensor",
-                linewidth=1,
-            )
-            ax.add_patch(line4)
-            lines.extend([line4])
+            if arrow_x and arrow_y:
+                line4 = mpatches.FancyArrow(
+                    sensor_x[-1],
+                    sensor_y[-1],
+                    arrow_x,
+                    arrow_y,
+                    width=5,
+                    head_width=15,
+                    head_length=15,
+                    facecolor=sensor_color,
+                    zorder=7,
+                    # edgecolor="black",
+                    label="Sensor",
+                    linewidth=1,
+                )
+                ax.add_patch(line4)
+                lines.extend([line4])
             if len(self.sensor_hist) > 1:
                 ax.plot(
                     sensor_x[len(sensor_x) - self.history_length :],
@@ -1100,7 +1100,7 @@ class Results:
 
         # Plot targets
         if self.target_hist or self.target_gps_hist:
-            color_map=get_cmap("tab10").colors
+            color_map = colormaps["tab10"].colors
             if env.simulated:
                 n_target_hist = env.state.n_targets
             else:

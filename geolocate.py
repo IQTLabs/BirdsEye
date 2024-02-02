@@ -110,27 +110,14 @@ class NumpyEncoder(json.JSONEncoder):
 
 class Geolocate:
     def __init__(self, config_path="geolocate.ini"):
-        self.data = {
-            "rssi": None,
-            "position": None,
-            "distance": None,
-            "previous_position": None,
-            "heading": None,
-            "previous_heading": None,
-            "course": None,
-            "action_proposal": None,
-            "action_taken": None,
-            "needs_processing": False,
-            "gps": None,
-            "targets": {},
-            "target_gps": None,
-        }
+        self.init_data()
         config = configparser.ConfigParser()
         config.read(config_path)
         self.config = config["geolocate"]
         self.config_path = config_path
         self.static_position = None
         self.static_heading = None
+        self.setDaemon = False
 
         #### CONFIGS
         default_config = {
@@ -161,6 +148,25 @@ class Geolocate:
         }
         default_config.update(self.config)
         self.config = default_config
+
+    def init_data(
+        self,
+    ):
+        self.data = {
+            "rssi": None,
+            "position": None,
+            "distance": None,
+            "previous_position": None,
+            "heading": None,
+            "previous_heading": None,
+            "course": None,
+            "action_proposal": None,
+            "action_taken": None,
+            "needs_processing": False,
+            "gps": None,
+            "targets": {},
+            "target_gps": None,
+        }
 
     def target_handler(self, message_data):
         logging.info(f"Received gamutrf/target MQTT message: {message_data}")
@@ -343,11 +349,13 @@ class Geolocate:
 
         host_name = flask_host
         port = flask_port
-        threading.Thread(
+        self.flask_thread = threading.Thread(
             target=lambda: app.run(
                 host=host_name, port=port, debug=False, use_reloader=False
             )
-        ).start()
+        )
+        self.flask_thread.daemon = self.setDaemon
+        self.flask_thread.start()
 
     def get_replay_json(self, replay_file):
         with open(replay_file, "r", encoding="UTF-8") as open_file:
@@ -361,8 +369,10 @@ class Geolocate:
                 replay_data = json.loads(line)
                 yield replay_data
 
-    def start(self):
+    def start(self, setDaemon=False):
+        self.setDaemon = setDaemon
         self.stop_threads = False
+        self.init_data()
         self.main_thread = threading.Thread(
             target=self.main, args=[lambda: self.stop_threads]
         )
@@ -371,8 +381,8 @@ class Geolocate:
 
     def stop(self):
         self.stop_threads = True
-        self.main_thread.join()
         logging.info("Main thread stopped.")
+        self.main_thread.join()
 
     def main(self, stopped):
         """
@@ -545,7 +555,7 @@ class Geolocate:
         if any_plot:
             fig = plt.figure(figsize=(14, 10), dpi=100)
             ax = fig.subplots()
-            fig.set_tight_layout(True)
+            fig.set_layout_engine("tight")
             plt.show(block=False)
 
         self.image_buf = BytesIO()
