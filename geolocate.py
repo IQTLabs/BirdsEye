@@ -110,21 +110,7 @@ class NumpyEncoder(json.JSONEncoder):
 
 class Geolocate:
     def __init__(self, config_path="geolocate.ini"):
-        self.data = {
-            "rssi": None,
-            "position": None,
-            "distance": None,
-            "previous_position": None,
-            "heading": None,
-            "previous_heading": None,
-            "course": None,
-            "action_proposal": None,
-            "action_taken": None,
-            "needs_processing": False,
-            "gps": None,
-            "targets": {},
-            "target_gps": None,
-        }
+        self.init_data()
         config = configparser.ConfigParser()
         config.read(config_path)
         self.config = config["geolocate"]
@@ -161,6 +147,23 @@ class Geolocate:
         }
         default_config.update(self.config)
         self.config = default_config
+
+    def init_data(self,):
+        self.data = {
+            "rssi": None,
+            "position": None,
+            "distance": None,
+            "previous_position": None,
+            "heading": None,
+            "previous_heading": None,
+            "course": None,
+            "action_proposal": None,
+            "action_taken": None,
+            "needs_processing": False,
+            "gps": None,
+            "targets": {},
+            "target_gps": None,
+        }
 
     def target_handler(self, message_data):
         logging.info(f"Received gamutrf/target MQTT message: {message_data}")
@@ -363,6 +366,7 @@ class Geolocate:
 
     def start(self):
         self.stop_threads = False
+        self.init_data()
         self.main_thread = threading.Thread(
             target=self.main, args=[lambda: self.stop_threads]
         )
