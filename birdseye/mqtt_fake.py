@@ -94,13 +94,31 @@ def main(blocking=True):
             elif key.char == "1":
                 print(f"\nSelected target 1. Up/Down/Left/Right will control target 1.")
                 control_key = "target"
-            return
+            
         except:
             pass
 
         if control_key is None:
             print(help_str)
             return
+
+        try:
+
+            if key.char == "n":
+                print(f"\n\nn key pressed. Sending no gps fix.")
+                if control_key == "sensor":
+                    sensor_data["gps"] = "no_fix"
+                elif control_key == "target":
+                    target_data["gps_fix_type"] = "null"
+            elif key.char == "g":
+                print(f"\n\ng key pressed. Sending good gps fix.")
+                if control_key == "sensor":
+                    sensor_data["gps"] = "fix"
+                elif control_key == "target":
+                    target_data["gps_fix_type"] = 2 
+            return
+        except:
+            pass
 
         if key == Key.right:
             print("\n\nRight key pressed. Moving right.\n")
@@ -130,6 +148,9 @@ def main(blocking=True):
             print(f"Press Up/Down/Left/Right to control {control_key}.\n")
             print(f"To change device being controlled:\n {help_str}")
             return
+          
+
+        
 
         if control_key == "sensor":
             mqtt_client.client.publish(
