@@ -173,11 +173,17 @@ class Geolocate:
 
         if (
             message_data["gps_stale"].lower() in ["null", "true"]
-            or (isinstance(message_data["gps_fix_type"], str) and message_data["gps_fix_type"].lower() == "null")
-            or (isinstance(message_data["gps_fix_type"], (int, float)) and int(message_data["gps_fix_type"]) < 2)
+            or (
+                isinstance(message_data["gps_fix_type"], str)
+                and message_data["gps_fix_type"].lower() == "null"
+            )
+            or (
+                isinstance(message_data["gps_fix_type"], (int, float))
+                and int(message_data["gps_fix_type"]) < 2
+            )
         ):
             logging.info(f"No target GPS")
-            return 
+            return
 
         self.data["target_gps"] = "fix"
         target_name = message_data["target_name"]
