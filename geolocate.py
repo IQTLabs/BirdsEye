@@ -172,7 +172,14 @@ class Geolocate:
         logging.info(f"Received gamutrf/target MQTT message: {message_data}")
 
         if (
-            message_data["gps_stale"].lower() in ["null", "true"]
+            (
+                isinstance(message_data["gps_stale"], str)
+                and message_data["gps_stale"].lower() == "null"
+            )
+            or (
+                isinstance(message_data["gps_stale"], bool)
+                and message_data["gps_stale"]
+            )
             or (
                 isinstance(message_data["gps_fix_type"], str)
                 and message_data["gps_fix_type"].lower() == "null"
