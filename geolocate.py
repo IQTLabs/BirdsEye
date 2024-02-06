@@ -172,10 +172,18 @@ class Geolocate:
         logging.info(f"Received gamutrf/target MQTT message: {message_data}")
 
         if (
-            message_data["gps_stale"].lower() != "false"
-            or int(message_data["gps_fix_type"]) < 2
+            message_data["gps_stale"].lower() in ["null", "true"]
+            or (
+                isinstance(message_data["gps_fix_type"], str)
+                and message_data["gps_fix_type"].lower() == "null"
+            )
+            or (
+                isinstance(message_data["gps_fix_type"], (int, float))
+                and int(message_data["gps_fix_type"]) < 2
+            )
         ):
-            return "No target GPS."
+            logging.info(f"No target GPS")
+            return
 
         self.data["target_gps"] = "fix"
         target_name = message_data["target_name"]
