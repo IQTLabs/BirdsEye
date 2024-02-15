@@ -1,6 +1,8 @@
 import argparse
 import json
 import logging
+import time
+
 
 from pynput import keyboard
 from pynput.keyboard import Key
@@ -16,6 +18,8 @@ def main(blocking=True):
         "localhost",
         1883,
         [("gamutrf/inference", message_handler), ("gamutrf/targets", message_handler)],
+        "fake_log_dir",
+        time.time(),
     )
 
     sensor_data = {

@@ -458,20 +458,6 @@ class Geolocate:
             any_plot = False
         ##########
 
-        ###### MQTT or replay from file
-        if replay_file is None:
-            topics = [
-                ("gamutrf/inference", self.data_handler),
-                ("gamutrf/targets", self.target_handler),
-            ]
-            mqtt_client = birdseye.mqtt.BirdsEyeMQTT(mqtt_host, mqtt_port, topics)
-        else:
-            if replay_file.endswith(".log"):
-                get_replay_data = self.get_replay_log(replay_file)
-            elif replay_file.endswith(".json"):
-                get_replay_data = self.get_replay_json(replay_file)
-        ###########
-
         # BirdsEye
         global_start_time = datetime.utcnow().timestamp()
         n_simulations = 100
@@ -538,6 +524,22 @@ class Geolocate:
             config=self.config,
             class_map=sensor.class_map,
         )
+
+        ###### MQTT or replay from file
+        if replay_file is None:
+            topics = [
+                ("gamutrf/inference", self.data_handler),
+                ("gamutrf/targets", self.target_handler),
+            ]
+            mqtt_client = birdseye.mqtt.BirdsEyeMQTT(
+                mqtt_host, mqtt_port, topics, results.logdir, global_start_time
+            )
+        else:
+            if replay_file.endswith(".log"):
+                get_replay_data = self.get_replay_log(replay_file)
+            elif replay_file.endswith(".json"):
+                get_replay_data = self.get_replay_json(replay_file)
+        ###########
 
         # Motion planner
         if self.config.get("use_planner", "false").lower() != "true":

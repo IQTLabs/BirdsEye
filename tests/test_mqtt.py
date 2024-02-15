@@ -4,6 +4,7 @@ Tests for mqtt.py
 import birdseye.mqtt
 import pytest
 import socket
+import time
 
 MQTT_PORT = 1883
 
@@ -70,4 +71,6 @@ def test_mqtt_client(fake_broker):
 
     topics = [("topic", topic_handler)]
 
-    mqtt_client = birdseye.mqtt.BirdsEyeMQTT("localhost", MQTT_PORT, topics)
+    mqtt_client = birdseye.mqtt.BirdsEyeMQTT(
+        "localhost", MQTT_PORT, topics, "fake_log_dir", time.time()
+    )
