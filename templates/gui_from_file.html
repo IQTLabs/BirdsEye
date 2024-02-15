@@ -1,16 +1,25 @@
 <html>
 <head>
     <title>BirdsEye</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='styles/birdseye.css') }}">
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 </head>
 <body>
-    <img id="map" src="" />
-    <form action = "{{ url_for('gui_form') }}" method = "post">
-        <p>Number of targets:</p>
-        <p><input type = "text" name="n_targets" value="{{ config.n_targets }}"/></p>
-        
-        <p><button name="reset" type="submit" value="reset">Reset</button></p>
-    </form>
+    <div class="container">
+      <img id="map" src="" />
+      <form action = "{{ url_for('gui_form') }}" method = "post">
+          <p>Number of targets:</p>
+          <p><input type = "text" name="n_targets" value="{{ config.n_targets }}"/></p>
+          <p>Number of particles:</p>
+          <p><input type = "text" name="n_particles" value="{{ config.n_particles }}"/></p>
+          <p>Particle resample proportion:</p>
+          <p><input type = "text" name="resample_proportion" value="{{ config.resample_proportion }}"/></p>
+          <p>Map width (meters):</p>
+          <p><input type = "text" name="map_width" value="{{ config.map_width }}"/></p>
+
+          <p><button name="reset" type="submit" value="reset">Reset</button></p>
+      </form>
+    </div>
     <script>
       $(document).ready(function(){
         setInterval(refreshFunction, 1000);
