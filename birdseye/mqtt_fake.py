@@ -35,7 +35,7 @@ def main(blocking=True):
         "predictions": {
             "mini2_telem": [
                 {
-                    "rssi": "-40",
+                    "rssi_max": "-60",
                     "conf": "0.33034399151802063",
                     "xywh": [
                         609.8685302734375,
@@ -47,7 +47,7 @@ def main(blocking=True):
             ],
             "mini2_video": [
                 {
-                    "rssi": "-80",
+                    "rssi_max": "-90",
                     "conf": "0.33034399151802063",
                     "xywh": [
                         609.8685302734375,
@@ -60,7 +60,6 @@ def main(blocking=True):
         },
         "position": [32.922651, -117.120815],
         "heading": 0,
-        "rssi": [-40, -60],
         "gps": "fix",
     }
     target_data = {

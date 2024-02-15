@@ -66,7 +66,13 @@ def pffilter_copy(pf, n_downsample=None):
 
 class RFMultiSeparableEnv:
     def __init__(
-        self, sensor=None, actions=None, state=None, simulated=True, num_particles=2000
+        self,
+        sensor=None,
+        actions=None,
+        state=None,
+        simulated=True,
+        num_particles=2000,
+        resample_proportion=0.1,
     ):
         # Sensor definitions
         self.sensor = sensor
@@ -77,6 +83,7 @@ class RFMultiSeparableEnv:
         # Flag for simulation vs real data
         self.simulated = simulated
         self.n_particles = num_particles
+        self.resample_proportion = resample_proportion
 
         # self.pfrnn = pfrnn()
 
@@ -185,7 +192,7 @@ class RFMultiSeparableEnv:
                 ),
                 n_particles=self.n_particles,
                 dynamics_fn=self.dynamics,
-                resample_proportion=0.1,  # 0.005,
+                resample_proportion=self.resample_proportion,  # 0.1,  # 0.005,
                 noise_fn=lambda x, **kwargs: self.particle_noise(x, sigmas=[1, 2, 2]),
                 weight_fn=lambda hyp, o, xp=None, **kwargs: self.sensor.weight(hyp, o),
                 resample_fn=systematic_resample,

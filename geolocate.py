@@ -145,6 +145,9 @@ class Geolocate:
             "flask_host": "0.0.0.0",  # nosec
             "flask_port": "4999",
             "use_flask": "false",
+            "map_width": "500",
+            "n_particles": "3000",
+            "resample_proportion": "0.1",
         }
         default_config.update(self.config)
         self.config = default_config
@@ -245,7 +248,7 @@ class Geolocate:
             # self.data["rssi"] = float(metadata["rssi_mean"])
             # self.data["rssi"] = float(metadata["rssi_min"])
             # self.data["rssi"] = float(metadata.get["rssi_max"])
-            pass
+            self.data["rssi"] = None
         else:
             self.data["rssi"] = message_data.get("rssi", None)
 
@@ -290,7 +293,7 @@ class Geolocate:
         """
         Flask
         """
-        app = Flask(__name__)
+        app = Flask(__name__, template_folder="templates", static_folder="static")
 
         @app.route("/gui/<path:filename>")
         def gui_file(filename):
@@ -316,9 +319,16 @@ class Geolocate:
         def gui_form():
             if request.method == "POST":
                 user = request.form.get("name", None)
-                self.config["n_targets"] = request.form.get(
-                    "n_targets", self.config["n_targets"]
-                )
+                form_inputs = [
+                    "n_targets",
+                    "n_particles",
+                    "resample_proportion",
+                    "map_width",
+                ]
+                for input_name in form_inputs:
+                    self.config[input_name] = request.form.get(
+                        input_name, self.config[input_name]
+                    )
                 reset = request.form.get("reset", None)
                 if reset == "reset":
                     self.stop()
@@ -326,6 +336,7 @@ class Geolocate:
                     self.start()
                 return redirect(request.referrer)
 
+        @app.route("/")
         @app.route("/guiFile")
         def gui_from_file():
             if not self.image_buf.getbuffer().nbytes:
@@ -337,30 +348,6 @@ class Geolocate:
             if not self.image_buf.getbuffer().nbytes:
                 return render_template("loading.html")
             return render_template("gui_from_buffer.html", config=self.config)
-
-        @app.route("/")
-        def index():
-            flask_start_time = timer()
-
-            if not self.image_buf.getbuffer().nbytes:
-                return render_template("loading.html")
-
-            data = base64.b64encode(self.image_buf.getvalue()).decode("ascii")
-
-            flask_end_time = timer()
-
-            logging.debug("=======================================")
-            logging.debug("Flask Timing")
-            logging.debug("time step = %s", str(results.time_step))
-            logging.debug(
-                "buffer size = {:.2f} MB".format(len(self.image_buf.getbuffer()) / 1e6)
-            )
-            logging.debug(
-                "Duration = {:.4f} s".format(flask_end_time - flask_start_time)
-            )
-            logging.debug("=======================================")
-
-            return render_template("birdseye_live.html", data=data)
 
         host_name = flask_host
         port = flask_port
@@ -447,7 +434,9 @@ class Geolocate:
         fading_sigma = float(self.config["fading_sigma"])
         threshold = float(self.config["threshold"])
 
-        particle_distance = float(self.config["particle_distance"])
+        n_particles = int(self.config["n_particles"])
+        map_width = float(self.config["map_width"])
+        resample_proportion = float(self.config["resample_proportion"])
 
         local_plot = self.config["local_plot"].lower()
         make_gif = self.config["make_gif"].lower()
@@ -460,16 +449,17 @@ class Geolocate:
 
         # BirdsEye
         global_start_time = datetime.utcnow().timestamp()
-        n_simulations = 100
-        max_iterations = 400
+
         reward_func = (
             lambda pf, **kwargs: pf.weight_entropy
         )  # lambda *args, **kwargs: None
+
+        # REPP/Lavapilot parameters
         r_min = 10
         horizon = 1  # 8
         min_bound = 0.82
         min_std_dev = 35
-        num_particles = 3000  # 3000
+
         step_duration = 1
 
         # Sensor
@@ -513,7 +503,8 @@ class Geolocate:
             actions=actions,
             state=state,
             simulated=False,
-            num_particles=num_particles,
+            num_particles=n_particles,
+            resample_proportion=resample_proportion,
         )
 
         belief = env.reset()
@@ -647,7 +638,7 @@ class Geolocate:
                     data=self.data,
                     sidebar=False,
                     separable=True,
-                    map_distance=particle_distance,
+                    map_distance=map_width,
                 )
                 # safe image buf
                 tmp_buf = BytesIO()

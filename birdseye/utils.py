@@ -278,12 +278,28 @@ class GPSVis:
         # Set axis dimensions, labels and tick marks
         axis1.set_xlim(0, int(self.width_meters))
         axis1.set_ylim(0, int(self.height_meters))
-        axis1.set_xlabel("Longitude")
-        axis1.set_ylabel("Latitude")
-        axis1.set_xticks(np.linspace(0, int(self.width_meters), num=8))
-        axis1.set_xticklabels(self.x_ticks, rotation=30, ha="center")
-        axis1.set_yticks(np.linspace(0, int(self.height_meters), num=8))
-        axis1.set_yticklabels(self.y_ticks)
+        axis1.set_xticks(np.linspace(0, int(self.width_meters), num=11))
+        axis1.set_xticklabels(
+            np.linspace(
+                -int(self.width_meters / 2), int(self.width_meters / 2), num=11
+            ),
+            rotation=0,
+            ha="center",
+        )
+        axis1.set_yticks(np.linspace(0, int(self.height_meters), num=11))
+        axis1.set_yticklabels(
+            np.linspace(
+                -int(self.height_meters / 2), int(self.height_meters / 2), num=11
+            )
+        )
+        axis1.set_xlabel("meters")
+        axis1.set_ylabel("meters")
+        # axis1.set_xlabel("Longitude")
+        # axis1.set_ylabel("Latitude")
+        # axis1.set_xticks(np.linspace(0, int(self.width_meters), num=8))
+        # axis1.set_xticklabels(self.x_ticks, rotation=30, ha="center")
+        # axis1.set_yticks(np.linspace(0, int(self.height_meters), num=8))
+        # axis1.set_yticklabels(self.y_ticks)
         axis1.grid()
 
         # Save or display
@@ -798,12 +814,12 @@ class Results:
         data=None,
         sidebar=False,
         separable=False,
-        map_distance=200,
+        map_distance=500,
     ):
         """
         Create a live plot
         """
-
+        map_distance /= 2
         lines = (
             []
         )  # https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.legend.html
