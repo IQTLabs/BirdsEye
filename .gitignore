@@ -139,3 +139,5 @@ dmypy.json
 
 rl_log
 resultMap.png
+
+gamutrf_fieldtest/*.out

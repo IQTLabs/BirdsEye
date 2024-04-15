@@ -4,6 +4,7 @@ import os
 import paho.mqtt.client
 import sys
 
+from paho.mqtt.enums import CallbackAPIVersion
 from pathlib import Path
 
 
@@ -18,7 +19,7 @@ class BirdsEyeMQTT:
         Path(self.log_path).mkdir(parents=True, exist_ok=True)
 
         try:
-            self.client = paho.mqtt.client.Client()
+            self.client = paho.mqtt.client.Client(CallbackAPIVersion.VERSION2)
             self.client.on_connect = self.on_connect
             self.client.on_publish = self.on_publish
             self.client.connect(mqtt_host, mqtt_port, 60)
