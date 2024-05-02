@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 LABEL maintainer="Lucas Tindall <ltindall@iqt.org>"
 ENV PYTHONUNBUFFERED 1
 
