@@ -1757,13 +1757,12 @@ testutils = ["gitpython (>3)"]
 
 [[package]]
 name = "pynput"
-version = "1.7.6"
+version = "1.7.7"
 description = "Monitor and control user input devices"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pynput-1.7.6-py2.py3-none-any.whl", hash = "sha256:19861b2a0c430d646489852f89500e0c9332e295f2c020e7c2775e7046aa2e2f"},
-    {file = "pynput-1.7.6.tar.gz", hash = "sha256:3a5726546da54116b687785d38b1db56997ce1d28e53e8d22fc656d8b92e533c"},
+    {file = "pynput-1.7.7-py2.py3-none-any.whl", hash = "sha256:afc43f651684c98818de048abc76adf9f2d3d797083cb07c1f82be764a2d44cb"},
 ]
 
 [package.dependencies]
