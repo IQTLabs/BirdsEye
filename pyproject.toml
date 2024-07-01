@@ -9,7 +9,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = ">=3.9,<3.13"
 flask = "3.0.3"
-imageio = "2.34.1"
+imageio = "2.34.2"
 ipython = "8.18.1"
 matplotlib = "3.9.0"
 numpy = "2.0.0"
