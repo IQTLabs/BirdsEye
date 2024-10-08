@@ -7,7 +7,7 @@ license = "Apache-2"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.13,<3.14"
 flask = "3.0.3"
 imageio = "2.35.1"
 ipython = "8.18.1"
