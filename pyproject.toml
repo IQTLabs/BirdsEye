@@ -18,7 +18,7 @@ pandas = "2.2.3"
 pfilter = "0.2.5"
 requests = "2.32.3"
 scipy = "1.13.1"
-tqdm = "4.67.0"
+tqdm = "4.67.1"
 seaborn = "^0.13.0"
 pynput = "^1.7.6"
 
